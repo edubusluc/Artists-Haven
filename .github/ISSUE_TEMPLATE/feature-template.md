@@ -1,9 +1,9 @@
 ---
 name: Feature template
 about: Create new feature issue
-title: ''
+title: 'R-NNN:'
 labels: ''
-assignees: ''
+assignees: edubusluc
 
 ---
 
