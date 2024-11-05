@@ -6,6 +6,7 @@ Interactive music platform that allows users to explore artist content, take qui
 3. [Installation](#id3)
 4. [Configuration](#id4)
 5. [How to use](#id5)
+6. [Contact](#id6)
 ## 🌟 Features<a name="id1"></a>
 Text of the first section
 ## 🖥️ System Requirements<a name="id2"></a>
@@ -16,3 +17,5 @@ Text of the third section
 Text of the fourth section
 ## 🚀 How to use<a name="id5"></a>
 Text of the fifth section
+## 📧 Contact<a name="id6"></a>
+- Email: edubusluc@alum.us.es
