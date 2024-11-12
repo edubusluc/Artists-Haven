@@ -1,2 +1,6 @@
 # Ignore the .env file
 .env
+
+#Ignore vscode files
+.vscode/
+
