@@ -25,6 +25,8 @@ jobs:
         uses: actions/setup-java@v3
         with:
           java-version: '20.0.2'  # Use Java version 20.0.2 (2023-07-18)
+          distribution: 'temurin'
+          cache: maven
 
       - name: Build and Test with Maven
         run: |
