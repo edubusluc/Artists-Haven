@@ -16,7 +16,7 @@ jobs:
   test:
     runs-on: windows-latest  # Run on a Windows container
 
-  services:
+    services:
       postgres:
         image: postgres:latest
         env:
@@ -43,5 +43,5 @@ jobs:
       - name: Compile the project
         run: mvn clean install -DskipTests=true -f artists-heaven-backend/pom.xml
 
-      - name: run test case
+      - name: Run test case
         run: mvn test -f artists-heaven-backend/pom.xml
