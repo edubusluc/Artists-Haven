@@ -21,6 +21,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3  # This checks out the code from the PR
 
+      - name: List files in the directory
+        run: dir  # Verifica que el pom.xml esté presente
+
       - name: Set up JDK 20.0.2
         uses: actions/setup-java@v3
         with:
