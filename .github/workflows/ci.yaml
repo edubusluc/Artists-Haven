@@ -16,6 +16,18 @@ jobs:
   test:
     runs-on: windows-latest  # Run on a Windows container
 
+  services:
+      postgres:
+        image: postgres:latest
+        env:
+          POSTGRES_USER: user
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: testdb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U user" --health-interval=10s --health-timeout=5s --health-retries=5
+
     # Steps to configure the action
     steps:
       - name: Checkout code
