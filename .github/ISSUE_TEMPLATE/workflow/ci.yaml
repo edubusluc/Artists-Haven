@@ -1,0 +1,32 @@
+name: CI - Run Tests
+
+# This action will run on pull requests and pushes to the `main` branch
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  # Define the Continuous Integration job
+  test:
+    runs-on: windows-latest  # Run on a Windows container
+
+    # Steps to configure the action
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3  # This checks out the code from the PR
+
+      - name: Set up JDK 20.0.2
+        uses: actions/setup-java@v3
+        with:
+          java-version: '20.0.2'  # Use Java version 20.0.2 (2023-07-18)
+
+      - name: Build and Test with Maven
+        run: |
+          ./mvnw clean install -DskipTests=false
+          
+      - name: Run Unit Tests
+        run: ./mvnw test  # Run unit tests using Maven
