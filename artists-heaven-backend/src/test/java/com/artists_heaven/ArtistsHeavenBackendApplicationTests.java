@@ -2,12 +2,13 @@ package com.artists_heaven;
 
 import io.github.cdimascio.dotenv.Dotenv;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestPropertySource;
 
 @SpringBootTest
 @ActiveProfiles("test")  // Activa el perfil 'test' para las pruebas
+@TestPropertySource("classpath:application-test.properties")
 class ArtistsHeavenBackendApplicationTests {
 
     @BeforeAll
@@ -19,10 +20,5 @@ class ArtistsHeavenBackendApplicationTests {
         System.setProperty("DB_USERNAME", dotenv.get("DB_USERNAME"));
         System.setProperty("DB_PASSWORD", dotenv.get("DB_PASSWORD"));
 
-    }
-
-    @Test
-    void contextLoads() {
-        // Aquí van tus pruebas
     }
 }
