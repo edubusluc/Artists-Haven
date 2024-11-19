@@ -45,7 +45,6 @@
 			<artifactId>postgresql</artifactId>
 			<version>42.5.1</version> <!-- Asegúrate de usar la última versión disponible -->
 		</dependency>
-
 		<dependency>
 			<groupId>io.zonky.test</groupId>
 			<artifactId>embedded-database-spring-test</artifactId>
