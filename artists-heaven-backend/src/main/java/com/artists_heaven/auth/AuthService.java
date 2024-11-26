@@ -4,7 +4,6 @@ import java.util.Optional;
 
 import javax.crypto.SecretKey;
 
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import io.jsonwebtoken.Jwts;
@@ -18,8 +17,7 @@ import com.artists_heaven.entities.user.UserRepository;
 public class AuthService {
 
     private final UserRepository userRepository;
-
-    private PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    private final PasswordEncoder passwordEncoder;
 
     private static final SecretKey jwtKey = Keys.secretKeyFor(SignatureAlgorithm.HS256);
 
