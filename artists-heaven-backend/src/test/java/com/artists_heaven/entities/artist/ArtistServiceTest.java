@@ -87,7 +87,7 @@ public class ArtistServiceTest {
         IllegalArgumentException exception = Assertions.assertThrows(IllegalArgumentException.class, () -> {
             artistService.registerArtist(artist_duplicate_artist_name);  // Intentamos registrar el segundo artista
         });
-        Assertions.assertTrue(exception.getMessage().contains("Ya hay un artista registrado con ese nombre"));
+        Assertions.assertTrue(exception.getMessage().contains("Ya existe un usuario con ese nombre registrado"));
         
     }
     

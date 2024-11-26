@@ -4,6 +4,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration
@@ -19,9 +21,15 @@ public class SecurityConfiguration {
                     .requestMatchers("/api/users/list").permitAll()  // Permitir acceso a la ruta sin autenticación
                     .requestMatchers("/api/users/register").permitAll()
                     .requestMatchers("/api/artists/register").permitAll()
+                    .requestMatchers("/api/auth/login").permitAll()
                     .anyRequest().authenticated()  // Asegurarse de que cualquier otra solicitud requiere autenticación
             );
     
         return http.build();
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
     }
 }
