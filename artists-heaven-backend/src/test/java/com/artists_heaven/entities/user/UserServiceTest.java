@@ -27,6 +27,7 @@ public class UserServiceTest {
     public static void setup() {
         userTest = new User();
         userTest.setEmail("email@email.com");
+        userTest.setUsername("Lorem Ipsum");
         userTest.setFirstName("Lorem Ipsum");
         userTest.setLastName("Lorem Ipsum");
         userTest.setPassword("password1234");

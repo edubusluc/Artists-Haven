@@ -9,12 +9,16 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.http.MediaType;
 
+import com.artists_heaven.entities.user.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 
 public class ArtistControllerTest {
 
@@ -23,38 +27,45 @@ public class ArtistControllerTest {
     @Mock
     private ArtistService artistService;
 
+    @Mock
+    private UserRepository userRepository;
+
     @InjectMocks
     private ArtistController artistController;
 
-    private ObjectMapper objectMapper = new ObjectMapper(); // Para convertir objetos a JSON
+    private ObjectMapper objectMapper = new ObjectMapper();
 
     @BeforeEach
     public void setUp() {
         MockitoAnnotations.openMocks(this);
-        
+
         mockMvc = MockMvcBuilders.standaloneSetup(artistController).build();
     }
 
     @Test
-    public void testRegisterArtistSuccess() throws Exception {
-        // Crear el artista con datos válidos
+    public void testRegisterArtist() throws Exception {
+        // Crear un objeto Artist para enviar como payload
         Artist artist = new Artist();
-        artist.setEmail("newartist@example.com");
-        artist.setArtistName("New Test Artist");
-        artist.setFirstName("New");
-        artist.setLastName("Artist");
-        artist.setUrl("https://www.new-artist-pages.com");
-        artist.setPassword("newpassword");
+        artist.setFirstName("John");
+        artist.setLastName("Doe");
+        artist.setUsername("johndoe");
+        artist.setEmail("johndoe@example.com");
+        artist.setPassword("password123");
+        artist.setArtistName("John's Art");
+        artist.setUrl("http://example.com");
 
-        // Simular la respuesta del servicio con el artista registrado
-        when(artistService.registerArtist(any(Artist.class))).thenReturn(artist);
+        // Configurar el servicio mock para devolver el artista al registrarse
+        Mockito.when(artistService.registerArtist(Mockito.any(Artist.class))).thenReturn(artist);
 
-        // Realizar la solicitud POST y verificar el resultado
-        mockMvc.perform(post("/api/artists/register")
-                        .contentType("application/json")
-                        .content(objectMapper.writeValueAsString(artist)))  
-                .andExpect(status().isCreated());  
+        // Realizar la solicitud POST y verificar la respuesta
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/artists/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(artist)))
+                .andExpect(MockMvcResultMatchers.status().isCreated())
+                .andExpect(MockMvcResultMatchers.jsonPath("$.firstName").value("John"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.lastName").value("Doe"));
     }
+
 
     @Test
     public void testRegisterArtistSuccessBadRequest() throws Exception {
@@ -65,12 +76,13 @@ public class ArtistControllerTest {
         artist.setLastName("Artist");
         artist.setUrl("invalid-artist.com");
         artist.setPassword("password");
-        when(artistService.registerArtist(any(Artist.class))).thenThrow(new IllegalArgumentException("Invalid user data"));
-        
+        when(artistService.registerArtist(any(Artist.class)))
+                .thenThrow(new IllegalArgumentException("Invalid user data"));
+
         mockMvc.perform(post("/api/artists/register")
-                        .contentType("application/json")
-                        .content(objectMapper.writeValueAsString(artist)))  
+                .contentType("application/json")
+                .content(objectMapper.writeValueAsString(artist)))
                 .andExpect(status().isBadRequest());
-    }   
+    }
 
 }
