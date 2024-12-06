@@ -22,6 +22,7 @@ jobs:
           POSTGRES_USER: ${{ secrets.DB_USERNAME }}
           POSTGRES_PASSWORD: ${{ secrets.DB_PASSWORD }}
           POSTGRES_DB: test_artists_heaven
+
         ports:
           - 5432:5432
         options: >-
@@ -31,6 +32,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3  # This checks out the code from the PR
+
+      - name: Set environment variables
+        run: echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> $GITHUB_ENV
 
       - name: Set up JDK 20.0.2
         uses: actions/setup-java@v3
