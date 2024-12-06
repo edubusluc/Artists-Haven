@@ -32,8 +32,6 @@ public class JwtTokenProvider {
 
     // Método para obtener la clave secreta de forma segura
     private Key getSigningKey() {
-        // Usar la clave secreta cargada para generar la clave de tipo Key
-        String s = secretKey;
         return Keys.hmacShaKeyFor(secretKey.getBytes());
     }
 

@@ -12,7 +12,6 @@ on:
       - develop
 
 jobs:
-  # Define the Continuous Integration job
   test:
     runs-on: ubuntu-latest
     services:
@@ -27,26 +26,21 @@ jobs:
         options: >-
           --health-cmd="pg_isready -U ${POSTGRES_USER}" --health-interval=10s --health-timeout=5s --health-retries=5
 
-    # Steps to configure the action
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3  # This checks out the code from the PR
+        uses: actions/checkout@v3
 
-      - name: Set environment variables
-        run: echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> $GITHUB_ENV
-
-      - name: Check if JWT_SECRET is loaded
+      - name: Create .env file
         run: |
-          if [ -z "$JWT_SECRET" ]; then
-            echo "JWT_SECRET is not loaded properly"
-          else
-            echo "JWT_SECRET is loaded correctly"
-          fi
+          echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" > .env
+          echo "POSTGRES_USER=${{ secrets.DB_USERNAME }}" >> .env
+          echo "POSTGRES_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
+          echo "POSTGRES_DB=test_artists_heaven" >> .env
 
       - name: Set up JDK 20.0.2
         uses: actions/setup-java@v3
         with:
-          java-version: '20.0.2'  # Use Java version 20.0.2 (2023-07-18)
+          java-version: '20.0.2'
           distribution: 'temurin'
           cache: maven
 
