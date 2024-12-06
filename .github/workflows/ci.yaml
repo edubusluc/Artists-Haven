@@ -48,4 +48,5 @@ jobs:
         run: mvn clean install -DskipTests=true -f artists-heaven-backend/pom.xml
 
       - name: Run test case
-        run: mvn test -f artists-heaven-backend/pom.xml
+        run: |
+          JWT_SECRET=${{ secrets.JWT_SECRET }} mvn test -f artists-heaven-backend/pom.xml
