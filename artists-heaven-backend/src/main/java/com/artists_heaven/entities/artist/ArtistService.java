@@ -1,7 +1,5 @@
 package com.artists_heaven.entities.artist;
 
-import java.util.Optional;
-
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -26,14 +24,18 @@ public class ArtistService {
 
 
     public Artist registerArtist(Artist artist) {        
-        Optional<User> userEmail = userRepository.findByEmail(artist.getEmail());
-        if(userEmail.isPresent()){
+        User userEmail = userRepository.findByEmail(artist.getEmail());
+        if(userEmail != null){
             throw new IllegalArgumentException("El correo electrónico ya está registrado.");
         }
 
         if(artistRepository.existsByArtistName(artist.getArtistName()) == true){
             throw new IllegalArgumentException("Ya existe un usuario con ese nombre registrado");
         }
+
+        String username = artist.getArtistName();
+        artist.setUsername(username);
+
 
         // Establecer el rol de artista
         artist.setRole(UserRole.ARTIST);

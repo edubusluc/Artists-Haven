@@ -5,6 +5,9 @@ import UserRegister from './components/UserRegister';
 import ArtistsRegister from './components/ArtistsRegister';
 import UserLogin from './components/UserLogin';
 import Logout from './components/Logout';
+import UserProfile from './components/UserProfile';
+import EditProfile from './components/EditProfile';
+
 
 const HomePage = () => {
   // Estado para almacenar el email del usuario si está logueado
@@ -13,6 +16,7 @@ const HomePage = () => {
   useEffect(() => {
     // Verifica si hay un email almacenado en el localStorage (o desde el contexto si lo usas)
     const storedEmail = localStorage.getItem('userEmail');
+    console.log(localStorage.getItem('authToken'))
     if (storedEmail) {
       setUserEmail(storedEmail);
     }
@@ -22,11 +26,26 @@ const HomePage = () => {
     <div>
       <h1>Bienvenido a la App</h1>
       
-      {/* Mostrar el email del usuario si está registrado */}
+      
       {userEmail ? (
-        <p>Usuario registrado: {userEmail}</p>
+        <>
+        <p>Email: {userEmail}</p>
+        <p>Ver Perfil:</p>
+        <Link to="/users/profile">
+          <button>Perfil</button>
+        </Link>
+        </>
       ) : (
-        <p>No has iniciado sesión. Regístrate o inicia sesión.</p>
+        <>
+        <p>No has iniciado sesión:</p>
+        <Link to="/artists/register">
+          <button>Registrar Artista</button>
+        </Link>
+        <p>Login de usuario:</p>
+        <Link to="/auth/login">
+          <button>Login Usuario</button>
+        </Link>
+      </>
       )}
 
       <p>Haz clic en el siguiente botón para ver la lista de usuarios:</p>
@@ -38,14 +57,7 @@ const HomePage = () => {
       <Link to="/user/register">
         <button>Registrar Usuario</button>
       </Link>
-      <p>O haz clic para registrar un nuevo artista:</p>
-      <Link to="/artists/register">
-        <button>Registrar Artista</button>
-      </Link>
-      <p>Login de usuario:</p>
-      <Link to="/auth/login">
-        <button>Login Usuario</button>
-      </Link>
+      <p>O haz clic para registrar un nuevo artista:</p>     
 
       {/* Botón de logout si el usuario está autenticado */}
       {userEmail && <Logout />}
@@ -71,6 +83,12 @@ const App = () => {
 
         {/* Ruta para el login de usuarios */}
         <Route path="/auth/login" element={<UserLogin />} />
+
+        {/* Ruta para el perfil de usuarios */}
+        <Route path="/users/profile" element={<UserProfile />} />
+
+        {/* Ruta para editar el perfil de usuario */}
+        <Route path="/profile/edit" element={<EditProfile />} />
       </Routes>
     </Router>
   );

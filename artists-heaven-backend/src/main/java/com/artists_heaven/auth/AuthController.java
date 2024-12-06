@@ -21,7 +21,9 @@ public class AuthController {
     public ResponseEntity<String> login(@RequestBody LoginRequest loginRequest) {
         try {
             String token = authService.login(loginRequest.getEmail(), loginRequest.getPassword());
+            System.out.println(token);
             return new ResponseEntity<>(token, HttpStatus.OK);
+            
         } catch (IllegalArgumentException e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.UNAUTHORIZED);
         }
