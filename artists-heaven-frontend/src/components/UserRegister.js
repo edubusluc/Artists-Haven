@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';  // Importa axios
+import { useNavigate } from 'react-router-dom';
 
 const UserRegister = () => {
   const [user, setUser] = useState({
@@ -8,6 +9,7 @@ const UserRegister = () => {
     email: '',
     password: '',
   });
+  const navigate = useNavigate();
 
   const [errorMessage, setErrorMessage] = useState(''); // Para mostrar los errores
 
@@ -70,6 +72,16 @@ const UserRegister = () => {
           />
         </div>
         <div>
+          <label>Usuario</label>
+          <input
+            type="username"
+            name="username"
+            value={user.username}
+            onChange={handleChange}
+            required
+          />
+        </div>
+        <div>
           <label>Contraseña:</label>
           <input
             type="password"
@@ -81,6 +93,10 @@ const UserRegister = () => {
         </div>
         <button type="submit">Registrar Usuario</button>
       </form>
+
+      <button onClick={() => navigate('/')} className="btn btn-primary">
+                Volver al inicio
+            </button>
 
       {/* Mostrar mensaje de error si existe */}
       {errorMessage && <p style={{ color: 'red' }}>{errorMessage}</p>}

@@ -1,23 +1,27 @@
 package com.artists_heaven.auth;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+
 import org.junit.jupiter.api.BeforeAll;
+
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+
 import org.springframework.boot.test.context.SpringBootTest;
+
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import com.artists_heaven.entities.user.User;
 import com.artists_heaven.entities.user.UserRepository;
 import com.artists_heaven.entities.user.UserRole;
 
-import jakarta.transaction.Transactional;
+import jakarta.transaction.*;
 
 @SpringBootTest
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 public class AuthServiceTest {
 
     @Autowired
@@ -26,8 +30,7 @@ public class AuthServiceTest {
     @Autowired
     private UserRepository userRepository;
 
-    private static User userTest; 
-
+    private static User userTest;
 
     @BeforeAll
     public static void setup() {
@@ -35,10 +38,10 @@ public class AuthServiceTest {
         userTest.setEmail("email@email.com");
         userTest.setFirstName("Lorem Ipsum");
         userTest.setLastName("Lorem Ipsum");
+        userTest.setUsername("Lorem Ipsum");
         userTest.setPassword(new BCryptPasswordEncoder().encode("password1234"));
         userTest.setRole(UserRole.USER);
 
-        
     }
 
     @Test
@@ -51,16 +54,20 @@ public class AuthServiceTest {
 
     @Test
     @Transactional
-    public void testLogin_withNonValidCredentials() {
+    public void testLogin_withNullUser() {
         IllegalArgumentException exception = Assertions.assertThrows(IllegalArgumentException.class, () -> {
             authService.login("email@email.com", "password1234");
         });
         Assertions.assertTrue(exception.getMessage().contains("Credenciales inválidas"));
-        
+
     }
 
-
-
-
-    
+    @Test
+    @Transactional
+    public void testLogin_withNonValidCredentials() {
+        userRepository.save(userTest);
+        assertThrows(IllegalArgumentException.class, () -> {
+            authService.login(userTest.getEmail(), "invalid password");
+        });
+    }
 }

@@ -20,11 +20,14 @@ const UserLogin = () => {
             });
 
             // Guardar el token en el almacenamiento local
-            const token = response.data.token;
+            const token = response.data;
             localStorage.setItem("authToken", token);
 
             // Guardar el correo del usuario en el localStorage
             localStorage.setItem("userEmail", email);
+
+            // Configurar el token en las cabeceras de axios para futuras solicitudes
+            axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
 
             // Redirigir al usuario a la página principal (u otra página)
             window.location.href = "/";  // Puedes cambiar esta ruta si es necesario
