@@ -22,7 +22,6 @@ jobs:
           POSTGRES_USER: ${{ secrets.DB_USERNAME }}
           POSTGRES_PASSWORD: ${{ secrets.DB_PASSWORD }}
           POSTGRES_DB: test_artists_heaven
-
         ports:
           - 5432:5432
         options: >-
@@ -35,6 +34,14 @@ jobs:
 
       - name: Set environment variables
         run: echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> $GITHUB_ENV
+
+      - name: Check if JWT_SECRET is loaded
+        run: |
+          if [ -z "$JWT_SECRET" ]; then
+            echo "JWT_SECRET is not loaded properly"
+          else
+            echo "JWT_SECRET is loaded correctly"
+          fi
 
       - name: Set up JDK 20.0.2
         uses: actions/setup-java@v3
