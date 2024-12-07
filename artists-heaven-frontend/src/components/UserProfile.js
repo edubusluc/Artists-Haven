@@ -8,7 +8,7 @@ const Profile = () => {
     useEffect(() => {
         // Obtener el token de autenticación desde localStorage
         const token = localStorage.getItem("authToken");
-        console.log(token)
+        console.log("TOKEN PERFIL", token)
         // Verificar si el token existe
         if (!token) {
             console.error('No se encontró el token de autenticación');
@@ -22,6 +22,7 @@ const Profile = () => {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`,  // Pasar el token en el header
             },
+            mode: 'cors'
         })
             .then(response => {
                 console.log(response)

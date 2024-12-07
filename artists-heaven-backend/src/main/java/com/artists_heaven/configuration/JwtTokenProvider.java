@@ -31,7 +31,7 @@ public class JwtTokenProvider {
 
 
     // Método para obtener la clave secreta de forma segura
-    private Key getSigningKey() {
+    public Key getSigningKey() {
         return Keys.hmacShaKeyFor(secretKey.getBytes());
     }
 
@@ -88,9 +88,19 @@ public class JwtTokenProvider {
     public String generateToken(Authentication authentication) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + (900 * 1000));
+        String email = "";
+
+        if(authentication.getPrincipal() instanceof User){
+            User userDetails = (User) authentication.getPrincipal();
+            email = userDetails.getEmail();
+        }
+        else{
+            email = authentication.getName();
+        }
+        
 
         return Jwts.builder()
-                .setSubject(authentication.getName())
+                .setSubject(email)
                 .setIssuedAt(now)
                 .setExpiration(expiryDate)
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256) // Usar la clave segura para firmar
