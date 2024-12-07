@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Route, Routes, Link } from 'react-router-dom';
+import { GoogleOAuthProvider } from '@react-oauth/google';
+import { GoogleLogin } from '@react-oauth/google';
 import UserList from './components/UserList';
 import UserRegister from './components/UserRegister';
 import ArtistsRegister from './components/ArtistsRegister';
@@ -8,13 +10,10 @@ import Logout from './components/Logout';
 import UserProfile from './components/UserProfile';
 import EditProfile from './components/EditProfile';
 
-
 const HomePage = () => {
-  // Estado para almacenar el email del usuario si está logueado
   const [userEmail, setUserEmail] = useState(null);
 
   useEffect(() => {
-    // Verifica si hay un email almacenado en el localStorage (o desde el contexto si lo usas)
     const storedEmail = localStorage.getItem('userEmail');
     console.log(localStorage.getItem('authToken'))
     if (storedEmail) {
@@ -22,30 +21,71 @@ const HomePage = () => {
     }
   }, []);
 
+  const handleGoogleLoginSuccess = async (response) => {
+    console.log('Google login successful:', response);
+    const googleToken = response.credential;
+
+    try {
+        // Enviar el token de Google al backend usando fetch
+        const backendResponse = await fetch('/api/auth/google-login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ idTokenString: googleToken }),
+        });
+
+        if (!backendResponse.ok) {
+            throw new Error('Error during Google login');
+        }
+
+        const data = await backendResponse.json();
+        const jwtToken = data.token;  // Asegúrate de obtener el token del objeto JSON
+
+        // Guardar el token JWT en el almacenamiento local
+        localStorage.setItem('authToken', jwtToken);
+        localStorage.setItem('userEmail', data.email);
+
+        // Redirigir al usuario a la página principal (u otra página)
+        window.location.href = '/';
+    } catch (error) {
+        console.error('Error during Google login:', error);
+    }
+};
+
+
+  const handleGoogleLoginError = (error) => {
+    console.log('Google login failed:', error);
+  };
+
   return (
     <div>
       <h1>Bienvenido a la App</h1>
       
-      
       {userEmail ? (
         <>
-        <p>Email: {userEmail}</p>
-        <p>Ver Perfil:</p>
-        <Link to="/users/profile">
-          <button>Perfil</button>
-        </Link>
+          <p>Email: {userEmail}</p>
+          <p>Ver Perfil:</p>
+          <Link to="/users/profile">
+            <button>Perfil</button>
+          </Link>
         </>
       ) : (
         <>
-        <p>No has iniciado sesión:</p>
-        <Link to="/artists/register">
-          <button>Registrar Artista</button>
-        </Link>
-        <p>Login de usuario:</p>
-        <Link to="/auth/login">
-          <button>Login Usuario</button>
-        </Link>
-      </>
+          <p>No has iniciado sesión:</p>
+          <Link to="/artists/register">
+            <button>Registrar Artista</button>
+          </Link>
+          <p>Login de usuario:</p>
+          <Link to="/auth/login">
+            <button>Login Usuario</button>
+          </Link>
+          <p>O inicia sesión con Google:</p>
+          <GoogleLogin
+            onSuccess={handleGoogleLoginSuccess}
+            onError={handleGoogleLoginError}
+          />
+        </>
       )}
 
       <p>Haz clic en el siguiente botón para ver la lista de usuarios:</p>
@@ -59,7 +99,6 @@ const HomePage = () => {
       </Link>
       <p>O haz clic para registrar un nuevo artista:</p>     
 
-      {/* Botón de logout si el usuario está autenticado */}
       {userEmail && <Logout />}
     </div>
   );
@@ -67,30 +106,19 @@ const HomePage = () => {
 
 const App = () => {
   return (
-    <Router>
-      <Routes>
-        {/* Ruta para la página de inicio */}
-        <Route path="/" element={<HomePage />} />
-        
-        {/* Ruta para la lista de usuarios */}
-        <Route path="/users" element={<UserList />} />
-
-        {/* Ruta para el registro de usuarios */}
-        <Route path="/user/register" element={<UserRegister />} />
-
-        {/* Ruta para el registro de artistas */}
-        <Route path="/artists/register" element={<ArtistsRegister />} />
-
-        {/* Ruta para el login de usuarios */}
-        <Route path="/auth/login" element={<UserLogin />} />
-
-        {/* Ruta para el perfil de usuarios */}
-        <Route path="/users/profile" element={<UserProfile />} />
-
-        {/* Ruta para editar el perfil de usuario */}
-        <Route path="/profile/edit" element={<EditProfile />} />
-      </Routes>
-    </Router>
+    <GoogleOAuthProvider clientId="1048927197271-g7tartu6gacs0jv8fgoa5braq8b2ck7p.apps.googleusercontent.com">
+      <Router>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/users" element={<UserList />} />
+          <Route path="/user/register" element={<UserRegister />} />
+          <Route path="/artists/register" element={<ArtistsRegister />} />
+          <Route path="/auth/login" element={<UserLogin />} />
+          <Route path="/users/profile" element={<UserProfile />} />
+          <Route path="/profile/edit" element={<EditProfile />} />
+        </Routes>
+      </Router>
+    </GoogleOAuthProvider>
   );
 };
 

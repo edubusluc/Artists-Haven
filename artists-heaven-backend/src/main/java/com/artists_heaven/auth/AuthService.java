@@ -45,7 +45,6 @@ public class AuthService {
                 AuthorityUtils.createAuthorityList(role) 
         );
 
-        System.out.println("AUHTENTICATION" + authentication);
         return jwtTokenProvider.generateToken(authentication);
     }
 
