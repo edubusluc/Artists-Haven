@@ -9,6 +9,7 @@ import UserLogin from './components/UserLogin';
 import Logout from './components/Logout';
 import UserProfile from './components/UserProfile';
 import EditProfile from './components/EditProfile';
+import EmailForm from './components/EmailForm';
 
 const HomePage = () => {
   const [userEmail, setUserEmail] = useState(null);
@@ -26,32 +27,32 @@ const HomePage = () => {
     const googleToken = response.credential;
 
     try {
-        // Enviar el token de Google al backend usando fetch
-        const backendResponse = await fetch('/api/auth/google-login', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ idTokenString: googleToken }),
-        });
+      // Enviar el token de Google al backend usando fetch
+      const backendResponse = await fetch('/api/auth/google-login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ idTokenString: googleToken }),
+      });
 
-        if (!backendResponse.ok) {
-            throw new Error('Error during Google login');
-        }
+      if (!backendResponse.ok) {
+        throw new Error('Error during Google login');
+      }
 
-        const data = await backendResponse.json();
-        const jwtToken = data.token;  // Asegúrate de obtener el token del objeto JSON
+      const data = await backendResponse.json();
+      const jwtToken = data.token;  // Asegúrate de obtener el token del objeto JSON
 
-        // Guardar el token JWT en el almacenamiento local
-        localStorage.setItem('authToken', jwtToken);
-        localStorage.setItem('userEmail', data.email);
+      // Guardar el token JWT en el almacenamiento local
+      localStorage.setItem('authToken', jwtToken);
+      localStorage.setItem('userEmail', data.email);
 
-        // Redirigir al usuario a la página principal (u otra página)
-        window.location.href = '/';
+      // Redirigir al usuario a la página principal (u otra página)
+      window.location.href = '/';
     } catch (error) {
-        console.error('Error during Google login:', error);
+      console.error('Error during Google login:', error);
     }
-};
+  };
 
 
   const handleGoogleLoginError = (error) => {
@@ -61,7 +62,7 @@ const HomePage = () => {
   return (
     <div>
       <h1>Bienvenido a la App</h1>
-      
+
       {userEmail ? (
         <>
           <p>Email: {userEmail}</p>
@@ -92,12 +93,18 @@ const HomePage = () => {
       <Link to="/users">
         <button>Ir a UserList</button>
       </Link>
+
+      <p>Mandar reporte</p>
+      <Link to="/email">
+        <button>Report</button>
+      </Link>
+
       <br />
       <p>O haz clic para registrar un nuevo usuario:</p>
       <Link to="/user/register">
         <button>Registrar Usuario</button>
       </Link>
-      <p>O haz clic para registrar un nuevo artista:</p>     
+      <p>O haz clic para registrar un nuevo artista:</p>
 
       {userEmail && <Logout />}
     </div>
@@ -116,6 +123,7 @@ const App = () => {
           <Route path="/auth/login" element={<UserLogin />} />
           <Route path="/users/profile" element={<UserProfile />} />
           <Route path="/profile/edit" element={<EditProfile />} />
+          <Route path="/email" element={<EmailForm />} />
         </Routes>
       </Router>
     </GoogleOAuthProvider>
