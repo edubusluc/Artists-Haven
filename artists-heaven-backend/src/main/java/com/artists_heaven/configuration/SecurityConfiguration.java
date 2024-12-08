@@ -31,6 +31,7 @@ public class SecurityConfiguration {
                 .requestMatchers("/api/users/profile", "/api/users/list", "/api/users/register", "/api/artists/register", "/api/auth/login", "/api/auth/google-login", "/api/emails/send").permitAll()
                 .requestMatchers("/api/users/profile").authenticated()
                 .requestMatchers("/api/admin/validate_artist").hasRole("ADMIN")
+                .requestMatchers("api/verification/send").hasRole("ARTIST")
                 .requestMatchers("/accounts.google.com/**", "/api/**").permitAll()
                 .requestMatchers("/login/oauth2/code/google").permitAll()
                 .anyRequest().authenticated()

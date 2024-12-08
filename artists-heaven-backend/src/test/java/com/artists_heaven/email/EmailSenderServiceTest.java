@@ -30,7 +30,7 @@ public class EmailSenderServiceTest {
         email.setDescription("This is a test bug description.");
 
         // Llamar al método sendEmail
-        emailSenderService.sendEmail(email);
+        emailSenderService.sendReportEmail(email);
 
         // Verificar que el repositorio guarda el email
         verify(emailSenderRepository, times(1)).save(email);
