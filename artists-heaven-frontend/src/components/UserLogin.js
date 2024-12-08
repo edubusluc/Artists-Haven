@@ -20,11 +20,14 @@ const UserLogin = () => {
             });
 
             // Guardar el token en el almacenamiento local
-            const token = response.data;
+            const token = response.data.token;
+            const role = response.data.role;
             localStorage.setItem("authToken", token);
 
             // Guardar el correo del usuario en el localStorage
             localStorage.setItem("userEmail", email);
+
+            localStorage.setItem("role", role);
 
             // Configurar el token en las cabeceras de axios para futuras solicitudes
             axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;

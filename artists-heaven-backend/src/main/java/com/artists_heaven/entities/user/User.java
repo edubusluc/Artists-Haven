@@ -10,8 +10,6 @@ import org.springframework.security.core.userdetails.UserDetails;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import jakarta.persistence.Column;
-import jakarta.persistence.DiscriminatorColumn;
-import jakarta.persistence.DiscriminatorType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -33,8 +31,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
-@DiscriminatorColumn(name = "user_type", discriminatorType = DiscriminatorType.STRING)
+@Inheritance(strategy = InheritanceType.JOINED)
 @Table(name = "users")
 public class User implements UserDetails {
 
@@ -72,7 +69,9 @@ public class User implements UserDetails {
     public Collection<? extends GrantedAuthority> getAuthorities() {
         if (role == UserRole.ARTIST) {
             return List.of(new SimpleGrantedAuthority("ROLE_ARTIST"));
-        } else {
+        } else if (role == UserRole.ADMIN){
+            return List.of(new SimpleGrantedAuthority("ROLE_ADMIN"));
+        }else{
             return List.of(new SimpleGrantedAuthority("ROLE_USER"));
         }
     }

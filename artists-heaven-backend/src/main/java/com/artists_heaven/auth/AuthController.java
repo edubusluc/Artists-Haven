@@ -1,5 +1,6 @@
 package com.artists_heaven.auth;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -41,12 +42,30 @@ public class AuthController{
     }
 
     @PostMapping("/login")
-    public ResponseEntity<String> login(@RequestBody LoginRequest loginRequest) {
+    public ResponseEntity<Map<String, Object>> login(@RequestBody LoginRequest loginRequest) {
         try {
             String token = authService.login(loginRequest.getEmail(), loginRequest.getPassword());
-            return new ResponseEntity<>(token, HttpStatus.OK);
-        } catch (IllegalArgumentException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.UNAUTHORIZED);
+            if (token == null) {
+                // Manejo de error si el token es nulo
+                return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
+            }
+    
+            User user = userRepository.findByEmail(loginRequest.getEmail());
+            if (user == null) {
+                // Manejo de error si el usuario no se encuentra
+                return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
+            }
+    
+            UserRole role = user.getRole();
+    
+            Map<String, Object> response = new HashMap<>();
+            response.put("token", token);
+            response.put("role", role);
+            return new ResponseEntity<>(response, HttpStatus.OK);
+    
+        } catch (Exception e) {
+            // Manejo de excepciones generales con logging opcional
+            return new ResponseEntity<>(Map.of("error", "Invalid credentials or server error"), HttpStatus.UNAUTHORIZED);
         }
     }
 
@@ -75,7 +94,7 @@ public class AuthController{
                 }
 
                 Authentication authentication = new UsernamePasswordAuthenticationToken(
-                        user, null, AuthorityUtils.createAuthorityList("ROLE_USER"));
+                        user, null, AuthorityUtils.createAuthorityList("USER"));
 
                 String token = jwtTokenProvider.generateToken(authentication);
 

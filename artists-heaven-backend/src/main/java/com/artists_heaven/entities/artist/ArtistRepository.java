@@ -9,6 +9,4 @@ public interface ArtistRepository  extends JpaRepository<Artist, Long> {
     Boolean existsByArtistName(String artistName);
 
     Artist findByEmail(String email);
-    
-    
 }

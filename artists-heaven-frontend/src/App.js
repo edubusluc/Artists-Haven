@@ -13,6 +13,7 @@ import EmailForm from './components/EmailForm';
 
 const HomePage = () => {
   const [userEmail, setUserEmail] = useState(null);
+  console.log(localStorage.getItem("role"))
 
   useEffect(() => {
     const storedEmail = localStorage.getItem('userEmail');
