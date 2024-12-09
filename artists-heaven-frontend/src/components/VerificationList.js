@@ -21,11 +21,13 @@ const fetchVideoBlob = async (videoUrl, authToken) => {
     }
 };
 
+// Función para hacer la verificación de un artista
 const VerificationList = () => {
     const [verifications, setVerifications] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const authToken = localStorage.getItem("authToken");
+    const [authToken, setAuthToken] = useState(localStorage.getItem("authToken"));
+    const [users, setUsers] = useState([]);
 
     useEffect(() => {
         const fetchVerifications = async () => {
@@ -52,6 +54,33 @@ const VerificationList = () => {
         fetchVerifications();
     }, [authToken]);
 
+    const verifyArtist = (id, verificationId) => {
+        fetch('/api/admin/validate_artist', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify({
+                 id,
+                 verificationId}),
+        })
+            .then(response => {
+                if (response.ok) {
+                    setUsers(users.map(user =>
+                        user.id === id ? { ...user, role: "ARTIST" } : user
+                    ));
+                    console.log("Artitsa verificado")
+                    window.location.reload()
+                } else {
+                    console.log('Error al verificar al artista');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+    };
+
     if (loading) return <p>Loading...</p>;
     if (error) return <p>Error: {error}</p>;
 
@@ -64,18 +93,27 @@ const VerificationList = () => {
                     <th>Video</th>
                     <th>Date</th>
                     <th>Status</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
                 {verifications.map((verification) => (
                     <tr key={verification.id}>
                         <td>{verification.id}</td>
+
                         <td>{verification.artist?.artistName || "Unknown"}</td>
                         <td>
                             <VideoLink videoUrl={verification.videoUrl} authToken={authToken} />
                         </td>
                         <td>{new Date(verification.date).toLocaleString()}</td>
                         <td>{verification.status}</td>
+                        <td>
+                            {!verification.artist.isvalid ? (
+                                <button onClick={() => verifyArtist(verification.artist.id, verification.id)}>Verificar Artista</button>
+                            ) : (
+                                <span>El artista ya está verificado</span>
+                            )}
+                        </td>
                     </tr>
                 ))}
             </tbody>

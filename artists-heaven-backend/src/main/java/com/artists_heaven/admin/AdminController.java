@@ -5,6 +5,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.artists_heaven.entities.artist.Artist;
 import com.artists_heaven.entities.artist.ArtistRepository;
+import com.artists_heaven.verification.VerficationStatus;
 import com.artists_heaven.verification.Verification;
 import com.artists_heaven.verification.VerificationRepository;
 
@@ -50,6 +51,13 @@ public class AdminController {
         artist.setIsvalid(true);
         artistRepository.save(artist);
 
+        Long verificationId = payload.get("verificationId");
+        Verification verification = verificationRepository.findById(verificationId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Verificación no encontrado"));
+
+        verification.setStatus(VerficationStatus.ACCEPTED);
+        verificationRepository.save(verification);
+        
         return ResponseEntity.ok(Map.of("message", "Artista verificado de forma correcta"));
 
     }
