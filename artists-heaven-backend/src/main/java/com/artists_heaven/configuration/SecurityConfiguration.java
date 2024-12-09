@@ -32,11 +32,10 @@ public class SecurityConfiguration{
             .authorizeHttpRequests(authorize -> authorize
                 .requestMatchers("/api/users/profile", "/api/users/list", "/api/users/register", "/api/artists/register", "/api/auth/login", "/api/auth/google-login", "/api/emails/send").permitAll()
                 .requestMatchers("/api/users/profile").authenticated()
-                .requestMatchers("/api/admin/validate_artist", "/api/admin/verification/pending").hasRole("ADMIN")
+                .requestMatchers("/api/admin/validate_artist", "/api/admin/verification/pending", "/api/admin/verification_media/**").hasRole("ADMIN")
                 .requestMatchers("api/verification/send").hasRole("ARTIST")
-                .requestMatchers("/accounts.google.com/**", "/verification_media/**").permitAll()
+                .requestMatchers("/accounts.google.com/**").permitAll()
                 .requestMatchers("/login/oauth2/code/google").permitAll()
-                .requestMatchers("/api/admin/verification_media/**").permitAll()
                 .anyRequest().authenticated()
             )
             .oauth2Login(oauth2 -> oauth2
