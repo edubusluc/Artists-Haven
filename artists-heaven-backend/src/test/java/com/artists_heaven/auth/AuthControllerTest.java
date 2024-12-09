@@ -1,7 +1,5 @@
 package com.artists_heaven.auth;
 
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
@@ -12,12 +10,15 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
 import java.util.Map;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -25,11 +26,11 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.http.HttpStatus;
 
 import com.artists_heaven.configuration.JwtTokenProvider;
 import com.artists_heaven.entities.user.User;
 import com.artists_heaven.entities.user.UserRepository;
+import com.artists_heaven.entities.user.UserRole;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload;
@@ -73,14 +74,48 @@ public class AuthControllerTest {
     public void testLoginUser_withValidCredentials() throws Exception {
 
         String mockJwt = "mock-jwt-token";
+        User user = new User();
+        user.setEmail("email@example.com");
+        user.setRole(UserRole.USER);
+
         when(authService.login(anyString(), anyString())).thenReturn(mockJwt);
 
         LoginRequest loginRequest = new LoginRequest("email@example.com", "password1234");
+        when(userRepository.findByEmail("email@example.com")).thenReturn(user);
 
         mockMvc.perform(post("/api/auth/login")
                 .contentType("application/json")
                 .content(objectMapper.writeValueAsString(loginRequest)))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    public void testLoginUser_withUserNull() throws Exception {
+
+        String mockJwt = "mock-jwt-token";
+        User user = new User();
+        user.setEmail("email@example.com");
+        user.setRole(UserRole.USER);
+
+        when(authService.login(anyString(), anyString())).thenReturn(mockJwt);
+
+        LoginRequest loginRequest = new LoginRequest("wrongemail@email.com", "password1234");
+        when(userRepository.findByEmail("email@example.com")).thenReturn(user);
+
+        mockMvc.perform(post("/api/auth/login")
+                .contentType("application/json")
+                .content(objectMapper.writeValueAsString(loginRequest)))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    public void testLoginUser_withNullToken() throws Exception {
+        LoginRequest loginRequest = new LoginRequest("wrongemail@email.com", "password1234");
+        when(authService.login(anyString(), anyString())).thenReturn(null);
+        mockMvc.perform(post("/api/auth/login")
+                .contentType("application/json")
+                .content(objectMapper.writeValueAsString(loginRequest)))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test

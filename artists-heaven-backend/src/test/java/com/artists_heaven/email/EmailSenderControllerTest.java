@@ -12,7 +12,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -44,7 +43,7 @@ public class EmailSenderControllerTest {
         email.setType(EmailType.BUG_REPORT);
         email.setDescription("This is a test bug description.");
 
-        doNothing().when(emailService).sendEmail(any(Email.class));
+        doNothing().when(emailService).sendReportEmail(any(Email.class));
 
         mockMvc.perform(post("/api/emails/send")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -52,6 +51,6 @@ public class EmailSenderControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string("Email enviado exitosamente!"));
 
-        verify(emailService, times(1)).sendEmail(any(Email.class));
+        verify(emailService, times(1)).sendReportEmail(any(Email.class));
     }
 }

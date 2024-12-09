@@ -1,39 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { checkTokenExpiration } from '../utils/authUtils';
 
 const Profile = () => {
     const [profile, setProfile] = useState(null);
     const navigate = useNavigate();
-
     useEffect(() => {
-        // Obtener el token de autenticación desde localStorage
-        const token = localStorage.getItem("authToken");
-        console.log("TOKEN PERFIL", token)
-        // Verificar si el token existe
-        if (!token) {
-            console.error('No se encontró el token de autenticación');
-            return;
-        }
-
-        // Realizar la solicitud GET a la API de Spring Boot para obtener el perfil
-        fetch('/api/users/profile', {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,  // Pasar el token en el header
-            },
-            mode: 'cors'
-        })
-            .then(response => {
-                console.log(response)
-                if (!response.ok) {
-                    throw new Error('Error al obtener el perfil: ' + response.statusText);
-                }
-                return response.json();
+        if (checkTokenExpiration()) { // Verifica si el token es válido
+            const token = localStorage.getItem("authToken");
+            // Realizar la solicitud GET a la API de Spring Boot para obtener el perfil
+            fetch('/api/users/profile', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,  // Pasar el token en el header
+                },
             })
-            .then(data => setProfile(data))
-            .catch(error => console.error('Error fetching profile:', error));
-    }, []);
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Error al obtener el perfil: ' + response.statusText);
+                    }
+                    return response.json();
+                })
+                .then(data => setProfile(data))
+                .catch(error => console.error('Error fetching profile:', error));
+        }
+    }, [navigate]);
 
     if (!profile) {
         return <div>Cargando...</div>;

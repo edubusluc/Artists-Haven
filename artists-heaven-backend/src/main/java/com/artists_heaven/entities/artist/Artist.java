@@ -22,4 +22,7 @@ public class Artist extends User {
     @Column(name = "artist_url")
     @URL(message = "La URL proporcionada no es válida")
     private String url;
+
+    @Column(name = "is_valid")
+    private Boolean isvalid = false;
 }

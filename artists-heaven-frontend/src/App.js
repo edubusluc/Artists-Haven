@@ -10,13 +10,20 @@ import Logout from './components/Logout';
 import UserProfile from './components/UserProfile';
 import EditProfile from './components/EditProfile';
 import EmailForm from './components/EmailForm';
+import VerificationForm from './components/VerificationForm';
+import VerificationList from './components/VerificationList';
+import { checkTokenExpiration } from './utils/authUtils';
 
 const HomePage = () => {
   const [userEmail, setUserEmail] = useState(null);
+  const rol = localStorage.getItem("role")
 
   useEffect(() => {
+    if (!localStorage.getItem('firstTime')) {
+      localStorage.setItem('firstTime', true);
+    }
+    checkTokenExpiration();
     const storedEmail = localStorage.getItem('userEmail');
-    console.log(localStorage.getItem('authToken'))
     if (storedEmail) {
       setUserEmail(storedEmail);
     }
@@ -106,6 +113,14 @@ const HomePage = () => {
       </Link>
       <p>O haz clic para registrar un nuevo artista:</p>
 
+      {rol === "ARTIST" && <Link to="/verification">
+        <button>Send Verification Request</button>
+      </Link>}
+
+      {rol === "ADMIN" && <Link to="/admin/verification/pending">
+        <button>View Verification Request</button>
+      </Link>}
+
       {userEmail && <Logout />}
     </div>
   );
@@ -124,6 +139,8 @@ const App = () => {
           <Route path="/users/profile" element={<UserProfile />} />
           <Route path="/profile/edit" element={<EditProfile />} />
           <Route path="/email" element={<EmailForm />} />
+          <Route path="/verification" element={<VerificationForm />} />
+          <Route path="/admin/verification/pending" element={<VerificationList />} />
         </Routes>
       </Router>
     </GoogleOAuthProvider>

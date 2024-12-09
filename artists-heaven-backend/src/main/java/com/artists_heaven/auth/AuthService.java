@@ -36,7 +36,15 @@ public class AuthService {
             throw new IllegalArgumentException("Credenciales inválidas");
         }
 
-        String role = (user.getRole() == UserRole.USER) ? "ROLE_USER" : "ROLE_ARTIST";
+        String role = "";
+        
+        if(user.getRole() == UserRole.USER){
+            role = "ROLE_USER";
+        }else if(user.getRole() == UserRole.ARTIST){
+            role = "ROLE_ARTIST";
+        }else{
+            role = "ROLE_ADMIN";
+        }
 
 
         Authentication authentication = new UsernamePasswordAuthenticationToken(

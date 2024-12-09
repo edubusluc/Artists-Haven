@@ -2,7 +2,6 @@ package com.artists_heaven.auth;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -39,16 +38,36 @@ public class AuthServiceTest {
         userTest.setLastName("Lorem Ipsum");
         userTest.setUsername("Lorem Ipsum");
         userTest.setPassword(new BCryptPasswordEncoder().encode("password1234"));
-        userTest.setRole(UserRole.USER);
 
     }
 
     @Test
     @Transactional
     public void testLogin_withValidCredentials_returnsJwt() {
+        userTest.setRole(UserRole.USER);
         userRepository.save(userTest);
         String token = authService.login("email@email.com", "password1234");
         assertNotNull(token, "El token no debería ser nulo");
+    }
+
+    @Test
+    @Transactional
+    public void testLogin_withValidCredentialsRoleAritst() {
+        userTest.setRole(UserRole.ARTIST);
+        userRepository.save(userTest);
+        String token = authService.login("email@email.com", "password1234");
+        assertNotNull(token, "El token no debería ser nulo");
+       
+    }
+
+    @Test
+    @Transactional
+    public void testLogin_withValidCredentialsRoleAdmin() {
+        userTest.setRole(UserRole.ADMIN);
+        userRepository.save(userTest);
+        String token = authService.login("email@email.com", "password1234");
+        assertNotNull(token, "El token no debería ser nulo");
+       
     }
 
     @Test
@@ -64,6 +83,7 @@ public class AuthServiceTest {
     @Test
     @Transactional
     public void testLogin_withNonValidCredentials() {
+        userTest.setRole(UserRole.USER);
         userRepository.save(userTest);
         assertThrows(IllegalArgumentException.class, () -> {
             authService.login(userTest.getEmail(), "invalid password");
