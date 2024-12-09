@@ -5,7 +5,6 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -14,18 +13,18 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 
-import com.artists_heaven.auth.LoginRequest;
 import com.artists_heaven.email.EmailSenderService;
 import com.artists_heaven.entities.artist.Artist;
 import com.artists_heaven.entities.artist.ArtistRepository;
+import org.springframework.beans.factory.annotation.Value;
+
+
 
 @RestController
 @RequestMapping("/api/verification")
@@ -40,7 +39,7 @@ public class VerificationController {
     @Autowired
     VerificationRepository verificationRepository;
 
-    private String url = "artists-heaven-backend/src/verification_media";
+    private String url = "artists-heaven-backend/src/main/resources/verification_media";
 
     @PostMapping("/send")
     public ResponseEntity<Map<String, Object>> sendValidation(
@@ -103,12 +102,13 @@ public class VerificationController {
     }
 
     private String saveFile(MultipartFile file) throws IOException {
-        // Aquí puedes usar un servicio de almacenamiento en la nube o guardar
-        // localmente.
         String directory = url;
-        String fileName = UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
+        String fileName = file.getOriginalFilename();
         Path filePath = Paths.get(directory, fileName);
         Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
-        return filePath.toString();
+        
+        // Devuelve una URL accesible desde el cliente
+        return "/verification_media/" + fileName;
     }
+   
 }

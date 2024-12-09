@@ -15,9 +15,11 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+
+
 @Configuration
 @EnableWebSecurity
-public class SecurityConfiguration {
+public class SecurityConfiguration{
 
     @Autowired
     JwtAuthenticationFilter jwtAuthorizationFilter;
@@ -30,10 +32,11 @@ public class SecurityConfiguration {
             .authorizeHttpRequests(authorize -> authorize
                 .requestMatchers("/api/users/profile", "/api/users/list", "/api/users/register", "/api/artists/register", "/api/auth/login", "/api/auth/google-login", "/api/emails/send").permitAll()
                 .requestMatchers("/api/users/profile").authenticated()
-                .requestMatchers("/api/admin/validate_artist").hasRole("ADMIN")
+                .requestMatchers("/api/admin/validate_artist", "/api/admin/verification/pending").hasRole("ADMIN")
                 .requestMatchers("api/verification/send").hasRole("ARTIST")
-                .requestMatchers("/accounts.google.com/**", "/api/**").permitAll()
+                .requestMatchers("/accounts.google.com/**", "/verification_media/**").permitAll()
                 .requestMatchers("/login/oauth2/code/google").permitAll()
+                .requestMatchers("/api/admin/verification_media/**").permitAll()
                 .anyRequest().authenticated()
             )
             .oauth2Login(oauth2 -> oauth2
@@ -47,7 +50,7 @@ public class SecurityConfiguration {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000"));
+        configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000", "/verification_media/**"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);
