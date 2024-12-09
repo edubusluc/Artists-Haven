@@ -1,7 +1,6 @@
 package com.artists_heaven.verification;
 
 import java.time.LocalDateTime;
-import java.util.Date;
 
 import com.artists_heaven.entities.artist.Artist;
 
@@ -32,7 +31,7 @@ public class Verification {
 
     private LocalDateTime date;
 
-    private VerficationStatus status;
+    private VerificationStatus status;
 
 
 }

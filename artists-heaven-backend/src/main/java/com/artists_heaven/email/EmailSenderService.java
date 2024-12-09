@@ -17,6 +17,7 @@ public class EmailSenderService {
     private EmailSenderRepository emailSenderRepository;
 
     public void sendReportEmail(Email email) {
+        email.setType(EmailType.BUG_REPORT);
         emailSenderRepository.save(email);
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo("mod.artistheaven@gmail.com");

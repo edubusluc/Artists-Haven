@@ -1,12 +1,16 @@
 package com.artists_heaven.email;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+
 import org.junit.jupiter.api.Test;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.SimpleMailMessage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import static org.mockito.Mockito.*;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
+import com.artists_heaven.entities.artist.Artist;
 
 @SpringBootTest
 public class EmailSenderServiceTest {
@@ -20,8 +24,9 @@ public class EmailSenderServiceTest {
     @MockBean
     private EmailSenderRepository emailSenderRepository;
 
+
     @Test
-    public void testSendEmail() {
+    public void testSendReportEmail() {
         // Preparar los datos de prueba
         Email email = new Email();
         email.setId(1L);
@@ -44,5 +49,20 @@ public class EmailSenderServiceTest {
 
         verify(mailSender, times(1)).send(expectedMessage);
     }
-}
 
+    @Test
+    public void testSendVerificationEmail() {
+        // Arrange
+        Artist artist = new Artist();
+        artist.setArtistName("Test Artist");
+
+        // Act
+        emailSenderService.sendVerificationEmail(artist);
+
+        // Assert
+        // Verifica que el método send de mailSender se llamó una vez
+        verify(mailSender, times(1)).send((SimpleMailMessage) any()); // Usa any() si no quieres verificar el contenido
+    }
+
+
+}

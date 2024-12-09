@@ -5,26 +5,21 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.artists_heaven.entities.artist.Artist;
 import com.artists_heaven.entities.artist.ArtistRepository;
-import com.artists_heaven.verification.VerficationStatus;
+import com.artists_heaven.verification.VerificationStatus;
 import com.artists_heaven.verification.Verification;
 import com.artists_heaven.verification.VerificationRepository;
 
 import java.nio.file.Paths;
-import java.security.Principal;
 import java.util.List;
 import java.util.Map;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.HttpHeaders;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -53,9 +48,9 @@ public class AdminController {
 
         Long verificationId = payload.get("verificationId");
         Verification verification = verificationRepository.findById(verificationId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Verificación no encontrado"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Verificación no encontrada"));
 
-        verification.setStatus(VerficationStatus.ACCEPTED);
+        verification.setStatus(VerificationStatus.ACCEPTED);
         verificationRepository.save(verification);
         
         return ResponseEntity.ok(Map.of("message", "Artista verificado de forma correcta"));

@@ -5,7 +5,6 @@ import { checkTokenExpiration } from '../utils/authUtils';
 const Profile = () => {
     const [profile, setProfile] = useState(null);
     const navigate = useNavigate();
-    console.log(checkTokenExpiration())
     useEffect(() => {
         if (checkTokenExpiration()) { // Verifica si el token es válido
             const token = localStorage.getItem("authToken");

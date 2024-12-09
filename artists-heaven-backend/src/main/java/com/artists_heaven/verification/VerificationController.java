@@ -7,7 +7,6 @@ import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -22,7 +21,6 @@ import java.nio.file.Path;
 import com.artists_heaven.email.EmailSenderService;
 import com.artists_heaven.entities.artist.Artist;
 import com.artists_heaven.entities.artist.ArtistRepository;
-import org.springframework.beans.factory.annotation.Value;
 
 
 
@@ -89,7 +87,7 @@ public class VerificationController {
 
     private boolean hasPendingVerification(Artist artist) {
         List<Verification> verificationCheck = verificationRepository.findByArtistId(artist.getId());
-        return verificationCheck.stream().anyMatch(v -> v.getStatus() == VerficationStatus.PENDING);
+        return verificationCheck.stream().anyMatch(v -> v.getStatus() == VerificationStatus.PENDING);
     }
 
     private void createVerification(Artist artist, String videoUrl) {
@@ -97,7 +95,7 @@ public class VerificationController {
         verification.setArtist(artist);
         verification.setVideoUrl(videoUrl);
         verification.setDate(LocalDateTime.now());
-        verification.setStatus(VerficationStatus.PENDING);
+        verification.setStatus(VerificationStatus.PENDING);
         verificationRepository.save(verification);
     }
 
@@ -109,6 +107,5 @@ public class VerificationController {
         
         // Devuelve una URL accesible desde el cliente
         return "/verification_media/" + fileName;
-    }
-   
+    }   
 }
