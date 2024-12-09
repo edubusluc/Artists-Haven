@@ -17,9 +17,11 @@ import { checkTokenExpiration } from './utils/authUtils';
 const HomePage = () => {
   const [userEmail, setUserEmail] = useState(null);
   const rol = localStorage.getItem("role")
-  console.log(localStorage.getItem("role"))
 
   useEffect(() => {
+    if (!localStorage.getItem('firstTime')) {
+      localStorage.setItem('firstTime', true);
+    }
     checkTokenExpiration();
     const storedEmail = localStorage.getItem('userEmail');
     if (storedEmail) {
@@ -116,7 +118,7 @@ const HomePage = () => {
       </Link>}
 
       {rol === "ADMIN" && <Link to="/admin/verification/pending">
-        <button>Send Verification Request</button>
+        <button>View Verification Request</button>
       </Link>}
 
       {userEmail && <Logout />}

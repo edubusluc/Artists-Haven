@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import axios from "axios";
+import { Link } from 'react-router-dom';
 
 const UserLogin = () => {
     const [email, setEmail] = useState("");
@@ -33,6 +34,7 @@ const UserLogin = () => {
             axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
 
             // Redirigir al usuario a la página principal (u otra página)
+            localStorage.setItem('firstTime', false) 
             window.location.href = "/";  // Puedes cambiar esta ruta si es necesario
 
         } catch (err) {
@@ -75,6 +77,9 @@ const UserLogin = () => {
 
                 {error && <p className="error-message">{error}</p>}
             </form>
+            <Link to="/">
+        <button>Home</button>
+      </Link>
         </div>
     );
 };
