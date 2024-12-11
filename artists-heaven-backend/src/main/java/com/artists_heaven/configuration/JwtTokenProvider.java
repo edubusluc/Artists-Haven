@@ -26,70 +26,79 @@ public class JwtTokenProvider {
     @Autowired
     private UserRepository userRepository;
 
+    // Load the secret key from environment variables
     Dotenv dotenv = Dotenv.load();
     private String secretKey = dotenv.get("JWT_SECRET");
 
 
-    // Método para obtener la clave secreta de forma segura
+    // Method to retrieve the signing key securely
     public Key getSigningKey() {
         return Keys.hmacShaKeyFor(secretKey.getBytes());
     }
 
-    // Método para resolver el token desde el encabezado Authorization
+    // Method to extract the token from the Authorization header
     public String resolveToken(HttpServletRequest request) {
         String bearerToken = request.getHeader("Authorization");
         if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
+            // Remove "Bearer " prefix to get the token
             return bearerToken.substring(7);
         }
         return null;
     }
 
-    // Método para validar el token
+    // Method to validate the JWT token
     public boolean validateToken(String token) {
         try {
             Jwts.parserBuilder()
-                    .setSigningKey(getSigningKey()) // Usar la clave segura para validar
+                    // Use the signing key to validate the token
+                    .setSigningKey(getSigningKey())
                     .build()
                     .parseClaimsJws(token);
             return true;
         } catch (Exception e) {
-            return false; // En caso de que el token sea inválido
+            return false;
         }
     }
 
-    // Método para obtener la autenticación del usuario desde el token
+    // Method to retrieve authentication information from the token
     public Authentication getAuthentication(String token) {
-        // Obtén las reclamaciones (claims) del token
+        // Extract claims from the token
         Claims claims = getClaims(token);
-        String email = claims.getSubject(); // Obtén el correo electrónico desde el token
+        // Retrieve the email (subject) from the token
+        String email = claims.getSubject(); 
 
-        // Busca el usuario en la base de datos usando el correo electrónico
+        // Look up the user in the database by email
         User myUser = userRepository.findByEmail(email);
 
         if (myUser == null) {
-            // Lanza una excepción si el usuario no se encuentra
+            // Throw an exception if the user is not found
             throw new UsernameNotFoundException("User not found with email: " + email);
         }
 
-        // Retorna el objeto Authentication con el usuario, token y sus autoridades
+        // Return an Authentication object with the user, token, and authorities
         return new UsernamePasswordAuthenticationToken(myUser, token, myUser.getAuthorities());
     }
 
-    // Método para obtener los reclamos (claims) del token
+     // Method to extract claims (payload) from the token
     private Claims getClaims(String token) {
         return Jwts.parserBuilder()
-                .setSigningKey(getSigningKey()) // Usar la clave segura para obtener los claims
+                .setSigningKey(getSigningKey())
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
     }
 
-    // Método para generar un nuevo token JWT
+    // Method to generate a new JWT token
     public String generateToken(Authentication authentication) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + (900 * 1000));
         String email = "";
 
+        // Retrieve the email from the authenticated user
+        /**
+         * authentication.getPrincipal() instanceof User -> login by web form
+         * email = authentication.getName(); -> login by google
+         */ 
         if(authentication.getPrincipal() instanceof User){
             User userDetails = (User) authentication.getPrincipal();
             email = userDetails.getEmail();
@@ -98,12 +107,13 @@ public class JwtTokenProvider {
             email = authentication.getName();
         }
         
-
+        // Build and return the JWT token
         return Jwts.builder()
                 .setSubject(email)
                 .setIssuedAt(now)
                 .setExpiration(expiryDate)
-                .signWith(getSigningKey(), SignatureAlgorithm.HS256) // Usar la clave segura para firmar
+                // Sign the token with the secure key
+                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
 }
