@@ -13,16 +13,18 @@ public class UserProfileDTO {
     private String lastName;
     private String artistName;
 
-    // Constructor predeterminado (necesario para Jackson)
-    public UserProfileDTO() {}
+    /*
+     * Default constructor (necessary for Jackson)
+     * For serialization and deserialization of the class.
+     */
+    public UserProfileDTO() {
+    }
 
-    // Constructor para User
+    // Constructor for User
     public UserProfileDTO(User user) {
         this.email = user.getEmail();
         this.firstName = user.getFirstName();
         this.lastName = user.getLastName();
         this.username = user.getUsername();
     }
-
 }
-
