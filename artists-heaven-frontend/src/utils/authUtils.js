@@ -18,11 +18,11 @@ export const checkTokenExpiration = () => {
                 return false;
             }
             return true;
-        } else {
+        } 
+        }else {
             if (!localStorage.getItem('firstTime') === true) {
                 window.location.href = '/auth/login';
             }
             return false;
-        }
     }
 };
