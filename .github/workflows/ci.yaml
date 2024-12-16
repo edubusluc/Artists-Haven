@@ -93,7 +93,7 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           npx sonar-scanner \
-            -Dsonar.projectKey=edubusluc_Artists-Haven-Frontend \
+            -Dsonar.projectKey=edubusluc_Artists-Haven \
             -Dsonar.sources=artists-heaven-frontend/src \
             -Dsonar.organization=edubusluc \
             -Dsonar.language=js \
