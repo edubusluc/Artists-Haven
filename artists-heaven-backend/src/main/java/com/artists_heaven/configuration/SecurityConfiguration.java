@@ -42,7 +42,12 @@ public class SecurityConfiguration {
     
     // Endpoints accessible only by ARTIST users
     private static final String[] ARTIST_ENDPOINTS = {
-        "/api/verification/send"
+        "/api/verification/send",
+    };
+
+    private static final String[] AUTHENTICATED_ENDPOINTS = {
+        "/api/users/profile/edit",
+        "/api/users/profile"
     };
 
     @Bean
@@ -61,6 +66,7 @@ public class SecurityConfiguration {
                 .requestMatchers(PUBLIC_ENDPOINTS).permitAll() 
                 .requestMatchers(ADMIN_ENDPOINTS).hasRole("ADMIN")
                 .requestMatchers(ARTIST_ENDPOINTS).hasRole("ARTIST")
+                .requestMatchers(AUTHENTICATED_ENDPOINTS).authenticated()
                 .anyRequest().authenticated()
             )
             // Configures OAuth2 login with a default success URL
