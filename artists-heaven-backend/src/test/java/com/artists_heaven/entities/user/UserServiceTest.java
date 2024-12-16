@@ -1,58 +1,155 @@
 package com.artists_heaven.entities.user;
 
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
-import org.springframework.boot.test.context.SpringBootTest;
-import jakarta.transaction.Transactional;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.*;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
+import java.security.Principal;
 import java.util.List;
 
-@SpringBootTest
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-public class UserServiceTest {
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
-    @Autowired
+import com.artists_heaven.entities.artist.Artist;
+
+class UserServiceTest {
+
+    @Mock
     private UserRepository userRepository;
 
-    @Autowired 
+    @Mock
+    private PasswordEncoder passwordEncoder;
+
+    @InjectMocks
     private UserService userService;
 
-    private static User userTest; 
-
-    @BeforeAll
-    public static void setup() {
-        userTest = new User();
-        userTest.setEmail("email@email.com");
-        userTest.setUsername("Lorem Ipsum");
-        userTest.setFirstName("Lorem Ipsum");
-        userTest.setLastName("Lorem Ipsum");
-        userTest.setPassword("password1234");
-        userTest.setRole(UserRole.USER);
+    @BeforeEach
+    void setUp() {
+        MockitoAnnotations.openMocks(this);
     }
 
     @Test
-    @Transactional
-    public void testRegisterUserEmailError() {
-        // Guardar el usuario de prueba en la base de datos
-        userService.registerUser(userTest);
+    void testGetAllUsers() {
+        User user1 = new User();
+        User user2 = new User();
+        List<User> userList = List.of(user1, user2);
 
-        List<User> users = userService.getAllUsers();
-        User user_test = users.get(0);
+        when(userRepository.findAll()).thenReturn(userList);
 
-        assertThat(user_test.getPassword()).isNotEqualTo("password1234");
-        assertThat(user_test.getRole()).isEqualTo(UserRole.USER);
-        
+        List<User> result = userService.getAllUsers();
+
+        assertEquals(2, result.size());
+        verify(userRepository, times(1)).findAll();
     }
 
     @Test
-    @Transactional
-    public void testGetAllUsers() {
-        userRepository.save(userTest);
-        List<User> allUsers = userService.getAllUsers();
-        assertThat(allUsers.size()==1);
+    void testRegisterUser() {
+        User user = new User();
+        user.setPassword("plainPassword");
+
+        when(passwordEncoder.encode(anyString())).thenReturn("encodedPassword");
+        when(userRepository.save(any(User.class))).thenReturn(user);
+
+        User result = userService.registerUser(user);
+
+        assertEquals("encodedPassword", result.getPassword());
+        assertEquals(UserRole.USER, result.getRole());
+        verify(passwordEncoder, times(1)).encode("plainPassword");
+        verify(userRepository, times(1)).save(user);
+    }
+
+    @Test
+    void testGetUserProfile() {
+        User user = new User();
+        user.setFirstName("John");
+        user.setLastName("Doe");
+        Principal principal = mock(Authentication.class);
+        when(((Authentication) principal).getPrincipal()).thenReturn(user);
+
+        UserProfileDTO result = userService.getUserProfile(principal);
+
+        assertEquals("John", result.getFirstName());
+        assertEquals("Doe", result.getLastName());
+    }
+
+    @Test
+    void testGetUserProfile_Artist() {
+        Artist artist = new Artist();
+        artist.setFirstName("John");
+        artist.setLastName("Doe");
+        artist.setArtistName("JDArtist");
+        Principal principal = mock(Authentication.class);
+        when(((Authentication) principal).getPrincipal()).thenReturn(artist);
+
+        UserProfileDTO result = userService.getUserProfile(principal);
+
+        assertEquals("John", result.getFirstName());
+        assertEquals("Doe", result.getLastName());
+        assertEquals("JDArtist", result.getArtistName());
+    }
+
+    @Test
+    void testGetUserProfileException() {
+        Authentication authentication = mock(Authentication.class); when(authentication.getPrincipal()).thenReturn(null);
+         Exception exception = assertThrows(IllegalArgumentException.class, () -> { userService.getUserProfile(authentication); }); 
+        assertEquals("Usuario no autenticado", exception.getMessage()); 
+    }
+
+    @Test
+    void testExtractAuthenticatedUser_ThrowsExceptionWhenPrincipalNotAuthentication() {
+        Principal principal = mock(Principal.class); // Mock principal not as Authentication
+
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            userService.extractAuthenticatedUser(principal);
+        });
+
+        assertEquals("Usuario no autenticado", exception.getMessage());
+    }
+
+    @Test
+    void testUpdateUserProfile() {
+        User user = new User();
+        user.setFirstName("OldFirstName");
+        user.setLastName("OldLastName");
+        UserProfileDTO userProfileDTO = new UserProfileDTO();
+        userProfileDTO.setFirstName("NewFirstName");
+        userProfileDTO.setLastName("NewLastName");
+
+        Principal principal = mock(Authentication.class);
+        when(((Authentication) principal).getPrincipal()).thenReturn(user);
+
+        userService.updateUserProfile(userProfileDTO, principal);
+
+        assertEquals("NewFirstName", user.getFirstName());
+        assertEquals("NewLastName", user.getLastName());
+        verify(userRepository, times(1)).save(user);
+    }
+
+    @Test
+    void testUpdateUserArtistProfile() {
+        Artist artist = new Artist();
+        artist.setFirstName("OldFirstName");
+        artist.setLastName("OldLastName");
+        artist.setArtistName("OldArtistName");
+        UserProfileDTO userProfileDTO = new UserProfileDTO();
+        userProfileDTO.setFirstName("NewFirstName");
+        userProfileDTO.setLastName("NewLastName");
+        userProfileDTO.setArtistName("NewArtistName");
+
+        Principal principal = mock(Authentication.class);
+        when(((Authentication) principal).getPrincipal()).thenReturn(artist);
+
+        userService.updateUserProfile(userProfileDTO, principal);
+
+        assertEquals("NewFirstName", artist.getFirstName());
+        assertEquals("NewLastName", artist.getLastName());
+        assertEquals("NewArtistName", artist.getArtistName());
+        verify(userRepository, times(1)).save(artist);
     }
 }
