@@ -1,92 +1,151 @@
 package com.artists_heaven.auth;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import org.junit.jupiter.api.Assertions;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.any;
+
+import java.util.Map;
+import java.util.UUID;
+
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.AuthorityUtils;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
-import org.junit.jupiter.api.BeforeAll;
-
-import org.springframework.beans.factory.annotation.Autowired;
-
-import org.springframework.boot.test.context.SpringBootTest;
-
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-
+import com.artists_heaven.configuration.JwtTokenProvider;
 import com.artists_heaven.entities.user.User;
 import com.artists_heaven.entities.user.UserRepository;
 import com.artists_heaven.entities.user.UserRole;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 
-import jakarta.transaction.*;
+import java.lang.reflect.Method;
 
-@SpringBootTest
 public class AuthServiceTest {
 
-    @Autowired
+    private Method mapRoleToAuthorityMethod;
+
+    @InjectMocks
     private AuthService authService;
 
-    @Autowired
+    @Mock
     private UserRepository userRepository;
 
-    private static User userTest;
+    @Mock
+    private PasswordEncoder passwordEncoder;
 
-    @BeforeAll
-    public static void setup() {
-        userTest = new User();
-        userTest.setEmail("email@email.com");
-        userTest.setFirstName("Lorem Ipsum");
-        userTest.setLastName("Lorem Ipsum");
-        userTest.setUsername("Lorem Ipsum");
-        userTest.setPassword(new BCryptPasswordEncoder().encode("password1234"));
+    @Mock
+    private JwtTokenProvider jwtTokenProvider;
 
+    @Mock
+    private TokenVerifier tokenVerifier;
+
+    @BeforeEach
+    public void setUp() throws Exception {
+        MockitoAnnotations.openMocks(this);
+
+        mapRoleToAuthorityMethod = AuthService.class.getDeclaredMethod("mapRoleToAuthority", UserRole.class);
+        mapRoleToAuthorityMethod.setAccessible(true);
     }
 
     @Test
-    @Transactional
-    public void testLogin_withValidCredentials_returnsJwt() {
-        userTest.setRole(UserRole.USER);
-        userRepository.save(userTest);
-        String token = authService.login("email@email.com", "password1234");
-        assertNotNull(token, "El token no debería ser nulo");
+    public void testLoginSuccess() {
+        String email = "test@example.com";
+        String password = "password";
+        User user = new User();
+        user.setEmail(email);
+        user.setPassword("hashedPassword");
+        user.setRole(UserRole.USER);
+
+        when(userRepository.findByEmail(email)).thenReturn(user);
+        when(passwordEncoder.matches(password, "hashedPassword")).thenReturn(true);
+        when(jwtTokenProvider.generateToken(any(Authentication.class))).thenReturn("jwtToken");
+
+        String token = authService.login(email, password);
+
+        assertEquals("jwtToken", token);
+        verify(userRepository).findByEmail(email);
+        verify(passwordEncoder).matches(password, "hashedPassword");
+        verify(jwtTokenProvider).generateToken(any(Authentication.class));
     }
 
     @Test
-    @Transactional
-    public void testLogin_withValidCredentialsRoleAritst() {
-        userTest.setRole(UserRole.ARTIST);
-        userRepository.save(userTest);
-        String token = authService.login("email@email.com", "password1234");
-        assertNotNull(token, "El token no debería ser nulo");
-       
-    }
+    public void testLoginFailure() {
+        String email = "test@example.com";
+        String password = "password";
 
-    @Test
-    @Transactional
-    public void testLogin_withValidCredentialsRoleAdmin() {
-        userTest.setRole(UserRole.ADMIN);
-        userRepository.save(userTest);
-        String token = authService.login("email@email.com", "password1234");
-        assertNotNull(token, "El token no debería ser nulo");
-       
-    }
+        when(userRepository.findByEmail(email)).thenReturn(null);
 
-    @Test
-    @Transactional
-    public void testLogin_withNullUser() {
-        IllegalArgumentException exception = Assertions.assertThrows(IllegalArgumentException.class, () -> {
-            authService.login("email@email.com", "password1234");
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            authService.login(email, password);
         });
-        Assertions.assertTrue(exception.getMessage().contains("Credenciales inválidas"));
 
+        assertEquals("Credenciales inválidas", exception.getMessage());
     }
 
     @Test
-    @Transactional
-    public void testLogin_withNonValidCredentials() {
-        userTest.setRole(UserRole.USER);
-        userRepository.save(userTest);
-        assertThrows(IllegalArgumentException.class, () -> {
-            authService.login(userTest.getEmail(), "invalid password");
+    public void testHandleGoogleLoginSuccess() throws Exception {
+        String idTokenString = "idToken";
+        GoogleIdToken.Payload payload = new GoogleIdToken.Payload();
+        payload.setEmail("test@example.com");
+        payload.set("given_name", "Test");
+        payload.set("family_name", "User");
+        payload.set("name", "Test User");
+
+        GoogleIdToken idToken = mock(GoogleIdToken.class);
+        when(idToken.getPayload()).thenReturn(payload);
+
+        when(tokenVerifier.verifyToken(idTokenString)).thenReturn(idToken);
+        when(userRepository.findByEmail("test@example.com")).thenReturn(null);
+        when(passwordEncoder.encode(anyString())).thenReturn("encodedPassword");
+        when(jwtTokenProvider.generateToken(any(Authentication.class))).thenReturn("jwtToken");
+
+        Map<String, String> response = authService.handleGoogleLogin(idTokenString);
+
+        assertNotNull(response);
+        assertEquals("jwtToken", response.get("token"));
+        assertEquals("test@example.com", response.get("email"));
+        verify(userRepository).save(any(User.class));
+    }
+
+    @Test
+    public void testHandleGoogleLoginInvalidToken() throws Exception {
+        String idTokenString = "invalidToken";
+
+        when(tokenVerifier.verifyToken(idTokenString)).thenReturn(null);
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            authService.handleGoogleLogin(idTokenString);
         });
+
+        assertEquals("Credenciales inválidas", exception.getMessage());
+    }
+
+    @Test
+    public void testMapRoleToAuthority_User() throws Exception {
+        String authority = (String) mapRoleToAuthorityMethod.invoke(authService, UserRole.USER);
+        assertEquals("ROLE_USER", authority);
+    }
+
+    @Test
+    public void testMapRoleToAuthority_Artist() throws Exception {
+        String authority = (String) mapRoleToAuthorityMethod.invoke(authService, UserRole.ARTIST);
+        assertEquals("ROLE_ARTIST", authority);
+    }
+
+    @Test
+    public void testMapRoleToAuthority_Admin() throws Exception {
+        String authority = (String) mapRoleToAuthorityMethod.invoke(authService, UserRole.ADMIN);
+        assertEquals("ROLE_ADMIN", authority);
     }
 }

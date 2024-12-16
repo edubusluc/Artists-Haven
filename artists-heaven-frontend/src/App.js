@@ -16,7 +16,7 @@ import { checkTokenExpiration } from './utils/authUtils';
 
 const HomePage = () => {
   const [userEmail, setUserEmail] = useState(null);
-  const rol = localStorage.getItem("role")
+  const rol = localStorage.getItem("role");
 
   useEffect(() => {
     if (!localStorage.getItem('firstTime')) {

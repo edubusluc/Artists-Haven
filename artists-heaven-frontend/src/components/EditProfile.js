@@ -8,14 +8,9 @@ const EditProfile = () => {
         artistName: '',
     });
     const navigate = useNavigate();
+    const token = localStorage.getItem("authToken");
 
     useEffect(() => {
-        const token = localStorage.getItem("authToken");
-        if (!token) {
-            console.error('No se encontró el token de autenticación');
-            return;
-        }
-
         fetch('/api/users/profile', {
             method: 'GET',
             headers: {
@@ -61,6 +56,12 @@ const EditProfile = () => {
             })
             .catch(error => console.error('Error updating profile:', error));
     };
+
+    if (!token) {
+        return <><p>No tienes permiso para acceder a esta página</p><button onClick={() => navigate('/')} className="btn btn-primary">
+            Volver al inicio
+        </button></>;
+    }
 
     return (
         <div>

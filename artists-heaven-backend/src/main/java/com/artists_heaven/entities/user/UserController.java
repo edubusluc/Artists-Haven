@@ -4,6 +4,7 @@ import java.security.Principal;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -11,81 +12,69 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import com.artists_heaven.entities.artist.Artist;
-
+import org.springframework.web.client.HttpClientErrorException.Unauthorized;
 import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.security.core.Authentication;
 
 @RestController
 @RequestMapping("/api/users")
 public class UserController {
 
-    private final UserService userService;
-    private final UserRepository userRepository;
+    @Autowired
+    private UserService userService;
 
-    public UserController(UserService userService, UserRepository userRepository) {
-        this.userService = userService;
-        this.userRepository = userRepository;
-    }
-
+    // Endpoint to retrieve all users
     @GetMapping("/list")
     public List<User> getAllUsers() {
         return userService.getAllUsers();
     }
 
+     // Endpoint to register a new user
     @PostMapping("/register")
     public ResponseEntity<User> registerUser(@RequestBody User user) {
         try {
+            // Call the service to register the user
             User registeredUser = userService.registerUser(user);
+            // Return the registered user with a CREATED status
             return new ResponseEntity<>(registeredUser, HttpStatus.CREATED);
         } catch (IllegalArgumentException e) {
+            // Return a BAD_REQUEST status if an exception occurs during registration
             return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
         }
     }
 
+    // Endpoint to get the profile of the currently authenticated user
     @GetMapping("/profile")
     public ResponseEntity<?> getUserProfile(Principal principal) {
-    
-        Authentication authentication = (Authentication) principal;
-    
-        Object principalUser = authentication.getPrincipal();
-
-        
-        if (principalUser instanceof User) {
-            User user = (User) principalUser;
-         
-            // Crear un DTO (Data Transfer Object) para la respuesta
-            UserProfileDTO userProfileDTO = new UserProfileDTO(user);
-    
-            // Si el usuario es un artista, podemos agregar más detalles
-            if (user instanceof Artist) {
-                Artist artist = (Artist) user;
-                userProfileDTO.setArtistName(artist.getArtistName());
-            }
-    
-            return ResponseEntity.ok(userProfileDTO); // Devolver los datos del perfil en formato JSON
-        } else {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Usuario no autenticado");
+        try {
+            // Call the service to get the user profile
+            UserProfileDTO userProfileDTO = userService.getUserProfile(principal);
+            // Return the profile data with an OK status
+            return ResponseEntity.ok(userProfileDTO);
+        } catch (Unauthorized e) {
+            // Return UNAUTHORIZED status if the user is not authenticated
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
+        } catch (Exception e) {
+            // Return INTERNAL_SERVER_ERROR if any other exception occurs
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error al obtener el perfil del usuario");
         }
     }
 
+     // Endpoint to update the profile of the currently authenticated user
     @PutMapping("/profile/edit")
     public ResponseEntity<?> updateUserProfile(@RequestBody UserProfileDTO userProfileDTO, Principal principal) {
-        if (!(principal instanceof Authentication)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Usuario no autenticado");
+        try {
+            // Call the service to update the user profile
+            userService.updateUserProfile(userProfileDTO, principal);
+            // Return success message if the profile was updated
+            return ResponseEntity.ok(Map.of("message", "Perfil actualizado correctamente"));
+        } catch (Unauthorized e) {
+            // Return UNAUTHORIZED status if the user is not authenticated
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
+        } catch (Exception e) {
+            // Return INTERNAL_SERVER_ERROR if any other exception occurs during update
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error al actualizar el perfil del usuario");
         }
-    
-        Authentication authentication = (Authentication) principal;
-        User user = (User) authentication.getPrincipal();
-    
-        user.setFirstName(userProfileDTO.getFirstName());
-        user.setLastName(userProfileDTO.getLastName());
-        if (user instanceof Artist && userProfileDTO.getArtistName() != null) {
-            ((Artist) user).setArtistName(userProfileDTO.getArtistName());
-        }
-    
-        userRepository.save(user);
-        return ResponseEntity.ok(Map.of("message", "Perfil actualizado correctamente"));
     }
 }

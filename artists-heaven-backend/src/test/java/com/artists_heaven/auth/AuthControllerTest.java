@@ -1,12 +1,7 @@
 package com.artists_heaven.auth;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -18,8 +13,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
@@ -32,8 +25,7 @@ import com.artists_heaven.entities.user.User;
 import com.artists_heaven.entities.user.UserRepository;
 import com.artists_heaven.entities.user.UserRole;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
-import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload;
+import org.springframework.http.MediaType;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
 
 public class AuthControllerTest {
@@ -134,72 +126,42 @@ public class AuthControllerTest {
 
     @Test
     public void testGoogleLogin_withExistingUser() throws Exception {
-        // Configurar el mock de TokenVerifier para devolver un token simulado
-        GoogleIdToken mockToken = mock(GoogleIdToken.class);
-        when(tokenVerifier.verifyToken(anyString())).thenReturn(mockToken);
-        Payload mockPayload = mock(Payload.class);
+        // Crear un mapa simulado para la respuesta de handleGoogleLogin
+        Map<String, String> mockResponse = Map.of("token", "mockJwtToken", "email", "user@example.com");
 
-        // Configurar el repositorio y el generador de tokens
-        String email = "testuser@example.com";
-        User mockUser = new User();
-        mockUser.setEmail(email);
-        when(userRepository.findByEmail(email)).thenReturn(mockUser);
-        when(mockToken.getPayload()).thenReturn(mockPayload);
-        when(mockPayload.getEmail()).thenReturn("testuser@example.com");
-        when(mockPayload.get("given_name")).thenReturn("Test");
-        when(mockPayload.get("family_name")).thenReturn("User");
-        when(mockPayload.get("name")).thenReturn("Test User");
+        // Mockear el comportamiento del servicio
+        when(authService.handleGoogleLogin(anyString())).thenReturn(mockResponse);
 
-        String token = "mockJwtToken";
-        when(jwtTokenProvider.generateToken(any())).thenReturn(token);
+        // Crear la solicitud de login
+        Map<String, String> requestPayload = Map.of("idTokenString", "mockedIdToken");
 
-        // Llamar al método y comprobar la respuesta
-        Map<String, String> request = Map.of("idTokenString", "mockIdTokenString");
-        ResponseEntity<Map<String, String>> response = authController.googleLogin(request);
+        // Realizar la solicitud POST y verificar el resultado
+        mockMvc.perform(post("/api/auth/google-login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(requestPayload)))
+                .andExpect(MockMvcResultMatchers.status().isOk()) // Verificar que el estado es OK
+                .andExpect(MockMvcResultMatchers.jsonPath("$.token").value("mockJwtToken")) // Verificar el token
+                .andExpect(MockMvcResultMatchers.jsonPath("$.email").value("user@example.com")); // Verificar el email
+        }
 
-        assertNotNull(response);
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals(token, response.getBody().get("token"));
-        assertEquals(email, response.getBody().get("email"));
-
-        // Verificar que los métodos mockeados se llamaron correctamente
-        verify(userRepository, times(1)).findByEmail(email);
-        verify(jwtTokenProvider, times(1)).generateToken(any());
-    }
-
-    @Test
-    public void testGoogleLogin_withNonExistingUser() throws Exception {
-        // Configurar el mock de TokenVerifier para devolver un token simulado
-        GoogleIdToken mockToken = mock(GoogleIdToken.class);
-        when(tokenVerifier.verifyToken(anyString())).thenReturn(mockToken);
-        Payload mockPayload = mock(Payload.class);
-
-        // Configurar el repositorio y el generador de tokens
-        String email = "testuser@example.com";
-        User mockUser = new User();
-        mockUser.setEmail(email);
-        when(mockToken.getPayload()).thenReturn(mockPayload);
-        when(mockPayload.getEmail()).thenReturn("testuser@example.com");
-        when(mockPayload.get("given_name")).thenReturn("Test");
-        when(mockPayload.get("family_name")).thenReturn("User");
-        when(mockPayload.get("name")).thenReturn("Test User");
-
-        String token = "mockJwtToken";
-        when(jwtTokenProvider.generateToken(any())).thenReturn(token);
-
-        // Llamar al método y comprobar la respuesta
-        Map<String, String> request = Map.of("idTokenString", "mockIdTokenString");
-        ResponseEntity<Map<String, String>> response = authController.googleLogin(request);
-
-        assertNotNull(response);
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals(token, response.getBody().get("token"));
-        assertEquals(email, response.getBody().get("email"));
-
-        // Verificar que los métodos mockeados se llamaron correctamente
-        verify(userRepository, times(1)).findByEmail(email);
-        verify(jwtTokenProvider, times(1)).generateToken(any());
-    }
+        @Test
+        public void testGoogleLoginInvalidToken() throws Exception {
+            // Simular un mapa con un error
+            Map<String, String> mockResponse = Map.of("error", "Invalid ID token");
+    
+            // Mockear el comportamiento del servicio para un ID token inválido
+            when(authService.handleGoogleLogin(anyString())).thenReturn(mockResponse);
+    
+            // Crear la solicitud de login
+            Map<String, String> requestPayload = Map.of("idTokenString", "invalidToken");
+    
+            // Realizar la solicitud POST y verificar el resultado
+            mockMvc.perform(post("/api/auth/google-login")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(requestPayload)))
+                    .andExpect(MockMvcResultMatchers.status().isUnauthorized()) // Verificar que el estado es 401
+                    .andExpect(MockMvcResultMatchers.jsonPath("$.error").value("Invalid ID token")); // Verificar el mensaje de error
+        }
 
     @Test
     public void testGoogleLogin_withUnauthorizedException() throws Exception {
@@ -217,27 +179,4 @@ public class AuthControllerTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(MockMvcResultMatchers.jsonPath("$.error").value("Invalid ID token"));
     }
-
-    @Test
-    public void testGoogleLogin_withInternalServerErrorException() throws Exception {
-        // Configurar el idTokenString de prueba
-        String idTokenString = "invalidTokenString";
-
-        // Configurar el comportamiento de tokenVerifier para lanzar una excepción
-        when(tokenVerifier.verifyToken(idTokenString)).thenThrow(new RuntimeException("Token verification failed"));
-
-        // Configurar la solicitud
-        Map<String, String> request = Map.of("idTokenString", idTokenString);
-
-        // Llamar al método y comprobar la respuesta
-        ResponseEntity<Map<String, String>> response = authController.googleLogin(request);
-
-        assertNotNull(response);
-        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
-        assertEquals("Error verifying token", response.getBody().get("error"));
-
-        // Verificar que el método de tokenVerifier se llamó con el argumento correcto
-        verify(tokenVerifier, times(1)).verifyToken(idTokenString);
-    }
-
 }

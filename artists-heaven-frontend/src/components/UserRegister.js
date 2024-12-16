@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-import axios from 'axios';  // Importa axios
+import React, { useState } from 'react';  // Importa React
 import { useNavigate } from 'react-router-dom';
 
 const UserRegister = () => {
@@ -8,6 +7,7 @@ const UserRegister = () => {
     lastName: '',
     email: '',
     password: '',
+    username: ''
   });
   const navigate = useNavigate();
 
@@ -22,18 +22,30 @@ const UserRegister = () => {
     e.preventDefault();
 
     try {
-      // Utiliza axios para enviar los datos al backend
-      const response = await axios.post('/api/users/register', user);
-      
+      // Realizar la solicitud POST al backend con fetch
+      const response = await fetch('/api/users/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(user), // Convertir el objeto a JSON
+      });
+
+      if (!response.ok) {
+        throw new Error('Error al registrar el usuario');
+      }
+
+      const data = await response.json();
+
       // Limpiar el formulario después del registro exitoso
-      setUser({ firstName: '', lastName: '', email: '', password: ''});
+      setUser({ firstName: '', lastName: '', email: '', password: '', username: '' });
       setErrorMessage(''); // Limpiar cualquier mensaje de error
 
       // Redirigir al usuario
       window.location.href = '/users';
     } catch (error) {
       // Manejar el error si ocurre
-      setErrorMessage(error.response?.data || 'Error al registrar el usuario');
+      setErrorMessage(error.message || 'Error al registrar el usuario');
     }
   };
 
@@ -72,9 +84,9 @@ const UserRegister = () => {
           />
         </div>
         <div>
-          <label>Usuario</label>
+          <label>Usuario:</label>
           <input
-            type="username"
+            type="text"
             name="username"
             value={user.username}
             onChange={handleChange}
@@ -95,8 +107,8 @@ const UserRegister = () => {
       </form>
 
       <button onClick={() => navigate('/')} className="btn btn-primary">
-                Volver al inicio
-            </button>
+        Volver al inicio
+      </button>
 
       {/* Mostrar mensaje de error si existe */}
       {errorMessage && <p style={{ color: 'red' }}>{errorMessage}</p>}

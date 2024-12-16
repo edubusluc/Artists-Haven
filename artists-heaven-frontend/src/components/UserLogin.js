@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import axios from "axios";
 import { Link } from 'react-router-dom';
 
 const UserLogin = () => {
@@ -14,32 +13,35 @@ const UserLogin = () => {
         setError("");
 
         try {
-            // Realizar la solicitud POST al backend
-            const response = await axios.post("/api/auth/login", {
-                email,
-                password,
+            // Realizar la solicitud POST al backend con fetch
+            const response = await fetch("/api/auth/login", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ email, password })
             });
 
-            // Guardar el token en el almacenamiento local
-            const token = response.data.token;
-            const role = response.data.role;
+            if (!response.ok) {
+                throw new Error("Credenciales incorrectas. Por favor, inténtalo de nuevo.");
+            }
+
+            const data = await response.json();
+            const token = data.token;
+            const role = data.role;
+
+            // Guardar el token y el correo en el localStorage
             localStorage.setItem("authToken", token);
-
-            // Guardar el correo del usuario en el localStorage
             localStorage.setItem("userEmail", email);
-
             localStorage.setItem("role", role);
 
-            // Configurar el token en las cabeceras de axios para futuras solicitudes
-            axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-
-            // Redirigir al usuario a la página principal (u otra página)
-            localStorage.setItem('firstTime', false) 
-            window.location.href = "/";  // Puedes cambiar esta ruta si es necesario
+            // Redirigir al usuario a la página principal (o a otra página)
+            localStorage.setItem('firstTime', false);
+            window.location.href = "/"; // Puedes cambiar esta ruta si es necesario
 
         } catch (err) {
             console.error("Error during login:", err);
-            setError("Credenciales incorrectas. Por favor, inténtalo de nuevo.");
+            setError(err.message);
         } finally {
             setIsLoading(false);
         }
@@ -78,8 +80,8 @@ const UserLogin = () => {
                 {error && <p className="error-message">{error}</p>}
             </form>
             <Link to="/">
-        <button>Home</button>
-      </Link>
+                <button>Home</button>
+            </Link>
         </div>
     );
 };

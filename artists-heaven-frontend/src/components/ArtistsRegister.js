@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { useNavigate } from 'react-router-dom';
-import axios from "axios";
 
 const ArtistForm = () => {
   const [formData, setFormData] = useState({
@@ -13,7 +12,6 @@ const ArtistForm = () => {
   });
 
   const [errorMessage, setErrorMessage] = useState("");
-
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -28,7 +26,20 @@ const ArtistForm = () => {
     e.preventDefault();
 
     try {
-      const response = await axios.post("/api/artists/register", formData);
+      const response = await fetch("/api/artists/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(formData)
+      });
+
+      if (!response.ok) {
+        throw new Error("Error al registrar el artista");
+      }
+
+      const data = await response.json();
+
       setFormData({
         firstName: "",
         lastName: "",
@@ -40,7 +51,7 @@ const ArtistForm = () => {
       setErrorMessage("");
       navigate('/users');
     } catch (error) {
-      setErrorMessage(error.response?.data || "Error al registrar el artista");
+      setErrorMessage(error.message || "Error al registrar el artista");
     }
   };
 

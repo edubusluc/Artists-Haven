@@ -1,7 +1,5 @@
 package com.artists_heaven.configuration;
 
-import java.util.Arrays;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -15,45 +13,83 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
-public class SecurityConfiguration{
+public class SecurityConfiguration {
 
     @Autowired
-    JwtAuthenticationFilter jwtAuthorizationFilter;
+    private JwtAuthenticationFilter jwtAuthorizationFilter;
+
+    // Public endpoints that do not require authentication
+    private static final String[] PUBLIC_ENDPOINTS = {
+        "/api/users/register",
+        "/api/artists/register",
+        "/api/auth/login",
+        "/api/auth/google-login",
+        "/api/emails/send",
+        "/accounts.google.com/**",
+        "/login/oauth2/code/google",
+        "/api/users/list"
+    };
+
+    // Endpoints accessible only by ADMIN users
+    private static final String[] ADMIN_ENDPOINTS = {
+        "/api/admin/validate_artist",
+        "/api/admin/verification/pending",
+        "/api/admin/verification_media/**"
+    };
+    
+    // Endpoints accessible only by ARTIST users
+    private static final String[] ARTIST_ENDPOINTS = {
+        "/api/verification/send",
+    };
+
+    private static final String[] AUTHENTICATED_ENDPOINTS = {
+        "/api/users/profile/edit",
+        "/api/users/profile"
+    };
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        configureHttpSecurity(http);
+        return http.build();
+    }
+
+    private void configureHttpSecurity(HttpSecurity http) throws Exception {
         http
-            .cors(cors -> cors.configurationSource(corsConfigurationSource())) // Configura CORS con la fuente de configuración
-            .csrf(csrf -> csrf.disable()) // Desactiva CSRF
-            .authorizeHttpRequests(authorize -> authorize
-                .requestMatchers("/api/users/profile", "/api/users/list", "/api/users/register", "/api/artists/register", "/api/auth/login", "/api/auth/google-login", "/api/emails/send").permitAll()
-                .requestMatchers("/api/users/profile").authenticated()
-                .requestMatchers("/api/admin/validate_artist", "/api/admin/verification/pending", "/api/admin/verification_media/**").hasRole("ADMIN")
-                .requestMatchers("api/verification/send").hasRole("ARTIST")
-                .requestMatchers("/accounts.google.com/**").permitAll()
-                .requestMatchers("/login/oauth2/code/google").permitAll()
+            // Configures Cross-Origin Resource Sharing (CORS)
+            .cors(cors -> cors.configurationSource(corsConfigurationSource())) // Configura CORS
+            // Disables Cross-Site Request Forgery (CSRF) protection
+            .csrf(csrf -> csrf.disable()) 
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers(PUBLIC_ENDPOINTS).permitAll() 
+                .requestMatchers(ADMIN_ENDPOINTS).hasRole("ADMIN")
+                .requestMatchers(ARTIST_ENDPOINTS).hasRole("ARTIST")
+                .requestMatchers(AUTHENTICATED_ENDPOINTS).authenticated()
                 .anyRequest().authenticated()
             )
-            .oauth2Login(oauth2 -> oauth2
-                .defaultSuccessUrl("http://localhost:3000", true)
-            )
-            .addFilterBefore(jwtAuthorizationFilter, UsernamePasswordAuthenticationFilter.class); 
-
-        return http.build();
+            // Configures OAuth2 login with a default success URL
+            .oauth2Login(oauth2 -> oauth2.defaultSuccessUrl("http://localhost:3000", true))
+             // Adds the custom JWT authorization filter before the default username/password filter
+            .addFilterBefore(jwtAuthorizationFilter, UsernamePasswordAuthenticationFilter.class);
     }
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
+         // Configures CORS settings
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000", "/verification_media/**"));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE"));
-        configuration.setAllowedHeaders(Arrays.asList("*"));
-        configuration.setAllowCredentials(true);
+        // Allowed origins
+        configuration.setAllowedOrigins(List.of("http://localhost:3000"));
+        // Allowed HTTP methods
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE")); 
+        // Allowed headers
+        configuration.setAllowedHeaders(List.of("*")); 
+         // Allows credentials such as cookies or authorization headers
+        configuration.setAllowCredentials(true); 
 
+        // Applies the CORS configuration to all paths
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
@@ -61,6 +97,7 @@ public class SecurityConfiguration{
 
     @Bean
     public PasswordEncoder passwordEncoder() {
+        // Bean for password encoding using BCrypt
         return new BCryptPasswordEncoder();
     }
 }
