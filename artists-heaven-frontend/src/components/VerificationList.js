@@ -1,7 +1,15 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from 'react-router-dom';
+
+
+const rol = localStorage.getItem("role");
 
 const fetchVideoBlob = async (videoUrl, authToken) => {
     try {
+        if (rol !== "ADMIN") {
+            // Si el rol no es ADMIN, no hacemos la petición
+            return;
+        }
         const response = await fetch(`/api/admin${videoUrl}`, {
             method: "GET",
             headers: {
@@ -28,8 +36,13 @@ const VerificationList = () => {
     const [error, setError] = useState(null);
     const [authToken, setAuthToken] = useState(localStorage.getItem("authToken"));
     const [users, setUsers] = useState([]);
+    const navigate = useNavigate();
 
     useEffect(() => {
+        if (rol !== "ADMIN") {
+            // Si el rol no es ADMIN, no hacemos la petición
+            return;
+        }
         const fetchVerifications = async () => {
             try {
                 const response = await fetch("/api/admin/verification/pending", {
@@ -55,6 +68,10 @@ const VerificationList = () => {
     }, [authToken]);
 
     const verifyArtist = (id, verificationId) => {
+        if (rol !== "ADMIN") {
+            // Si el rol no es ADMIN, no hacemos la petición
+            return;
+        }
         fetch('/api/admin/validate_artist', {
             method: 'POST',
             headers: {
@@ -62,8 +79,9 @@ const VerificationList = () => {
                 'Authorization': `Bearer ${authToken}`
             },
             body: JSON.stringify({
-                 id,
-                 verificationId}),
+                id,
+                verificationId
+            }),
         })
             .then(response => {
                 if (response.ok) {
@@ -82,7 +100,9 @@ const VerificationList = () => {
     };
 
     if (loading) return <p>Loading...</p>;
-    if (error) return <p>Error: {error}</p>;
+    if (rol != "ADMIN") return <><p>No tienes permiso para acceder a esta página</p><button onClick={() => navigate('/')} className="btn btn-primary">
+        Volver al inicio
+    </button></>;
 
     return (
         <table>
