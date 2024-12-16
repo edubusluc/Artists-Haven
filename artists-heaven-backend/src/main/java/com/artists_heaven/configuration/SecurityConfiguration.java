@@ -30,7 +30,8 @@ public class SecurityConfiguration {
         "/api/auth/google-login",
         "/api/emails/send",
         "/accounts.google.com/**",
-        "/login/oauth2/code/google"
+        "/login/oauth2/code/google",
+        "/api/users/list"
     };
 
     // Endpoints accessible only by ADMIN users

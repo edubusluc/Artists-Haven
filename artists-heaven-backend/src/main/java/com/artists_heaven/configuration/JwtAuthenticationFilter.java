@@ -33,14 +33,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
         String token = jwtTokenProvider.resolveToken(request);
-        String authorizationHeader = request.getHeader("Authorization");
-
-        if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
-            // Return 401 if no token is provided
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.getWriter().write("No se ha proporcionado un token válido");
-            return;
-        }
         
         // Resolve the JWT token from the Authorization header
         if (token != null && jwtTokenProvider.validateToken(token)) {
