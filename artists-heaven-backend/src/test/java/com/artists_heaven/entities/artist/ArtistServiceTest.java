@@ -1,94 +1,87 @@
 package com.artists_heaven.entities.artist;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
-import java.util.List;
-
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
+import com.artists_heaven.entities.user.User;
+import com.artists_heaven.entities.user.UserRepository;
 import com.artists_heaven.entities.user.UserRole;
 
-import jakarta.transaction.Transactional;
-
-@SpringBootTest
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 public class ArtistServiceTest {
 
-    @Autowired 
-    private ArtistService artistService;
-
-    @Autowired
+    @Mock
     private ArtistRepository artistRepository;
 
-    private static Artist artist;
+    @Mock
+    private UserRepository userRepository;
 
-    @BeforeAll
-    public static void setup() {
-        artist = new Artist();
+    @InjectMocks
+    private ArtistService artistService;
+
+    private PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+
+    @BeforeEach
+    public void setUp() {
+        MockitoAnnotations.openMocks(this);
+    }
+
+    @Test
+    public void testRegisterArtist_EmailAlreadyExists() {
+        Artist artist = new Artist();
         artist.setEmail("test@example.com");
-        artist.setFirstName("Artist name");
-        artist.setLastName("Artist lastName");
-        artist.setArtistName("Test Artist");
-        artist.setUrl("https://www.artist-pages.com");
+
+        User userEmail = new User();
+        userEmail.setEmail("test@example.com");
+
+        when(userRepository.findByEmail("test@example.com")).thenReturn(userEmail);
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            artistService.registerArtist(artist);
+        });
+
+        assertEquals("El correo electrónico ya está registrado.", exception.getMessage());
+    }
+
+    @Test
+    public void testRegisterArtist_ArtistNameAlreadyExists() {
+        Artist artist = new Artist();
+        artist.setArtistName("existingArtist");
+
+        when(userRepository.findByEmail(anyString())).thenReturn(null);
+        when(artistRepository.existsByArtistName("existingArtist")).thenReturn(true);
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            artistService.registerArtist(artist);
+        });
+
+        assertEquals("Ya existe un usuario con ese nombre registrado", exception.getMessage());
+    }
+
+    @Test
+    public void testRegisterArtist_Success() {
+        Artist artist = new Artist();
+        artist.setArtistName("newArtist");
+        artist.setEmail("test@example.com");
         artist.setPassword("password");
+
+        when(userRepository.findByEmail(anyString())).thenReturn(null);
+        when(artistRepository.existsByArtistName(anyString())).thenReturn(false);
+        when(artistRepository.save(any(Artist.class))).thenReturn(artist);
+
+        Artist savedArtist = artistService.registerArtist(artist);
+
+        assertNotNull(savedArtist);
+        assertEquals("newArtist", savedArtist.getArtistName());
+        assertEquals("newArtist", savedArtist.getUsername());
+        assertEquals(UserRole.ARTIST, savedArtist.getRole());
+        assertTrue(passwordEncoder.matches("password", savedArtist.getPassword()));
     }
-
-    @Test
-    @Transactional
-    public void testRegisterArtist() {
-        artistService.registerArtist(artist);
-
-        List<Artist> users = artistRepository.findAll();
-        Artist artist_test = users.get(0);
-
-        assertThat(artist_test.getPassword()).isNotEqualTo("password");
-        assertThat(artist_test.getRole()).isEqualTo(UserRole.ARTIST);
-        
-    }
-
-    @Test
-    @Transactional
-    public void testRegisterArtistDuplicateEmail() {
-        artistService.registerArtist(artist);
-
-        Artist artist_duplicate_email = new Artist();
-        artist_duplicate_email.setEmail("test@example.com");
-        artist_duplicate_email.setFirstName("Other Artist name");
-        artist_duplicate_email.setLastName("Other Artist lastName");
-        artist_duplicate_email.setArtistName("Other Test Artist");
-        artist_duplicate_email.setUrl("https://www.other-artist-pages.com");
-        artist_duplicate_email.setPassword("otherpassword");
-
-        IllegalArgumentException exception = Assertions.assertThrows(IllegalArgumentException.class, () -> {
-            artistService.registerArtist(artist_duplicate_email);  // Intentamos registrar el segundo artista
-        });
-        Assertions.assertTrue(exception.getMessage().contains("El correo electrónico ya está registrado."));
-        
-    }
-
-    @Test
-    @Transactional
-    public void testRegisterArtistDuplicateArtistName() {
-        artistService.registerArtist(artist);
-
-        Artist artist_duplicate_artist_name = new Artist();
-        artist_duplicate_artist_name.setEmail("othertest@example.com");
-        artist_duplicate_artist_name.setFirstName("Other Artist name");
-        artist_duplicate_artist_name.setLastName("Other Artist lastName");
-        artist_duplicate_artist_name.setArtistName("Test Artist");
-        artist_duplicate_artist_name.setUrl("https://www.other-artist-pages.com");
-        artist_duplicate_artist_name.setPassword("otherpassword");
-
-        IllegalArgumentException exception = Assertions.assertThrows(IllegalArgumentException.class, () -> {
-            artistService.registerArtist(artist_duplicate_artist_name);  // Intentamos registrar el segundo artista
-        });
-        Assertions.assertTrue(exception.getMessage().contains("Ya existe un usuario con ese nombre registrado"));
-        
-    }
-    
 }
