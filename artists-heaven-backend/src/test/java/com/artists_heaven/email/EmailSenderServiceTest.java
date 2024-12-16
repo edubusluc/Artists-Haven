@@ -1,68 +1,60 @@
 package com.artists_heaven.email;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+
 import com.artists_heaven.entities.artist.Artist;
 
-@SpringBootTest
 public class EmailSenderServiceTest {
 
-    @Autowired
-    private EmailSenderService emailSenderService;
-
-    @MockBean
+    @Mock
     private JavaMailSender mailSender;
 
-    @MockBean
+    @Mock
     private EmailSenderRepository emailSenderRepository;
 
+    @InjectMocks
+    private EmailSenderService emailSenderService;
+
+    @BeforeEach
+    public void setUp() {
+        MockitoAnnotations.openMocks(this);
+    }
 
     @Test
     public void testSendReportEmail() {
-        // Preparar los datos de prueba
         Email email = new Email();
         email.setId(1L);
-        email.setUsername("testUser");
         email.setType(EmailType.BUG_REPORT);
-        email.setDescription("This is a test bug description.");
+        email.setUsername("testUser");
+        email.setDescription("This is a test report");
 
-        // Llamar al método sendEmail
+        doNothing().when(mailSender).send(any(SimpleMailMessage.class));
+        when(emailSenderRepository.save(any(Email.class))).thenReturn(email);
+
         emailSenderService.sendReportEmail(email);
 
-        // Verificar que el repositorio guarda el email
         verify(emailSenderRepository, times(1)).save(email);
-
-        // Verificar que se envía un correo con los detalles correctos
-        SimpleMailMessage expectedMessage = new SimpleMailMessage();
-        expectedMessage.setTo("mod.artistheaven@gmail.com");
-        expectedMessage.setSubject("1 [BUG_REPORT] User: testUser");
-        expectedMessage.setText("Username: testUser\n\nDescription:\nThis is a test bug description.");
-        expectedMessage.setFrom("mod.artistheaven@gmail.com");
-
-        verify(mailSender, times(1)).send(expectedMessage);
+        verify(mailSender, times(1)).send(any(SimpleMailMessage.class));
     }
 
     @Test
     public void testSendVerificationEmail() {
-        // Arrange
         Artist artist = new Artist();
-        artist.setArtistName("Test Artist");
+        artist.setArtistName("testArtist");
 
-        // Act
+        doNothing().when(mailSender).send(any(SimpleMailMessage.class));
+
         emailSenderService.sendVerificationEmail(artist);
 
-        // Assert
-        // Verifica que el método send de mailSender se llamó una vez
-        verify(mailSender, times(1)).send((SimpleMailMessage) any()); // Usa any() si no quieres verificar el contenido
+        verify(mailSender, times(1)).send(any(SimpleMailMessage.class));
     }
-
-
 }

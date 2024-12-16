@@ -14,7 +14,7 @@ class ArtistsHeavenBackendApplicationTests {
     @BeforeAll
     static void setup() {
         // Load the .env file
-        Dotenv dotenv = Dotenv.configure().directory("../.env").load();
+        Dotenv dotenv = Dotenv.configure().directory("../.envT").load();
 
         System.setProperty("DB_URL_TEST", dotenv.get("DB_URL_TEST"));
         System.setProperty("DB_USERNAME", dotenv.get("DB_USERNAME"));
