@@ -16,6 +16,10 @@
     <description>TFG project - Artists'-Heaven</description>
     <properties>
         <java.version>17</java.version>
+
+        <!-- SonarCloud Configuration -->
+        <sonar.organization>edubusluc</sonar.organization>
+        <sonar.host.url>https://sonarcloud.io</sonar.host.url>
     </properties>
     <dependencies>
         <!-- Spring Data JPA -->
