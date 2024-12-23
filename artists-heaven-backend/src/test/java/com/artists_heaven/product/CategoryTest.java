@@ -24,6 +24,12 @@ class CategoryTest {
     }
 
     @Test
+    void testCategoryCreation2() {
+        Category category = new Category(1L);
+        assertEquals(1L, category.getId());
+    }
+
+    @Test
     void testCategoryWithProducts() {
         Product product1 = new Product();
         product1.setName("Product 1");
