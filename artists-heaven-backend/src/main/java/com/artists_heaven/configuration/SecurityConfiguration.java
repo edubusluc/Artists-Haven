@@ -31,14 +31,21 @@ public class SecurityConfiguration {
         "/api/emails/send",
         "/accounts.google.com/**",
         "/login/oauth2/code/google",
-        "/api/users/list"
+        "/api/users/list",
+        "/api/product/categories",
+        "/api/product/allProducts",
+        "/api/product/product_media/**",
+        "/api/product/details/{id}"
     };
 
     // Endpoints accessible only by ADMIN users
     private static final String[] ADMIN_ENDPOINTS = {
         "/api/admin/validate_artist",
         "/api/admin/verification/pending",
-        "/api/admin/verification_media/**"
+        "/api/admin/verification_media/**",
+        "/api/product/delete/{id}",
+        "/api/product/edit/{id}",
+        "/api/product/new",
     };
     
     // Endpoints accessible only by ARTIST users
@@ -81,7 +88,7 @@ public class SecurityConfiguration {
          // Configures CORS settings
         CorsConfiguration configuration = new CorsConfiguration();
         // Allowed origins
-        configuration.setAllowedOrigins(List.of("http://localhost:3000"));
+        configuration.setAllowedOrigins(List.of("http://localhost:3000", "http://localhost:8080"));
         // Allowed HTTP methods
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE")); 
         // Allowed headers
