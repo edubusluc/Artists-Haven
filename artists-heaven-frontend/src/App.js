@@ -13,6 +13,9 @@ import EmailForm from './components/EmailForm';
 import VerificationForm from './components/VerificationForm';
 import VerificationList from './components/VerificationList';
 import { checkTokenExpiration } from './utils/authUtils';
+import CreateProductForm from './components/CreateProductForm';
+import ProductsList from './components/ProductsList';
+import EditProduct from './components/EditProduct';
 
 const HomePage = () => {
   const [userEmail, setUserEmail] = useState(null);
@@ -106,6 +109,19 @@ const HomePage = () => {
         <button>Report</button>
       </Link>
 
+
+      <p>Listado de Producto</p>
+      <Link to="/product/all">
+        <button>All Product</button>
+      </Link>
+
+
+      <p>Nuevo Producto</p>
+      <Link to="/product/new">
+        <button>New Product</button>
+      </Link>
+
+
       <br />
       <p>O haz clic para registrar un nuevo usuario:</p>
       <Link to="/user/register">
@@ -141,6 +157,9 @@ const App = () => {
           <Route path="/email" element={<EmailForm />} />
           <Route path="/verification" element={<VerificationForm />} />
           <Route path="/admin/verification/pending" element={<VerificationList />} />
+          <Route path="/product/new" element={<CreateProductForm />} />
+          <Route path="/product/all" element={<ProductsList />} />
+          <Route path="/product/edit/:id" element={<EditProduct />} />
         </Routes>
       </Router>
     </GoogleOAuthProvider>
