@@ -78,6 +78,26 @@ public class ProductServiceTest {
     }
 
     @Test
+    void testRegisterProductThrowsException() {
+        ProductDTO productDTO = new ProductDTO();
+        productDTO.setCategories(new HashSet<>());
+        productDTO.setDescription("Test Description");
+        productDTO.setName("Test Name");
+        productDTO.setPrice(100.0f);
+        productDTO.setSizes(new HashMap<>());
+        productDTO.setImages(new ArrayList<>());
+
+        when(productRepository.save(any(Product.class))).thenThrow(new RuntimeException("Database error"));
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            productService.registerProduct(productDTO);
+        });
+
+        assertEquals("No se ha podido crear el producto", exception.getMessage());
+        verify(productRepository, times(1)).save(any(Product.class));
+    }
+
+    @Test
     void testGetAllCategories() {
         Set<Category> categories = new HashSet<>();
         when(productRepository.getAllCategories()).thenReturn(categories);
