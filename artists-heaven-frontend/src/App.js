@@ -16,6 +16,7 @@ import { checkTokenExpiration } from './utils/authUtils';
 import CreateProductForm from './components/CreateProductForm';
 import ProductsList from './components/ProductsList';
 import EditProduct from './components/EditProduct';
+import CreateEventForm from './components/CreateEventForm';
 
 const HomePage = () => {
   const [userEmail, setUserEmail] = useState(null);
@@ -121,6 +122,11 @@ const HomePage = () => {
         <button>New Product</button>
       </Link>
 
+      <p>Nuevo Evento</p>
+      <Link to="/event/new">
+        <button>New Event</button>
+      </Link>
+
 
       <br />
       <p>O haz clic para registrar un nuevo usuario:</p>
@@ -136,6 +142,8 @@ const HomePage = () => {
       {rol === "ADMIN" && <Link to="/admin/verification/pending">
         <button>View Verification Request</button>
       </Link>}
+
+      
 
       {userEmail && <Logout />}
     </div>
@@ -160,6 +168,7 @@ const App = () => {
           <Route path="/product/new" element={<CreateProductForm />} />
           <Route path="/product/all" element={<ProductsList />} />
           <Route path="/product/edit/:id" element={<EditProduct />} />
+          <Route path="/event/new" element={<CreateEventForm />} />
         </Routes>
       </Router>
     </GoogleOAuthProvider>
