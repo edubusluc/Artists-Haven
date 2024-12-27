@@ -51,6 +51,7 @@ public class SecurityConfiguration {
     // Endpoints accessible only by ARTIST users
     private static final String[] ARTIST_ENDPOINTS = {
         "/api/verification/send",
+        "/api/event/new"
     };
 
     private static final String[] AUTHENTICATED_ENDPOINTS = {

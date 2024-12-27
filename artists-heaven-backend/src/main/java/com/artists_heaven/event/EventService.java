@@ -1,0 +1,90 @@
+package com.artists_heaven.event;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.LocalDate;
+import java.util.List;
+
+import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.artists_heaven.entities.artist.Artist;
+import com.artists_heaven.entities.artist.ArtistRepository;
+
+@Service
+public class EventService {
+
+    private final EventRepository eventRepository;
+    private final ArtistRepository artistRepository;
+
+    private static final String UPLOAD_DIR = "artists-heaven-backend/src/main/resources/event_media/";
+    private static final Path TARGET_PATH = new File(UPLOAD_DIR).toPath().normalize();
+
+    public EventService(EventRepository eventRepository, ArtistRepository artistRepository) {
+        this.eventRepository = eventRepository;
+        this.artistRepository = artistRepository;
+    }
+
+    public List<Event> getAllEvents() {
+        return eventRepository.findAll();
+    }
+
+    private void validateEventDate(LocalDate eventDate) {
+        if (eventDate == null) {
+            throw new IllegalArgumentException("Event date cannot be null");
+        }
+
+        if (eventDate.isBefore(LocalDate.now())) {
+            throw new IllegalArgumentException("Event date cannot be in the past");
+        }
+    }
+
+    public Event newEvent(EventDTO eventDTO) {
+        try {
+            Artist artist = artistRepository.findById(eventDTO.getArtistId())
+                    .orElseThrow(() -> new IllegalArgumentException("Artist not found"));
+
+            validateEventDate(eventDTO.getDate());
+
+            Event event = new Event();
+            event.setName(eventDTO.getName());
+            event.setDescription(eventDTO.getDescription());
+            event.setDate(eventDTO.getDate());
+            event.setLocation(eventDTO.getLocation());
+            event.setMoreInfo(eventDTO.getMoreInfo());
+            event.setImage(eventDTO.getImage());
+            event.setArtist(artist);
+            return eventRepository.save(event);
+        } catch (Exception e) {
+            throw new IllegalArgumentException(e.getMessage());
+        }
+    }
+
+    public String saveImages(MultipartFile image) {
+        String imageUrl = "";
+
+        String fileName = StringUtils.cleanPath(image.getOriginalFilename());
+        Path targetPath = Paths.get(UPLOAD_DIR, fileName).normalize();
+
+        if (!targetPath.startsWith(TARGET_PATH)) {
+            throw new IllegalArgumentException("Entry is outside of the target directory");
+        }
+
+        try {
+            // Guardar la imagen en el directorio
+            Files.copy(image.getInputStream(), targetPath);
+            // Agregar la URL o nombre del archivo a la lista (ajustado según la necesidad)
+            fileName = "/event_media/" + fileName;
+            imageUrl = fileName;
+        } catch (IOException e) {
+            throw new IllegalArgumentException("Error al guardar las imágenes.");
+        }
+
+        return imageUrl;
+    }
+
+}
