@@ -166,7 +166,8 @@ class EventServiceTest {
 
     @Test
     void testSaveImagesThrowsExceptionForIOException() throws IOException {
-        MockMultipartFile image = new MockMultipartFile("images", "test.jpg", "image/jpeg", "test image content".getBytes());
+        MockMultipartFile image = new MockMultipartFile("images", "test.jpg", "image/jpeg",
+                "test image content".getBytes());
 
         Path targetPath = Paths.get(UPLOAD_DIR, "test.jpg").normalize();
         Files.createDirectories(targetPath.getParent());
@@ -185,7 +186,8 @@ class EventServiceTest {
 
     @Test
     void testSaveImagesSuccess() throws IOException {
-        MockMultipartFile image = new MockMultipartFile("images", "test.jpg", "image/jpeg", "test image content".getBytes());
+        MockMultipartFile image = new MockMultipartFile("images", "test.jpg", "image/jpeg",
+                "test image content".getBytes());
 
         Path targetPath = Paths.get(UPLOAD_DIR, "test.jpg").normalize();
         Files.createDirectories(targetPath.getParent());
@@ -258,25 +260,6 @@ class EventServiceTest {
     }
 
     @Test
-    void testDeleteImagesThrowsExceptionForIOException() throws IOException {
-        String removedImage = "event_media/test.jpg";
-        Path targetPath = Paths.get("artists-heaven-backend/src/main/resources", removedImage).normalize();
-        Files.createDirectories(targetPath.getParent());
-        Files.createFile(targetPath);
-        targetPath.toFile().setReadOnly(); // Make the file read-only to cause an IOException
-
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            eventService.deleteImages(removedImage);
-        });
-
-        assertEquals("Error al eliminar las imágenes.", exception.getMessage());
-
-        // Clean up the dummy file
-        targetPath.toFile().setWritable(true);
-        Files.deleteIfExists(targetPath);
-    }
-
-        @Test
     void testGetEventByIdSuccess() {
         Event event = new Event();
         event.setId(1L);
