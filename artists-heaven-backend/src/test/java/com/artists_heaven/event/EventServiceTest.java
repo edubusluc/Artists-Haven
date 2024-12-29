@@ -17,6 +17,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.*;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import com.artists_heaven.entities.artist.Artist;
 import com.artists_heaven.entities.artist.ArtistRepository;
@@ -28,6 +30,9 @@ class EventServiceTest {
 
     @Mock
     private ArtistRepository artistRepository;
+
+    @Mock
+    private Authentication authentication;
 
     @InjectMocks
     private EventService eventService;
@@ -239,5 +244,83 @@ class EventServiceTest {
         eventService.deleteImages(removedImage);
 
         assertFalse(Files.exists(targetPath));
+    }
+
+    @Test
+    void testDeleteImagesThrowsExceptionForPathTraversal() {
+        String removedImage = "../test.jpg";
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            eventService.deleteImages(removedImage);
+        });
+
+        assertEquals("Entry is outside of the target directory", exception.getMessage());
+    }
+
+    @Test
+    void testDeleteImagesThrowsExceptionForIOException() throws IOException {
+        String removedImage = "event_media/test.jpg";
+        Path targetPath = Paths.get("artists-heaven-backend/src/main/resources", removedImage).normalize();
+        Files.createDirectories(targetPath.getParent());
+        Files.createFile(targetPath);
+        targetPath.toFile().setReadOnly(); // Make the file read-only to cause an IOException
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            eventService.deleteImages(removedImage);
+        });
+
+        assertEquals("Error al eliminar las imágenes.", exception.getMessage());
+
+        // Clean up the dummy file
+        targetPath.toFile().setWritable(true);
+        Files.deleteIfExists(targetPath);
+    }
+
+        @Test
+    void testGetEventByIdSuccess() {
+        Event event = new Event();
+        event.setId(1L);
+
+        when(eventRepository.findById(1L)).thenReturn(Optional.of(event));
+
+        Event result = eventService.getEventById(1L);
+
+        assertNotNull(result);
+        assertEquals(1L, result.getId());
+        verify(eventRepository, times(1)).findById(1L);
+    }
+
+    @Test
+    void testGetEventByIdThrowsExceptionForNotFound() {
+        when(eventRepository.findById(1L)).thenReturn(Optional.empty());
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            eventService.getEventById(1L);
+        });
+
+        assertEquals("Event not found", exception.getMessage());
+        verify(eventRepository, times(1)).findById(1L);
+    }
+
+    @Test
+    void testIsArtistReturnsTrue() {
+        Artist artist = new Artist();
+        when(authentication.getPrincipal()).thenReturn(artist);
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        Boolean result = eventService.isArtist();
+
+        assertTrue(result);
+    }
+
+    @Test
+    void testIsArtistReturnsFalse() {
+        Object user = new Object();
+        when(authentication.getPrincipal()).thenReturn(user);
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        Boolean result = eventService.isArtist();
+
+        assertFalse(result);
     }
 }
