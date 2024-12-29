@@ -12,7 +12,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.PostMapping;
 
@@ -57,6 +59,44 @@ public class EventController {
             return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
         }
 
+    }
+
+    @GetMapping("/allMyEvents")
+    public ResponseEntity<List<Event>> getAllMyEvents() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        Object principalUser = authentication.getPrincipal();
+        if (eventService.isArtist()) {
+            Artist artist = (Artist) principalUser;
+            List<Event> events = eventService.getAllMyEvents(artist.getId());
+            return ResponseEntity.ok(events);
+        } else {
+            return ResponseEntity.badRequest().body(null);
+        }
+    }
+
+    @DeleteMapping("/delete/{id}")
+    public ResponseEntity<String> deleteEvent(@PathVariable Long id) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        Object principalUser = authentication.getPrincipal();
+
+        if (!eventService.isArtist()) {
+            return ResponseEntity.badRequest().body("User is not an artist");
+        }
+
+        Artist artist = (Artist) principalUser;
+
+        try {
+            Event event = eventService.getEventById(id);
+
+            if (!event.getArtist().getId().equals(artist.getId())) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("This event does not belong to you");
+            }
+            eventService.deleteImages(event.getImage());
+            eventService.deleteEvent(id);
+            return ResponseEntity.ok("Event deleted successfully");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 
 }
