@@ -17,6 +17,7 @@ import CreateProductForm from './components/CreateProductForm';
 import ProductsList from './components/ProductsList';
 import EditProduct from './components/EditProduct';
 import CreateEventForm from './components/CreateEventForm';
+import AllMyEvents from './components/AllMyEvents';
 
 const HomePage = () => {
   const [userEmail, setUserEmail] = useState(null);
@@ -127,6 +128,11 @@ const HomePage = () => {
         <button>New Event</button>
       </Link>
 
+      <p>Mis Eventos</p>
+      <Link to="/event/allMyEvents">
+        <button>My Events</button>
+      </Link>
+
 
       <br />
       <p>O haz clic para registrar un nuevo usuario:</p>
@@ -169,6 +175,7 @@ const App = () => {
           <Route path="/product/all" element={<ProductsList />} />
           <Route path="/product/edit/:id" element={<EditProduct />} />
           <Route path="/event/new" element={<CreateEventForm />} />
+          <Route path="/event/allMyEvents" element={<AllMyEvents />} />
         </Routes>
       </Router>
     </GoogleOAuthProvider>

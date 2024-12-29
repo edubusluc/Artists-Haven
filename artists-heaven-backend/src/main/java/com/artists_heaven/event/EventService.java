@@ -8,6 +8,8 @@ import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.util.List;
 
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
@@ -29,8 +31,30 @@ public class EventService {
         this.artistRepository = artistRepository;
     }
 
+    public Event getEventById(Long id) {
+        return eventRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Event not found"));
+    }
+
     public List<Event> getAllEvents() {
         return eventRepository.findAll();
+    }
+
+    public void deleteEvent(Long id) {
+        Event event = eventRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Event not found"));
+
+        eventRepository.delete(event);
+    }
+
+    public Boolean isArtist() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        Object principalUser = authentication.getPrincipal();
+        if (principalUser instanceof Artist) {
+            return true;
+        } else {
+            return false;
+        }
     }
 
     private void validateEventDate(LocalDate eventDate) {
@@ -85,6 +109,25 @@ public class EventService {
         }
 
         return imageUrl;
+    }
+
+    public List<Event> getAllMyEvents(Long id) {
+        return eventRepository.findByArtistId(id);
+    }
+
+    public void deleteImages(String removedImage) {
+        String fileName = StringUtils.cleanPath(removedImage);
+        Path targetPath = Paths.get("artists-heaven-backend/src/main/resources", fileName).normalize();
+
+        if (!targetPath.startsWith(TARGET_PATH)) {
+            throw new IllegalArgumentException("Entry is outside of the target directory");
+        }
+
+        try {
+            Files.delete(targetPath);
+        } catch (IOException e) {
+            throw new IllegalArgumentException("Error al eliminar las imágenes.");
+        }
     }
 
 }
