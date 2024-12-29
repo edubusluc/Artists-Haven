@@ -10,13 +10,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.*;
 import org.springframework.mock.web.MockMultipartFile;
-import org.springframework.web.multipart.MultipartFile;
 
 import com.artists_heaven.entities.artist.Artist;
 import com.artists_heaven.entities.artist.ArtistRepository;
@@ -33,7 +33,6 @@ class EventServiceTest {
     private EventService eventService;
 
     private static final String UPLOAD_DIR = "artists-heaven-backend/src/main/resources/event_media/";
-    private static final Path TARGET_PATH = Paths.get(UPLOAD_DIR).normalize();
 
     @BeforeEach
     void setUp() {
@@ -191,5 +190,54 @@ class EventServiceTest {
 
         // Clean up the dummy file
         Files.deleteIfExists(targetPath);
+    }
+
+    @Test
+    void testDeleteEventSuccess() {
+        Event event = new Event();
+        event.setId(1L);
+
+        when(eventRepository.findById(1L)).thenReturn(Optional.of(event));
+
+        eventService.deleteEvent(1L);
+
+        verify(eventRepository, times(1)).findById(1L);
+        verify(eventRepository, times(1)).delete(event);
+    }
+
+    @Test
+    void testDeleteEventThrowsExceptionForNotFound() {
+        when(eventRepository.findById(1L)).thenReturn(Optional.empty());
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            eventService.deleteEvent(1L);
+        });
+
+        assertEquals("Event not found", exception.getMessage());
+        verify(eventRepository, times(1)).findById(1L);
+        verify(eventRepository, times(0)).delete(any(Event.class));
+    }
+
+    @Test
+    void testGetAllMyEvents() {
+        List<Event> events = List.of(new Event(), new Event());
+        when(eventRepository.findByArtistId(1L)).thenReturn(events);
+
+        List<Event> result = eventService.getAllMyEvents(1L);
+
+        assertEquals(2, result.size());
+        verify(eventRepository, times(1)).findByArtistId(1L);
+    }
+
+    @Test
+    void testDeleteImagesSuccess() throws IOException {
+        String removedImage = "event_media/test.jpg";
+        Path targetPath = Paths.get("artists-heaven-backend/src/main/resources", removedImage).normalize();
+        Files.createDirectories(targetPath.getParent());
+        Files.createFile(targetPath);
+
+        eventService.deleteImages(removedImage);
+
+        assertFalse(Files.exists(targetPath));
     }
 }
