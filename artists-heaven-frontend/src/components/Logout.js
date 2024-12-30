@@ -8,6 +8,7 @@ const Logout = () => {
     // Eliminar el token y el correo del localStorage
     localStorage.removeItem("authToken");
     localStorage.removeItem("userEmail");
+    localStorage.removeItem("role");
 
     // Redirigir al usuario a la página de inicio (o login)
     navigate("/");  // Puedes redirigir a la página que desees
