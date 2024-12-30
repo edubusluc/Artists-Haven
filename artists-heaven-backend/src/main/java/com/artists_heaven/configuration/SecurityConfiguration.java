@@ -35,7 +35,8 @@ public class SecurityConfiguration {
         "/api/product/categories",
         "/api/product/allProducts",
         "/api/product/product_media/**",
-        "/api/product/details/{id}"
+        "/api/product/details/{id}",
+        "/api/event/event_media/**",
     };
 
     // Endpoints accessible only by ADMIN users
@@ -51,7 +52,9 @@ public class SecurityConfiguration {
     // Endpoints accessible only by ARTIST users
     private static final String[] ARTIST_ENDPOINTS = {
         "/api/verification/send",
-        "/api/event/new"
+        "/api/event/new",
+        "/api/event/allMyEvents",
+        "/api/event/edit/{id}",
     };
 
     private static final String[] AUTHENTICATED_ENDPOINTS = {

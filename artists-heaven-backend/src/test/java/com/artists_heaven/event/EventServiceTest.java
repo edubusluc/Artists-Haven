@@ -306,4 +306,64 @@ class EventServiceTest {
 
         assertFalse(result);
     }
+
+    @Test
+    void testUpdateEventSuccess() {
+        Event event = new Event();
+        event.setId(1L);
+        event.setName("Original Event");
+        event.setDescription("Original Description");
+        event.setDate(LocalDate.now().plusDays(10));
+        event.setLocation("Original Location");
+        event.setMoreInfo("Original More Info");
+        event.setImage("original_image.jpg");
+
+        EventDTO eventDTO = new EventDTO();
+        eventDTO.setName("Updated Event");
+        eventDTO.setDescription("Updated Description");
+        eventDTO.setDate(LocalDate.now().plusDays(20));
+        eventDTO.setLocation("Updated Location");
+        eventDTO.setMoreInfo("Updated More Info");
+        eventDTO.setImage("updated_image.jpg");
+
+        when(eventRepository.save(any(Event.class))).thenReturn(event);
+
+        eventService.updateEvent(event, eventDTO);
+
+        assertEquals("Updated Event", event.getName());
+        assertEquals("Updated Description", event.getDescription());
+        assertEquals(LocalDate.now().plusDays(20), event.getDate());
+        assertEquals("Updated Location", event.getLocation());
+        assertEquals("Updated More Info", event.getMoreInfo());
+        assertEquals("updated_image.jpg", event.getImage());
+
+        verify(eventRepository, times(1)).save(event);
+    }
+
+    @Test
+    void testUpdateEventThrowsExceptionForPastDate() {
+        Event event = new Event();
+        event.setId(1L);
+        event.setName("Original Event");
+        event.setDescription("Original Description");
+        event.setDate(LocalDate.now().plusDays(10));
+        event.setLocation("Original Location");
+        event.setMoreInfo("Original More Info");
+        event.setImage("original_image.jpg");
+
+        EventDTO eventDTO = new EventDTO();
+        eventDTO.setName("Updated Event");
+        eventDTO.setDescription("Updated Description");
+        eventDTO.setDate(LocalDate.now().minusDays(1)); // Fecha en el pasado
+        eventDTO.setLocation("Updated Location");
+        eventDTO.setMoreInfo("Updated More Info");
+        eventDTO.setImage("updated_image.jpg");
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            eventService.updateEvent(event, eventDTO);
+        });
+
+        assertEquals("Event date cannot be in the past", exception.getMessage());
+        verify(eventRepository, times(0)).save(event);
+    }
 }

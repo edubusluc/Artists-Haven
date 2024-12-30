@@ -130,4 +130,22 @@ public class EventService {
         }
     }
 
+    public void updateEvent(Event event, EventDTO eventDTO) {
+        LocalDate actualDate = LocalDate.now();
+        
+        if (eventDTO.getDate().isBefore(actualDate)) {
+            throw new IllegalArgumentException("Event date cannot be in the past");
+        }
+    
+        event.setName(eventDTO.getName());
+        event.setDescription(eventDTO.getDescription());
+        event.setDate(eventDTO.getDate());
+        event.setLocation(eventDTO.getLocation());
+        event.setMoreInfo(eventDTO.getMoreInfo());
+        event.setImage(eventDTO.getImage());
+        
+        eventRepository.save(event);
+    }
+    
+
 }
