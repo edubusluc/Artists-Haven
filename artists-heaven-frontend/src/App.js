@@ -19,6 +19,7 @@ import EditProduct from './components/EditProduct';
 import CreateEventForm from './components/CreateEventForm';
 import AllMyEvents from './components/AllMyEvents';
 import FAQ from './components/FAQ';
+import EditMyEvent from './components/EditMyEvent';
 
 const HomePage = () => {
   const [userEmail, setUserEmail] = useState(null);
@@ -183,6 +184,7 @@ const App = () => {
           <Route path="/event/new" element={<CreateEventForm />} />
           <Route path="/event/allMyEvents" element={<AllMyEvents />} />
           <Route path="/FAQ" element={<FAQ />} />
+          <Route path="/event/edit/:id" element={<EditMyEvent />} />
         </Routes>
       </Router>
     </GoogleOAuthProvider>
