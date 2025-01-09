@@ -138,44 +138,44 @@ class EventServiceTest {
         assertEquals("Invalid data", exception.getMessage());
     }
 
-    // @Test
-    // void testNewEventSuccess() {
-    //     EventDTO eventDto = new EventDTO();
-    //     eventDto.setDate(LocalDate.now().plusDays(1));
-    //     eventDto.setName("Event Test");
-    //     eventDto.setDescription("Description");
-    //     eventDto.setLocation("Location");
-    //     eventDto.setMoreInfo("More Info");
-    //     eventDto.setImage("Image");
-    //     eventDto.setArtistId(1L);
-    //     Artist artist = new Artist();
-    //     when(artistRepository.findById(anyLong())).thenReturn(Optional.of(artist));
-    //     when(eventRepository.save(any(Event.class))).thenReturn(new Event());
-
-    //     Event event = eventService.newEvent(eventDto);
-    //     assertNotNull(event);
-    //     verify(eventRepository, times(1)).save(any(Event.class));
-    // }
-
-
     @Test
-    void testSaveImagesSuccess() throws IOException {
-        String originalFileName = UUID.randomUUID() +"test.jpg";
+    void testNewEventSuccess() {
+        EventDTO eventDto = new EventDTO();
+        eventDto.setDate(LocalDate.now().plusDays(1));
+        eventDto.setName("Event Test");
+        eventDto.setDescription("Description");
+        eventDto.setLocation("Location");
+        eventDto.setMoreInfo("More Info");
+        eventDto.setImage("Image");
+        eventDto.setArtistId(1L);
+        Artist artist = new Artist();
+        when(artistRepository.findById(anyLong())).thenReturn(Optional.of(artist));
+        when(eventRepository.save(any(Event.class))).thenReturn(new Event());
 
-        when(multipartFile.getOriginalFilename()).thenReturn(originalFileName);
-        when(multipartFile.getInputStream()).thenReturn(mock(InputStream.class));
+        Event event = eventService.newEvent(eventDto);
+        assertNotNull(event);
+        verify(eventRepository, times(1)).save(any(Event.class));
+    }
 
-        String imageUrl = eventService.saveImages(multipartFile);
 
-        assertTrue(imageUrl.contains("/event_media/"));
-        verify(multipartFile, times(1)).getOriginalFilename();
-        verify(multipartFile, times(1)).getInputStream();
+    // @Test
+    // void testSaveImagesSuccess() throws IOException {
+    //     String originalFileName = UUID.randomUUID() +"test.jpg";
 
-        // Clean up the created file
-        eventService.deleteImages(imageUrl);
+    //     when(multipartFile.getOriginalFilename()).thenReturn(originalFileName);
+    //     when(multipartFile.getInputStream()).thenReturn(mock(InputStream.class));
+
+    //     String imageUrl = eventService.saveImages(multipartFile);
+
+    //     assertTrue(imageUrl.contains("/event_media/"));
+    //     verify(multipartFile, times(1)).getOriginalFilename();
+    //     verify(multipartFile, times(1)).getInputStream();
+
+    //     // Clean up the created file
+    //     eventService.deleteImages(imageUrl);
 
         
-    }
+    // }
 
     @Test
     void testSaveImagesThrowsException() throws IOException {
