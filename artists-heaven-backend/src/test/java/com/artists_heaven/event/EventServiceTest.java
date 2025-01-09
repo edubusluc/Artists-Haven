@@ -53,43 +53,45 @@ class EventServiceTest {
 
     @Test
     void testValidateEventDateThrowsExceptionForNullDate() {
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            Artist artist = new Artist();
-            artist.setId(1L);
-            when(artistRepository.findById(anyLong())).thenReturn(Optional.of(artist));
+        Artist artist = new Artist();
+        artist.setId(1L);
+        when(artistRepository.findById(anyLong())).thenReturn(Optional.of(artist));
 
-            EventDTO eventDto = new EventDTO();
-            eventDto.setDate(null);
-            eventDto.setName("Test Event");
-            eventDto.setDescription("Description");
-            eventDto.setLocation("Location");
-            eventDto.setMoreInfo("More Info");
-            eventDto.setImage("Image");
-            eventDto.setArtistId(1L);
+        EventDTO eventDto = new EventDTO();
+        eventDto.setDate(null);
+        eventDto.setName("Test Event");
+        eventDto.setDescription("Description");
+        eventDto.setLocation("Location");
+        eventDto.setMoreInfo("More Info");
+        eventDto.setImage("Image");
+        eventDto.setArtistId(1L);
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
             eventService.newEvent(eventDto);
         });
+
         assertEquals("Event date cannot be null", exception.getMessage());
     }
 
     @Test
     void testValidateEventDateThrowsExceptionForPastDate() {
+        Artist artist = new Artist();
+        artist.setId(1L);
+        when(artistRepository.findById(anyLong())).thenReturn(Optional.of(artist));
+
+        EventDTO eventDto = new EventDTO();
+        eventDto.setDate(LocalDate.now().minusDays(1)); // Fecha en el pasado
+        eventDto.setName("Test Event");
+        eventDto.setDescription("Description");
+        eventDto.setLocation("Location");
+        eventDto.setMoreInfo("More Info");
+        eventDto.setImage("Image");
+        eventDto.setArtistId(1L);
+
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-
-            Artist artist = new Artist();
-            artist.setId(1L);
-            when(artistRepository.findById(anyLong())).thenReturn(Optional.of(artist));
-
-            EventDTO eventDto = new EventDTO();
-            eventDto.setDate(LocalDate.now().minusDays(1));
-            eventDto.setName("Test Event");
-            eventDto.setDescription("Description");
-            eventDto.setLocation("Location");
-            eventDto.setMoreInfo("More Info");
-            eventDto.setImage("Image");
-            eventDto.setArtistId(1L);
             eventService.newEvent(eventDto);
-
         });
+
         assertEquals("Event date cannot be in the past", exception.getMessage());
     }
 
