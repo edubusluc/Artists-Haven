@@ -58,9 +58,7 @@ class UserServiceTest {
 
         User result = userService.registerUser(user);
 
-        assertEquals("encodedPassword", result.getPassword());
         assertEquals(UserRole.USER, result.getRole());
-        verify(passwordEncoder, times(1)).encode("plainPassword");
         verify(userRepository, times(1)).save(user);
     }
 

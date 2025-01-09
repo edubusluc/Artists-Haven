@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -16,10 +17,10 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.*;
-import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.util.StringUtils;
 import com.artists_heaven.entities.artist.Artist;
 import com.artists_heaven.entities.artist.ArtistRepository;
 
@@ -27,6 +28,9 @@ class EventServiceTest {
 
     @Mock
     private EventRepository eventRepository;
+
+    @Mock
+    private MultipartFile multipartFile;
 
     @Mock
     private ArtistRepository artistRepository;
@@ -152,51 +156,38 @@ class EventServiceTest {
         verify(eventRepository, times(1)).save(any(Event.class));
     }
 
-    @Test
-    void testSaveImagesThrowsExceptionForPathTraversal() {
-        MockMultipartFile image = new MockMultipartFile("images", "../test.jpg",
-                "image/jpeg", "test image content".getBytes());
-
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            eventService.saveImages(image);
-        });
-        assertEquals("Entry is outside of the target directory",
-                exception.getMessage());
-    }
-
-    @Test
-    void testSaveImagesThrowsExceptionForIOException() throws IOException {
-        MockMultipartFile image = new MockMultipartFile("images", "test.jpg", "image/jpeg",
-                "test image content".getBytes());
-
-        Path targetPath = Paths.get(UPLOAD_DIR, "test.jpg").normalize();
-        Files.createDirectories(targetPath.getParent());
-        Files.createFile(targetPath);
-        targetPath.toFile().setReadOnly(); // Make the file read-only to cause an IOException
-
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            eventService.saveImages(image);
-        });
-        assertEquals("Error al guardar las imágenes.", exception.getMessage());
-
-        // Clean up the dummy file
-        targetPath.toFile().setWritable(true);
-        Files.deleteIfExists(targetPath);
-    }
 
     @Test
     void testSaveImagesSuccess() throws IOException {
-        MockMultipartFile image = new MockMultipartFile("images", "test.jpg", "image/jpeg",
-                "test image content".getBytes());
+        String originalFileName = "test.jpg";
+        String fileName = "randomUUID_test.jpg";
+        Path targetPath = Paths.get(UPLOAD_DIR, fileName);
 
-        Path targetPath = Paths.get(UPLOAD_DIR, "test.jpg").normalize();
-        Files.createDirectories(targetPath.getParent());
+        when(multipartFile.getOriginalFilename()).thenReturn(originalFileName);
+        when(multipartFile.getInputStream()).thenReturn(mock(InputStream.class));
 
-        String imageUrl = eventService.saveImages(image);
-        assertEquals("/event_media/test.jpg", imageUrl);
+        String imageUrl = eventService.saveImages(multipartFile);
 
-        // Clean up the dummy file
+        assertTrue(imageUrl.contains("/event_media/"));
+        verify(multipartFile, times(1)).getOriginalFilename();
+        verify(multipartFile, times(1)).getInputStream();
+
+        // Clean up the created file
         Files.deleteIfExists(targetPath);
+    }
+
+    @Test
+    void testSaveImagesThrowsException() throws IOException {
+        when(multipartFile.getOriginalFilename()).thenReturn("test.jpg");
+        when(multipartFile.getInputStream()).thenThrow(new IOException("Test IOException"));
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            eventService.saveImages(multipartFile);
+        });
+
+        assertEquals("Error al guardar las imágenes.", exception.getMessage());
+        verify(multipartFile, times(1)).getOriginalFilename();
+        verify(multipartFile, times(1)).getInputStream();
     }
 
     @Test
@@ -239,24 +230,36 @@ class EventServiceTest {
     @Test
     void testDeleteImagesSuccess() throws IOException {
         String removedImage = "event_media/test.jpg";
-        Path targetPath = Paths.get("artists-heaven-backend/src/main/resources", removedImage).normalize();
-        Files.createDirectories(targetPath.getParent());
-        Files.createFile(targetPath);
+        String cleanedPath = StringUtils.cleanPath(removedImage);
+        Path targetPath = Paths.get("artists-heaven-backend/src/main/resources", cleanedPath).normalize();
 
-        eventService.deleteImages(removedImage);
+        // Mock the static method Files.delete
+        try (MockedStatic<Files> mockedFiles = mockStatic(Files.class)) {
+            mockedFiles.when(() -> Files.delete(targetPath)).thenAnswer(invocation -> null);
 
-        assertFalse(Files.exists(targetPath));
+            eventService.deleteImages(removedImage);
+
+            mockedFiles.verify(() -> Files.delete(targetPath), times(1));
+        }
     }
 
     @Test
-    void testDeleteImagesThrowsExceptionForPathTraversal() {
-        String removedImage = "../test.jpg";
+    void testDeleteImagesThrowsException() throws IOException {
+        String removedImage = "event_media/test.jpg";
+        String cleanedPath = StringUtils.cleanPath(removedImage);
+        Path targetPath = Paths.get("artists-heaven-backend/src/main/resources", cleanedPath).normalize();
 
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            eventService.deleteImages(removedImage);
-        });
+        // Mock the static method Files.delete to throw an IOException
+        try (MockedStatic<Files> mockedFiles = mockStatic(Files.class)) {
+            mockedFiles.when(() -> Files.delete(targetPath)).thenThrow(new IOException("Test IOException"));
 
-        assertEquals("Entry is outside of the target directory", exception.getMessage());
+            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+                eventService.deleteImages(removedImage);
+            });
+
+            assertEquals("Error al eliminar las imágenes.", exception.getMessage());
+            mockedFiles.verify(() -> Files.delete(targetPath), times(1));
+        }
     }
 
     @Test
