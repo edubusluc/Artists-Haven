@@ -17,7 +17,7 @@ public class ArtistController {
 
     // Endpoint for registering a new artist.
     @PostMapping("/register")
-    public ResponseEntity<?> registerArtist(@RequestBody Artist artist) {
+    public ResponseEntity<Artist> registerArtist(@RequestBody Artist artist) {
         try {
             // Attempt to register the artist using the service
             Artist registeredArtist = artistService.registerArtist(artist);
@@ -26,7 +26,7 @@ public class ArtistController {
             return new ResponseEntity<>(registeredArtist, HttpStatus.CREATED);
         } catch (IllegalArgumentException e) {
             // Return a response with the error message and HTTP status 400 (Bad Request)
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
+            return ResponseEntity.badRequest().body(null);
         }
     }
 
