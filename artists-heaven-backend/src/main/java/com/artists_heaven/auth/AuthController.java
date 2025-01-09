@@ -4,7 +4,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.http.auth.InvalidCredentialsException;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -22,20 +21,15 @@ import com.artists_heaven.entities.user.UserRole;
 @RequestMapping("/api/auth")
 public class AuthController {
 
-    @Autowired
-    AuthService authService;
+    private final AuthService authService;
 
-    @Autowired
-    UserRepository userRepository;
+    private final UserRepository userRepository;
 
-    @Autowired
-    JwtTokenProvider jwtTokenProvider;
-
-    @Autowired
-    PasswordEncoder passwordEncoder;
-
-    @Autowired
-    TokenVerifier tokenVerifier;
+    public AuthController(AuthService authService, UserRepository userRepository, JwtTokenProvider jwtTokenProvider,
+            PasswordEncoder passwordEncoder, TokenVerifier tokenVerifier) {
+        this.authService = authService;
+        this.userRepository = userRepository;
+    }
 
     // Endpoint to handle user login requests
     @PostMapping("/login")
