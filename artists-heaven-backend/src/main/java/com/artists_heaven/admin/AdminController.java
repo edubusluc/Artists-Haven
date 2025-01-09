@@ -17,7 +17,6 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.HttpHeaders;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -30,11 +29,17 @@ import org.springframework.web.bind.annotation.RequestBody;
 @RequestMapping("/api/admin")
 public class AdminController {
 
-    @Autowired
-    ArtistRepository artistRepository;
+    
+    private final ArtistRepository artistRepository;
 
-    @Autowired
-    VerificationRepository verificationRepository;
+    private final VerificationRepository verificationRepository;
+
+    public AdminController(ArtistRepository artistRepository, VerificationRepository verificationRepository) {
+        this.artistRepository = artistRepository;
+        this.verificationRepository = verificationRepository;
+    }
+
+
 
     @PostMapping("/validate_artist")
     public ResponseEntity<?> validateArtist(@RequestBody Map<String, Long> payload) {
