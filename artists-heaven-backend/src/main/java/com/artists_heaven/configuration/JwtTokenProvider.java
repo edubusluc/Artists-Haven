@@ -6,7 +6,6 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -23,8 +22,11 @@ import java.util.Date;
 @Component
 public class JwtTokenProvider {
 
-    @Autowired
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
+
+    public JwtTokenProvider(UserRepository userRepository){
+        this.userRepository = userRepository;
+    }
 
     // Load the secret key from environment variables
     Dotenv dotenv = Dotenv.load();
