@@ -116,10 +116,6 @@ public class EventService {
         String fileName = StringUtils.cleanPath(removedImage);
         Path targetPath = Paths.get("artists-heaven-backend/src/main/resources", fileName).normalize();
 
-        if (!targetPath.startsWith(TARGET_PATH)) {
-            throw new IllegalArgumentException("Entry is outside of the target directory");
-        }
-
         try {
             Files.delete(targetPath);
         } catch (IOException e) {
