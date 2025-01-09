@@ -39,7 +39,6 @@ public class Event {
 
     private String moreInfo;
 
-    @NotNull
     @ManyToOne
     @JsonBackReference
     private Artist artist;
