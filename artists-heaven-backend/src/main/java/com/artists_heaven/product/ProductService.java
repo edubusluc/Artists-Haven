@@ -47,7 +47,8 @@ public class ProductService {
 
     public List<String> saveImages(List<MultipartFile> images) {
         List<String> imageUrls = new ArrayList<>();
-
+        validateImages(images);
+        
         for (MultipartFile image : images) {
             String fileName = StringUtils.cleanPath(image.getOriginalFilename());
             Path targetPath = Paths.get(UPLOAD_DIR, fileName).normalize();
@@ -68,6 +69,14 @@ public class ProductService {
         }
 
         return imageUrls;
+    }
+
+    private void validateImages(List<MultipartFile> images) {
+        for (MultipartFile image : images) {
+            if (image.isEmpty()) {
+                throw new IllegalArgumentException("Las imágenes no pueden estar vacías.");
+            }
+        }
     }
 
     public List<String> deleteImages(List<MultipartFile> removedImages) {
