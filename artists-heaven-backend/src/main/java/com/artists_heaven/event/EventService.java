@@ -87,11 +87,19 @@ public class EventService {
         }
     }
 
-    public String saveImages(MultipartFile image)  {
+    public String saveImages(MultipartFile image) {
         String imageUrl = "";
 
-        String fileName = UUID.randomUUID().toString() + "_" + image.getOriginalFilename();
-        Path targetPath = Paths.get(UPLOAD_DIR, fileName);
+        // Limpiar el nombre del archivo
+        String originalFileName = StringUtils.cleanPath(image.getOriginalFilename());
+
+        // Validar el nombre del archivo
+        if (originalFileName.contains("..")) {
+            throw new IllegalArgumentException("Nombre de archivo no válido: " + originalFileName);
+        }
+
+        String fileName = UUID.randomUUID().toString() + "_" + originalFileName;
+        Path targetPath = Paths.get(UPLOAD_DIR, fileName).normalize();
 
         try {
             // Guardar la imagen en el directorio
