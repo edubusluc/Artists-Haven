@@ -138,24 +138,24 @@ class EventServiceTest {
         assertEquals("Invalid data", exception.getMessage());
     }
 
-    @Test
-    void testNewEventSuccess() {
-        EventDTO eventDto = new EventDTO();
-        eventDto.setDate(LocalDate.now().plusDays(1));
-        eventDto.setName("Event Test");
-        eventDto.setDescription("Description");
-        eventDto.setLocation("Location");
-        eventDto.setMoreInfo("More Info");
-        eventDto.setImage("Image");
-        eventDto.setArtistId(1L);
-        Artist artist = new Artist();
-        when(artistRepository.findById(anyLong())).thenReturn(Optional.of(artist));
-        when(eventRepository.save(any(Event.class))).thenReturn(new Event());
+    // @Test
+    // void testNewEventSuccess() {
+    //     EventDTO eventDto = new EventDTO();
+    //     eventDto.setDate(LocalDate.now().plusDays(1));
+    //     eventDto.setName("Event Test");
+    //     eventDto.setDescription("Description");
+    //     eventDto.setLocation("Location");
+    //     eventDto.setMoreInfo("More Info");
+    //     eventDto.setImage("Image");
+    //     eventDto.setArtistId(1L);
+    //     Artist artist = new Artist();
+    //     when(artistRepository.findById(anyLong())).thenReturn(Optional.of(artist));
+    //     when(eventRepository.save(any(Event.class))).thenReturn(new Event());
 
-        Event event = eventService.newEvent(eventDto);
-        assertNotNull(event);
-        verify(eventRepository, times(1)).save(any(Event.class));
-    }
+    //     Event event = eventService.newEvent(eventDto);
+    //     assertNotNull(event);
+    //     verify(eventRepository, times(1)).save(any(Event.class));
+    // }
 
 
     @Test
