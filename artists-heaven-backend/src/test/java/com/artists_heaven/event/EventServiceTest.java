@@ -13,6 +13,7 @@ import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -159,9 +160,7 @@ class EventServiceTest {
 
     @Test
     void testSaveImagesSuccess() throws IOException {
-        String originalFileName = "test.jpg";
-        String fileName = "randomUUID_test.jpg";
-        Path targetPath = Paths.get(UPLOAD_DIR, fileName);
+        String originalFileName = UUID.randomUUID() +"test.jpg";
 
         when(multipartFile.getOriginalFilename()).thenReturn(originalFileName);
         when(multipartFile.getInputStream()).thenReturn(mock(InputStream.class));
@@ -173,7 +172,9 @@ class EventServiceTest {
         verify(multipartFile, times(1)).getInputStream();
 
         // Clean up the created file
-        Files.deleteIfExists(targetPath);
+        eventService.deleteImages(imageUrl);
+
+        
     }
 
     @Test

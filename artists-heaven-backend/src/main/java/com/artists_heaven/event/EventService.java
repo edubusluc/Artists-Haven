@@ -25,7 +25,6 @@ public class EventService {
     private final ArtistRepository artistRepository;
 
     private static final String UPLOAD_DIR = "artists-heaven-backend/src/main/resources/event_media/";
-    private static final Path TARGET_PATH = new File(UPLOAD_DIR).toPath().normalize();
 
     public EventService(EventRepository eventRepository, ArtistRepository artistRepository) {
         this.eventRepository = eventRepository;
