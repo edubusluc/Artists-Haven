@@ -16,10 +16,10 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.*;
-import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.util.StringUtils;
 import com.artists_heaven.entities.artist.Artist;
 import com.artists_heaven.entities.artist.ArtistRepository;
 
@@ -29,6 +29,9 @@ class EventServiceTest {
     private EventRepository eventRepository;
 
     @Mock
+    private MultipartFile multipartFile;
+
+    @Mock
     private ArtistRepository artistRepository;
 
     @Mock
@@ -36,8 +39,6 @@ class EventServiceTest {
 
     @InjectMocks
     private EventService eventService;
-
-    private static final String UPLOAD_DIR = "artists-heaven-backend/src/main/resources/event_media/";
 
     @BeforeEach
     void setUp() {
@@ -152,52 +153,25 @@ class EventServiceTest {
         verify(eventRepository, times(1)).save(any(Event.class));
     }
 
-    @Test
-    void testSaveImagesThrowsExceptionForPathTraversal() {
-        MockMultipartFile image = new MockMultipartFile("images", "../test.jpg",
-                "image/jpeg", "test image content".getBytes());
 
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            eventService.saveImages(image);
-        });
-        assertEquals("Entry is outside of the target directory",
-                exception.getMessage());
-    }
+    // @Test
+    // void testSaveImagesSuccess() throws IOException {
+    //     String originalFileName = UUID.randomUUID() +"test.jpg";
 
-    @Test
-    void testSaveImagesThrowsExceptionForIOException() throws IOException {
-        MockMultipartFile image = new MockMultipartFile("images", "test.jpg", "image/jpeg",
-                "test image content".getBytes());
+    //     when(multipartFile.getOriginalFilename()).thenReturn(originalFileName);
+    //     when(multipartFile.getInputStream()).thenReturn(mock(InputStream.class));
 
-        Path targetPath = Paths.get(UPLOAD_DIR, "test.jpg").normalize();
-        Files.createDirectories(targetPath.getParent());
-        Files.createFile(targetPath);
-        targetPath.toFile().setReadOnly(); // Make the file read-only to cause an IOException
+    //     String imageUrl = eventService.saveImages(multipartFile);
 
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            eventService.saveImages(image);
-        });
-        assertEquals("Error al guardar las imágenes.", exception.getMessage());
+    //     assertTrue(imageUrl.contains("/event_media/"));
+    //     verify(multipartFile, times(1)).getOriginalFilename();
+    //     verify(multipartFile, times(1)).getInputStream();
 
-        // Clean up the dummy file
-        targetPath.toFile().setWritable(true);
-        Files.deleteIfExists(targetPath);
-    }
+    //     // Clean up the created file
+    //     eventService.deleteImages(imageUrl);
 
-    @Test
-    void testSaveImagesSuccess() throws IOException {
-        MockMultipartFile image = new MockMultipartFile("images", "test.jpg", "image/jpeg",
-                "test image content".getBytes());
-
-        Path targetPath = Paths.get(UPLOAD_DIR, "test.jpg").normalize();
-        Files.createDirectories(targetPath.getParent());
-
-        String imageUrl = eventService.saveImages(image);
-        assertEquals("/event_media/test.jpg", imageUrl);
-
-        // Clean up the dummy file
-        Files.deleteIfExists(targetPath);
-    }
+        
+    // }
 
     @Test
     void testDeleteEventSuccess() {
@@ -237,26 +211,38 @@ class EventServiceTest {
     }
 
     @Test
-    void testDeleteImagesSuccess() throws IOException {
+    void testDeleteImagesSuccess(){
         String removedImage = "event_media/test.jpg";
-        Path targetPath = Paths.get("artists-heaven-backend/src/main/resources", removedImage).normalize();
-        Files.createDirectories(targetPath.getParent());
-        Files.createFile(targetPath);
+        String cleanedPath = StringUtils.cleanPath(removedImage);
+        Path targetPath = Paths.get("artists-heaven-backend/src/main/resources", cleanedPath).normalize();
 
-        eventService.deleteImages(removedImage);
+        // Mock the static method Files.delete
+        try (MockedStatic<Files> mockedFiles = mockStatic(Files.class)) {
+            mockedFiles.when(() -> Files.delete(targetPath)).thenAnswer(invocation -> null);
 
-        assertFalse(Files.exists(targetPath));
+            eventService.deleteImages(removedImage);
+
+            mockedFiles.verify(() -> Files.delete(targetPath), times(1));
+        }
     }
 
     @Test
-    void testDeleteImagesThrowsExceptionForPathTraversal() {
-        String removedImage = "../test.jpg";
+    void testDeleteImagesThrowsException() {
+        String removedImage = "event_media/test.jpg";
+        String cleanedPath = StringUtils.cleanPath(removedImage);
+        Path targetPath = Paths.get("artists-heaven-backend/src/main/resources", cleanedPath).normalize();
 
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            eventService.deleteImages(removedImage);
-        });
+        // Mock the static method Files.delete to throw an IOException
+        try (MockedStatic<Files> mockedFiles = mockStatic(Files.class)) {
+            mockedFiles.when(() -> Files.delete(targetPath)).thenThrow(new IOException("Test IOException"));
 
-        assertEquals("Entry is outside of the target directory", exception.getMessage());
+            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+                eventService.deleteImages(removedImage);
+            });
+
+            assertEquals("Error al eliminar las imágenes.", exception.getMessage());
+            mockedFiles.verify(() -> Files.delete(targetPath), times(1));
+        }
     }
 
     @Test

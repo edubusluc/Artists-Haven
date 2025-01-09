@@ -6,18 +6,20 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.beans.factory.annotation.Autowired;
 
 @RestController
 @RequestMapping("/api/artists")
 public class ArtistController {
 
-    @Autowired
-    private ArtistService artistService;
+    private final ArtistService artistService;
+
+    public ArtistController(ArtistService artistService) {
+        this.artistService = artistService;
+    }
 
     // Endpoint for registering a new artist.
     @PostMapping("/register")
-    public ResponseEntity<?> registerArtist(@RequestBody Artist artist) {
+    public ResponseEntity<Artist> registerArtist(@RequestBody Artist artist) {
         try {
             // Attempt to register the artist using the service
             Artist registeredArtist = artistService.registerArtist(artist);
@@ -26,7 +28,7 @@ public class ArtistController {
             return new ResponseEntity<>(registeredArtist, HttpStatus.CREATED);
         } catch (IllegalArgumentException e) {
             // Return a response with the error message and HTTP status 400 (Bad Request)
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
+            return ResponseEntity.badRequest().body(null);
         }
     }
 

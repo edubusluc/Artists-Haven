@@ -1,12 +1,12 @@
 package com.artists_heaven.event;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -24,7 +24,6 @@ public class EventService {
     private final ArtistRepository artistRepository;
 
     private static final String UPLOAD_DIR = "artists-heaven-backend/src/main/resources/event_media/";
-    private static final Path TARGET_PATH = new File(UPLOAD_DIR).toPath().normalize();
 
     public EventService(EventRepository eventRepository, ArtistRepository artistRepository) {
         this.eventRepository = eventRepository;
@@ -88,27 +87,52 @@ public class EventService {
         }
     }
 
-    public String saveImages(MultipartFile image) {
+    public String saveImages(MultipartFile image)  {
         String imageUrl = "";
-
-        String fileName = StringUtils.cleanPath(image.getOriginalFilename());
-        Path targetPath = Paths.get(UPLOAD_DIR, fileName).normalize();
-
-        if (!targetPath.startsWith(TARGET_PATH)) {
-            throw new IllegalArgumentException("Entry is outside of the target directory");
+    
+        // Validar y sanitizar el nombre del archivo original
+        String originalFilename = image.getOriginalFilename();
+        
+        
+        // Validar que el archivo no esté vacío
+        if (originalFilename == null || originalFilename.isEmpty()) {
+            throw new IllegalArgumentException("El nombre del archivo no es válido.");
         }
 
+        originalFilename = sanitizeFilename(originalFilename);
+    
+        // Crear un nuevo nombre de archivo seguro
+        String fileName = UUID.randomUUID().toString() + "_" + originalFilename;
+        Path targetPath = Paths.get(UPLOAD_DIR, fileName);
+    
         try {
+            // Validar el contenido del archivo (puedes implementar validaciones adicionales si es necesario)
+            if (image.isEmpty() || !isValidImage(image)) {
+                throw new IllegalArgumentException("El archivo no es una imagen válida.");
+            }
+    
             // Guardar la imagen en el directorio
             Files.copy(image.getInputStream(), targetPath);
+            
             // Agregar la URL o nombre del archivo a la lista (ajustado según la necesidad)
-            fileName = "/event_media/" + fileName;
-            imageUrl = fileName;
+            imageUrl = "/event_media/" + fileName;
         } catch (IOException e) {
             throw new IllegalArgumentException("Error al guardar las imágenes.");
         }
-
+    
         return imageUrl;
+    }
+    
+    // Método para sanitizar el nombre del archivo
+    private String sanitizeFilename(String filename) {
+        return filename.replaceAll("[^a-zA-Z0-9\\._-]", "_");
+    }
+    
+    // Método para validar el contenido del archivo
+    private boolean isValidImage(MultipartFile image) {
+        // Aquí puedes agregar validaciones adicionales según el tipo de archivo que esperas
+        String contentType = image.getContentType();
+        return contentType != null && (contentType.equals("image/jpeg") || contentType.equals("image/png"));
     }
 
     public List<Event> getAllMyEvents(Long id) {
@@ -118,10 +142,6 @@ public class EventService {
     public void deleteImages(String removedImage) {
         String fileName = StringUtils.cleanPath(removedImage);
         Path targetPath = Paths.get("artists-heaven-backend/src/main/resources", fileName).normalize();
-
-        if (!targetPath.startsWith(TARGET_PATH)) {
-            throw new IllegalArgumentException("Entry is outside of the target directory");
-        }
 
         try {
             Files.delete(targetPath);

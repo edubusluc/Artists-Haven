@@ -1,6 +1,5 @@
 package com.artists_heaven.entities.artist;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -12,11 +11,14 @@ import com.artists_heaven.entities.user.UserRole;
 @Service
 public class ArtistService {
 
-    @Autowired
-    private ArtistRepository artistRepository;
+    private final ArtistRepository artistRepository;
 
-    @Autowired
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
+
+    public ArtistService(ArtistRepository artistRepository, UserRepository userRepository) {
+        this.artistRepository = artistRepository;
+        this.userRepository = userRepository;
+    }
 
     private PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 

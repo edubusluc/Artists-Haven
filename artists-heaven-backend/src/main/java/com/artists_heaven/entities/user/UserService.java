@@ -6,7 +6,6 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import com.artists_heaven.entities.artist.Artist;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -14,8 +13,11 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 @Service
 public class UserService {
 
-    @Autowired
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
+
+    public UserService(UserRepository userRepository) {
+        this.userRepository = userRepository;
+    }
 
     private PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 

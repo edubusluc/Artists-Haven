@@ -30,6 +30,8 @@ public class EventController {
 
     private final EventService eventService;
 
+    private static final String ERROR_MESSAGE = "User is not an artist";
+
     public EventController(EventService eventService) {
         this.eventService = eventService;
     }
@@ -58,7 +60,7 @@ public class EventController {
                 Event newEvent = eventService.newEvent(eventDTO);
                 return new ResponseEntity<>(newEvent, HttpStatus.CREATED);
             } else {
-                throw new IllegalArgumentException("User is not an artist");
+                throw new IllegalArgumentException(ERROR_MESSAGE);
             }
 
         } catch (IllegalArgumentException e) {
@@ -86,7 +88,7 @@ public class EventController {
         Object principalUser = authentication.getPrincipal();
 
         if (!eventService.isArtist()) {
-            return ResponseEntity.badRequest().body("User is not an artist");
+            return ResponseEntity.badRequest().body(ERROR_MESSAGE);
         }
 
         Artist artist = (Artist) principalUser;
@@ -106,7 +108,7 @@ public class EventController {
     }
 
     @GetMapping("details/{id}")
-    public ResponseEntity<?> eventDetails(@PathVariable Long id) {
+    public ResponseEntity<Event> eventDetails(@PathVariable Long id) {
         try {
             Event event = eventService.getEventById(id);
             return ResponseEntity.ok(event);
@@ -124,7 +126,7 @@ public class EventController {
         Object principalUser = authentication.getPrincipal();
 
         if (!eventService.isArtist()) {
-            return ResponseEntity.badRequest().body("User is not an artist");
+            return ResponseEntity.badRequest().body(ERROR_MESSAGE);
         }
 
         Artist artist = (Artist) principalUser;
@@ -159,7 +161,7 @@ public class EventController {
         }
 
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_TYPE, "image/png") // Cambia a image/jpeg si tus imágenes son jpeg
+                .header(HttpHeaders.CONTENT_TYPE, "image/png")
                 .body(resource);
     }
 

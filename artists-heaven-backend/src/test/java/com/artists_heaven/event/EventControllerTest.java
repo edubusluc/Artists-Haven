@@ -15,7 +15,7 @@ import static org.hamcrest.Matchers.*;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
-
+import java.util.UUID;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -384,17 +384,22 @@ public class EventControllerTest {
 
         @Test
         void testGetProductImageSuccess() throws Exception {
-                String fileName = "test.jpg";
-                Path filePath = Paths.get(System.getProperty("user.dir")
-                                + "/artists-heaven-backend/src/main/resources/event_media/", fileName);
-                Files.createDirectories(filePath.getParent());
-                Files.createFile(filePath);
-
-                mockMvc.perform(get("/api/event/event_media/" + fileName))
-                                .andExpect(status().isOk())
-                                .andExpect(header().string(HttpHeaders.CONTENT_TYPE, "image/png"));
-
-                Files.deleteIfExists(filePath);
+            String fileName = UUID.randomUUID() + "test.jpg";
+            String basePath = System.getProperty("user.dir") + "/artists-heaven-backend/src/main/resources/event_media/";
+            Path filePath = Paths.get(basePath, fileName);
+    
+            // Ensure the directory exists
+            Files.createDirectories(filePath.getParent());
+        
+            // Create the file for the test
+            Files.createFile(filePath);
+    
+            mockMvc.perform(get("/api/event/event_media/" + fileName))
+                    .andExpect(status().isOk())
+                    .andExpect(header().string(HttpHeaders.CONTENT_TYPE, "image/png"));
+    
+            // Clean up the created file
+            Files.deleteIfExists(filePath);
         }
 
         @Test

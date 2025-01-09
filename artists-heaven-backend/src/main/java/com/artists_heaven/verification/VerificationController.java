@@ -7,8 +7,8 @@ import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -28,16 +28,20 @@ import com.artists_heaven.entities.artist.ArtistRepository;
 @RequestMapping("/api/verification")
 public class VerificationController {
 
-    @Autowired
-    EmailSenderService emailSenderService;
+    
+    private final EmailSenderService emailSenderService;
 
-    @Autowired
-    ArtistRepository artistRepository;
+    private final ArtistRepository artistRepository;
 
-    @Autowired
-    VerificationRepository verificationRepository;
+    private final VerificationRepository verificationRepository;
 
-    private String url = "artists-heaven-backend/src/main/resources/verification_media";
+    public VerificationController(ArtistRepository artistRepository, EmailSenderService emailSenderService, VerificationRepository verificationRepository) {
+        this.artistRepository = artistRepository;
+        this.verificationRepository = verificationRepository;
+        this.emailSenderService = emailSenderService;
+    }
+
+    private static String url = "artists-heaven-backend/src/main/resources/verification_media";
 
     @PostMapping("/send")
     public ResponseEntity<Map<String, Object>> sendValidation(
@@ -101,7 +105,7 @@ public class VerificationController {
 
     private String saveFile(MultipartFile file) throws IOException {
         String directory = url;
-        String fileName = file.getOriginalFilename();
+        String fileName = UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
         Path filePath = Paths.get(directory, fileName);
         Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
         

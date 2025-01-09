@@ -1,6 +1,5 @@
 package com.artists_heaven.email;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
@@ -10,11 +9,14 @@ import com.artists_heaven.entities.artist.Artist;
 @Service
 public class EmailSenderService {
 
-    @Autowired
-    private JavaMailSender mailSender;
+    private final JavaMailSender mailSender;
 
-    @Autowired
-    private EmailSenderRepository emailSenderRepository;
+    private final EmailSenderRepository emailSenderRepository;
+
+    public EmailSenderService(JavaMailSender mailSender, EmailSenderRepository emailSenderRepository) {
+        this.mailSender = mailSender;
+        this.emailSenderRepository = emailSenderRepository;
+    }
 
      // Constant email address used as the sender for reports and verification emails
     private static final String MODERATOR_EMAIL = "mod.artistheaven@gmail.com";
