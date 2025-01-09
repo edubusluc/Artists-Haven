@@ -6,7 +6,7 @@ import org.hibernate.validator.constraints.URL;
 
 import com.artists_heaven.entities.user.User;
 import com.artists_heaven.event.Event;
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.DiscriminatorValue;
@@ -32,6 +32,6 @@ public class Artist extends User {
     private Boolean isvalid = false;
 
     @OneToMany(mappedBy = "artist")
-    @JsonIgnore
+    @JsonManagedReference
     private Set<Event> events;
 }

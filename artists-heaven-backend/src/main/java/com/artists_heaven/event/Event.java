@@ -3,6 +3,7 @@ package com.artists_heaven.event;
 import java.time.LocalDate;
 
 import com.artists_heaven.entities.artist.Artist;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -40,6 +41,7 @@ public class Event {
 
     @NotNull
     @ManyToOne
+    @JsonBackReference
     private Artist artist;
 
     private String image;
