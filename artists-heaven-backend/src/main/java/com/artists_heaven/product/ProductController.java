@@ -77,7 +77,7 @@ public class ProductController {
     }
 
     @GetMapping("/details/{id}")
-    public ResponseEntity<?> productDetails(@PathVariable("id") Long id) {
+    public ResponseEntity<Product> productDetails(@PathVariable("id") Long id) {
         Optional<Product> optionalProduct = productService.findById(id);
         if (optionalProduct.isPresent()) {
             return ResponseEntity.ok(optionalProduct.get());
