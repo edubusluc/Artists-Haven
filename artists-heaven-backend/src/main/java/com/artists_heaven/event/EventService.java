@@ -91,12 +91,15 @@ public class EventService {
         String imageUrl = "";
     
         // Validar y sanitizar el nombre del archivo original
-        String originalFilename = sanitizeFilename(image.getOriginalFilename());
+        String originalFilename = image.getOriginalFilename();
+        
         
         // Validar que el archivo no esté vacío
         if (originalFilename == null || originalFilename.isEmpty()) {
             throw new IllegalArgumentException("El nombre del archivo no es válido.");
         }
+
+        originalFilename = sanitizeFilename(originalFilename);
     
         // Crear un nuevo nombre de archivo seguro
         String fileName = UUID.randomUUID().toString() + "_" + originalFilename;
