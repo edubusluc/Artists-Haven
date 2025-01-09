@@ -6,13 +6,11 @@ import java.util.Map;
 import org.apache.http.auth.InvalidCredentialsException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.artists_heaven.configuration.JwtTokenProvider;
 import com.artists_heaven.entities.user.User;
 import com.artists_heaven.entities.user.UserRepository;
 import com.artists_heaven.entities.user.UserRole;
@@ -25,8 +23,7 @@ public class AuthController {
 
     private final UserRepository userRepository;
 
-    public AuthController(AuthService authService, UserRepository userRepository, JwtTokenProvider jwtTokenProvider,
-            PasswordEncoder passwordEncoder, TokenVerifier tokenVerifier) {
+    public AuthController(AuthService authService, UserRepository userRepository) {
         this.authService = authService;
         this.userRepository = userRepository;
     }

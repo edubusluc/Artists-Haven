@@ -6,14 +6,12 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,8 +39,6 @@ class EventServiceTest {
 
     @InjectMocks
     private EventService eventService;
-
-    private static final String UPLOAD_DIR = "artists-heaven-backend/src/main/resources/event_media/";
 
     @BeforeEach
     void setUp() {
@@ -215,7 +211,7 @@ class EventServiceTest {
     }
 
     @Test
-    void testDeleteImagesSuccess() throws IOException {
+    void testDeleteImagesSuccess(){
         String removedImage = "event_media/test.jpg";
         String cleanedPath = StringUtils.cleanPath(removedImage);
         Path targetPath = Paths.get("artists-heaven-backend/src/main/resources", cleanedPath).normalize();
@@ -231,7 +227,7 @@ class EventServiceTest {
     }
 
     @Test
-    void testDeleteImagesThrowsException() throws IOException {
+    void testDeleteImagesThrowsException() {
         String removedImage = "event_media/test.jpg";
         String cleanedPath = StringUtils.cleanPath(removedImage);
         Path targetPath = Paths.get("artists-heaven-backend/src/main/resources", cleanedPath).normalize();
