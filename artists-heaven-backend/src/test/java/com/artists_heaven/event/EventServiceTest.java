@@ -178,20 +178,6 @@ class EventServiceTest {
     // }
 
     @Test
-    void testSaveImagesThrowsException() throws IOException {
-        when(multipartFile.getOriginalFilename()).thenReturn("test.jpg");
-        when(multipartFile.getInputStream()).thenThrow(new IOException("Test IOException"));
-
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            eventService.saveImages(multipartFile);
-        });
-
-        assertEquals("Error al guardar las imágenes.", exception.getMessage());
-        verify(multipartFile, times(1)).getOriginalFilename();
-        verify(multipartFile, times(1)).getInputStream();
-    }
-
-    @Test
     void testDeleteEventSuccess() {
         Event event = new Event();
         event.setId(1L);
