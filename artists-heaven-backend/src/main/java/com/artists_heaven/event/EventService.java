@@ -87,31 +87,49 @@ public class EventService {
         }
     }
 
-    public String saveImages(MultipartFile image) {
+    public String saveImages(MultipartFile image)  {
         String imageUrl = "";
-
-        // Limpiar el nombre del archivo
-        String originalFileName = StringUtils.cleanPath(image.getOriginalFilename());
-
-        // Validar el nombre del archivo
-        if (originalFileName.contains("..")) {
-            throw new IllegalArgumentException("Nombre de archivo no válido: " + originalFileName);
+    
+        // Validar y sanitizar el nombre del archivo original
+        String originalFilename = sanitizeFilename(image.getOriginalFilename());
+        
+        // Validar que el archivo no esté vacío
+        if (originalFilename == null || originalFilename.isEmpty()) {
+            throw new IllegalArgumentException("El nombre del archivo no es válido.");
         }
-
-        String fileName = UUID.randomUUID().toString() + "_" + originalFileName;
-        Path targetPath = Paths.get(UPLOAD_DIR, fileName).normalize();
-
+    
+        // Crear un nuevo nombre de archivo seguro
+        String fileName = UUID.randomUUID().toString() + "_" + originalFilename;
+        Path targetPath = Paths.get(UPLOAD_DIR, fileName);
+    
         try {
+            // Validar el contenido del archivo (puedes implementar validaciones adicionales si es necesario)
+            if (image.isEmpty() || !isValidImage(image)) {
+                throw new IllegalArgumentException("El archivo no es una imagen válida.");
+            }
+    
             // Guardar la imagen en el directorio
             Files.copy(image.getInputStream(), targetPath);
+            
             // Agregar la URL o nombre del archivo a la lista (ajustado según la necesidad)
-            fileName = "/event_media/" + fileName;
-            imageUrl = fileName;
+            imageUrl = "/event_media/" + fileName;
         } catch (IOException e) {
             throw new IllegalArgumentException("Error al guardar las imágenes.");
         }
-
+    
         return imageUrl;
+    }
+    
+    // Método para sanitizar el nombre del archivo
+    private String sanitizeFilename(String filename) {
+        return filename.replaceAll("[^a-zA-Z0-9\\._-]", "_");
+    }
+    
+    // Método para validar el contenido del archivo
+    private boolean isValidImage(MultipartFile image) {
+        // Aquí puedes agregar validaciones adicionales según el tipo de archivo que esperas
+        String contentType = image.getContentType();
+        return contentType != null && (contentType.equals("image/jpeg") || contentType.equals("image/png"));
     }
 
     public List<Event> getAllMyEvents(Long id) {
