@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -29,14 +28,18 @@ import com.artists_heaven.entities.artist.ArtistRepository;
 @RequestMapping("/api/verification")
 public class VerificationController {
 
-    @Autowired
-    EmailSenderService emailSenderService;
+    
+    private final EmailSenderService emailSenderService;
 
-    @Autowired
-    ArtistRepository artistRepository;
+    private final ArtistRepository artistRepository;
 
-    @Autowired
-    VerificationRepository verificationRepository;
+    private final VerificationRepository verificationRepository;
+
+    public VerificationController(ArtistRepository artistRepository, EmailSenderService emailSenderService, VerificationRepository verificationRepository) {
+        this.artistRepository = artistRepository;
+        this.verificationRepository = verificationRepository;
+        this.emailSenderService = emailSenderService;
+    }
 
     private static String url = "artists-heaven-backend/src/main/resources/verification_media";
 
