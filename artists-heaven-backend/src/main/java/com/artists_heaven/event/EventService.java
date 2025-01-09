@@ -7,6 +7,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -88,15 +89,11 @@ public class EventService {
         }
     }
 
-    public String saveImages(MultipartFile image) {
+    public String saveImages(MultipartFile image)  {
         String imageUrl = "";
 
-        String fileName = StringUtils.cleanPath(image.getOriginalFilename());
-        Path targetPath = Paths.get(UPLOAD_DIR, fileName).normalize();
-
-        if (!targetPath.startsWith(TARGET_PATH)) {
-            throw new IllegalArgumentException("Entry is outside of the target directory");
-        }
+        String fileName = UUID.randomUUID().toString() + "_" + image.getOriginalFilename();
+        Path targetPath = Paths.get(UPLOAD_DIR, fileName);
 
         try {
             // Guardar la imagen en el directorio
