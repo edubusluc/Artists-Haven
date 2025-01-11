@@ -164,19 +164,19 @@ class EventServiceTest {
 
 
 @Test
-    void testSaveImagesSuccess() throws IOException {
+    void testSaveImagesSuccess() {
         String originalFilename = "test.jpg";
         String sanitizedFilename = "test.jpg"; // Assuming sanitizeFilename does not change the name
         String fileName = UUID.randomUUID().toString() + "_" + sanitizedFilename;
         Path targetPath = Paths.get(UPLOAD_DIR, fileName);
 
-        MultipartFile multipartFile = new MockMultipartFile("file", originalFilename, "image/jpeg", new byte[]{1, 2, 3, 4});
+        MultipartFile newMultipartFile = new MockMultipartFile("file", originalFilename, "image/jpeg", new byte[]{1, 2, 3, 4});
 
         // Mock the static method Files.copy
         try (MockedStatic<Files> mockedFiles = mockStatic(Files.class)) {
             mockedFiles.when(() -> Files.copy(any(InputStream.class), eq(targetPath))).thenAnswer(invocation -> null);
 
-            String imageUrl = eventService.saveImages(multipartFile);
+            String imageUrl = eventService.saveImages(newMultipartFile);
 
             assertTrue(imageUrl.contains("/event_media/"));
             assertTrue(imageUrl.contains(sanitizedFilename));
