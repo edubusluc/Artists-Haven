@@ -1,14 +1,6 @@
 package com.artists_heaven.verification;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
-import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Map;
-import java.util.UUID;
-
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -16,11 +8,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
-import java.nio.file.Path;
-
 import com.artists_heaven.email.EmailSenderService;
 import com.artists_heaven.entities.artist.Artist;
-import com.artists_heaven.entities.artist.ArtistRepository;
 
 
 
@@ -31,17 +20,13 @@ public class VerificationController {
     
     private final EmailSenderService emailSenderService;
 
-    private final ArtistRepository artistRepository;
+    private final VerificationService verificationService;
 
-    private final VerificationRepository verificationRepository;
 
-    public VerificationController(ArtistRepository artistRepository, EmailSenderService emailSenderService, VerificationRepository verificationRepository) {
-        this.artistRepository = artistRepository;
-        this.verificationRepository = verificationRepository;
+    public VerificationController(EmailSenderService emailSenderService, VerificationService verificationService) {
         this.emailSenderService = emailSenderService;
+        this.verificationService = verificationService;
     }
-
-    private static String url = "artists-heaven-backend/src/main/resources/verification_media";
 
     @PostMapping("/send")
     public ResponseEntity<Map<String, Object>> sendValidation(
@@ -50,26 +35,26 @@ public class VerificationController {
 
         try {
             // Validación de la existencia y estado del artista
-            Artist artist = validateArtist(email);
+            Artist artist = verificationService.validateArtist(email);
             if (artist == null) {
                 return new ResponseEntity<>(Map.of("error", "El usuario no es un artista"), HttpStatus.UNAUTHORIZED);
             }
 
             // Verifica si el artista ya está validado o tiene una solicitud pendiente
-            if (!isArtistEligibleForVerification(artist)) {
+            if (!verificationService.isArtistEligibleForVerification(artist)) {
                 return new ResponseEntity<>(Map.of("error", "Usuario no válido o ya verificado"),
                         HttpStatus.UNAUTHORIZED);
             }
 
             // Verifica si ya existe una solicitud pendiente
-            if (hasPendingVerification(artist)) {
+            if (verificationService.hasPendingVerification(artist)) {
                 return new ResponseEntity<>(Map.of("error", "Ya existe una solicitud para este usuario"),
                         HttpStatus.UNAUTHORIZED);
             }
 
             // Guarda el archivo y crea la verificación
-            String videoUrl = saveFile(video);
-            createVerification(artist, videoUrl);
+            String videoUrl = verificationService.saveFile(video);
+            verificationService.createVerification(artist, videoUrl);
 
             // Envía el correo de verificación
             emailSenderService.sendVerificationEmail(artist);
@@ -81,35 +66,5 @@ public class VerificationController {
         }
     }
 
-    private Artist validateArtist(String email) {
-        return artistRepository.findByEmail(email);
-    }
-
-    private boolean isArtistEligibleForVerification(Artist artist) {
-        return artist != null && !artist.getIsvalid();
-    }
-
-    private boolean hasPendingVerification(Artist artist) {
-        List<Verification> verificationCheck = verificationRepository.findByArtistId(artist.getId());
-        return verificationCheck.stream().anyMatch(v -> v.getStatus() == VerificationStatus.PENDING);
-    }
-
-    private void createVerification(Artist artist, String videoUrl) {
-        Verification verification = new Verification();
-        verification.setArtist(artist);
-        verification.setVideoUrl(videoUrl);
-        verification.setDate(LocalDateTime.now());
-        verification.setStatus(VerificationStatus.PENDING);
-        verificationRepository.save(verification);
-    }
-
-    private String saveFile(MultipartFile file) throws IOException {
-        String directory = url;
-        String fileName = UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
-        Path filePath = Paths.get(directory, fileName);
-        Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
-        
-        // Devuelve una URL accesible desde el cliente
-        return "/verification_media/" + fileName;
-    }   
+     
 }
