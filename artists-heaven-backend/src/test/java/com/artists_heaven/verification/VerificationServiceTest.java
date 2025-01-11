@@ -4,6 +4,9 @@ import static org.mockito.Mockito.*;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -13,6 +16,7 @@ import com.artists_heaven.entities.artist.Artist;
 import com.artists_heaven.entities.artist.ArtistRepository;
 import java.io.IOException;
 import java.util.List;
+import java.util.stream.Stream;
 
 public class VerificationServiceTest {
 
@@ -28,6 +32,27 @@ public class VerificationServiceTest {
     @BeforeEach
     public void setUp() {
         MockitoAnnotations.openMocks(this);
+    }
+
+    @ParameterizedTest
+    @MethodSource("provideInvalidFileNames")
+    void testSaveFile_InvalidFileName(String originalFileName, String expectedMessage) {
+        MultipartFile file = mock(MultipartFile.class);
+        when(file.isEmpty()).thenReturn(false);
+        when(file.getOriginalFilename()).thenReturn(originalFileName);
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            verificationService.saveFile(file);
+        });
+
+        assertEquals(expectedMessage, exception.getMessage());
+    }
+
+    private static Stream<Arguments> provideInvalidFileNames() {
+        return Stream.of(
+                Arguments.of(null, "El nombre del archivo no puede ser nulo o vacío"),
+                Arguments.of(" ", "El nombre del archivo no puede ser nulo o vacío"),
+                Arguments.of("../test.mp4", "La entrada está fuera del directorio objetivo"));
     }
 
     @Test
@@ -104,7 +129,7 @@ public class VerificationServiceTest {
     }
 
     @Test
-    void testSaveFile_EmptyFile() {
+    public void testSaveFile_EmptyFile() {
         MultipartFile file = mock(MultipartFile.class);
         when(file.isEmpty()).thenReturn(true);
 
@@ -113,45 +138,6 @@ public class VerificationServiceTest {
         });
 
         assertEquals("No se ha enviado ningún archivo", exception.getMessage());
-    }
-
-    @Test
-    public void testSaveFile_NullFileName() {
-        MultipartFile file = mock(MultipartFile.class);
-        when(file.isEmpty()).thenReturn(false);
-        when(file.getOriginalFilename()).thenReturn(null);
-
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            verificationService.saveFile(file);
-        });
-
-        assertEquals("El nombre del archivo no puede ser nulo o vacío", exception.getMessage());
-    }
-
-    @Test
-    public void testSaveFile_EmptyFileName() {
-        MultipartFile file = mock(MultipartFile.class);
-        when(file.isEmpty()).thenReturn(false);
-        when(file.getOriginalFilename()).thenReturn(" ");
-
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            verificationService.saveFile(file);
-        });
-
-        assertEquals("El nombre del archivo no puede ser nulo o vacío", exception.getMessage());
-    }
-
-    @Test
-    public void testSaveFile_InvalidPath() {
-        MultipartFile file = mock(MultipartFile.class);
-        when(file.isEmpty()).thenReturn(false);
-        when(file.getOriginalFilename()).thenReturn("../test.mp4");
-
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            verificationService.saveFile(file);
-        });
-
-        assertEquals("La entrada está fuera del directorio objetivo", exception.getMessage());
     }
 
     @Test
@@ -166,6 +152,45 @@ public class VerificationServiceTest {
         });
 
         assertEquals("Error al guardar la imagen.", exception.getMessage());
+    }
+
+    @Test
+    void testSaveFile_NullFileName() {
+        MultipartFile file = mock(MultipartFile.class);
+        when(file.isEmpty()).thenReturn(false);
+        when(file.getOriginalFilename()).thenReturn(null);
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            verificationService.saveFile(file);
+        });
+
+        assertEquals("El nombre del archivo no puede ser nulo o vacío", exception.getMessage());
+    }
+
+    @Test
+    void testSaveFile_EmptyFileName() {
+        MultipartFile file = mock(MultipartFile.class);
+        when(file.isEmpty()).thenReturn(false);
+        when(file.getOriginalFilename()).thenReturn(" ");
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            verificationService.saveFile(file);
+        });
+
+        assertEquals("El nombre del archivo no puede ser nulo o vacío", exception.getMessage());
+    }
+
+    @Test
+    void testSaveFile_InvalidPath() {
+        MultipartFile file = mock(MultipartFile.class);
+        when(file.isEmpty()).thenReturn(false);
+        when(file.getOriginalFilename()).thenReturn("../test.mp4");
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            verificationService.saveFile(file);
+        });
+
+        assertEquals("La entrada está fuera del directorio objetivo", exception.getMessage());
     }
 
 }
