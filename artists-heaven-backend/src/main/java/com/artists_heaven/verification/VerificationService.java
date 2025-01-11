@@ -22,7 +22,7 @@ public class VerificationService {
 
     private final VerificationRepository verificationRepository;
 
-    private static String UPLOAD_DIR = "artists-heaven-backend/src/main/resources/verification_media";
+    private static final String UPLOAD_DIR = "artists-heaven-backend/src/main/resources/verification_media";
     private static final Path TARGET_PATH = new File(UPLOAD_DIR).toPath().normalize();
 
     public VerificationService(ArtistRepository artistRepository, VerificationRepository verificationRepository) {
@@ -56,6 +56,9 @@ public class VerificationService {
     public String saveFile(MultipartFile file) throws IOException {
 
         if (file.isEmpty()) throw new IllegalArgumentException("No se ha enviado ningún archivo");
+
+        String originalFileName = file.getOriginalFilename();
+        if (originalFileName == null) throw new IllegalArgumentException("El nombre del archivo no puede ser nulo");
 
         String fileName = StringUtils.cleanPath(file.getOriginalFilename());
         Path targetPath = Paths.get(UPLOAD_DIR, fileName).normalize();

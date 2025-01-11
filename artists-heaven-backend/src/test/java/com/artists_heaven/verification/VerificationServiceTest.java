@@ -31,7 +31,7 @@ public class VerificationServiceTest {
     }
 
     @Test
-    public void testValidateArtist() {
+    void testValidateArtist() {
         String email = "test@example.com";
         Artist artist = new Artist();
         when(artistRepository.findByEmail(email)).thenReturn(artist);
@@ -42,7 +42,7 @@ public class VerificationServiceTest {
     }
 
     @Test
-    public void testIsArtistEligibleForVerification_True() {
+    void testIsArtistEligibleForVerification_True() {
         Artist artist = new Artist();
         artist.setIsvalid(false);
 
@@ -52,7 +52,7 @@ public class VerificationServiceTest {
     }
 
     @Test
-    public void testIsArtistEligibleForVerification_False() {
+    void testIsArtistEligibleForVerification_False() {
         Artist artist = new Artist();
         artist.setIsvalid(true);
 
@@ -62,7 +62,7 @@ public class VerificationServiceTest {
     }
 
     @Test
-    public void testHasPendingVerification_True() {
+    void testHasPendingVerification_True() {
         Artist artist = new Artist();
         artist.setId(1L);
         Verification verification = new Verification();
@@ -75,7 +75,7 @@ public class VerificationServiceTest {
     }
 
     @Test
-    public void testCreateVerification() {
+    void testCreateVerification() {
         Artist artist = new Artist();
         artist.setId(1L);
         String videoUrl = "http://example.com/video.mp4";
@@ -93,7 +93,7 @@ public class VerificationServiceTest {
     }
 
     @Test
-    public void testHasPendingVerification_False() {
+    void testHasPendingVerification_False() {
         Artist artist = new Artist();
         artist.setId(1L);
         when(verificationRepository.findByArtistId(artist.getId())).thenReturn(List.of());
@@ -104,7 +104,7 @@ public class VerificationServiceTest {
     }
 
     @Test
-    public void testSaveFile_EmptyFile() {
+    void testSaveFile_EmptyFile() {
         MultipartFile file = mock(MultipartFile.class);
         when(file.isEmpty()).thenReturn(true);
 
@@ -116,7 +116,7 @@ public class VerificationServiceTest {
     }
 
     @Test
-    public void testSaveFile_OutsideTargetDirectory() {
+    void testSaveFile_OutsideTargetDirectory() {
         MultipartFile file = mock(MultipartFile.class);
         when(file.isEmpty()).thenReturn(false);
         when(file.getOriginalFilename()).thenReturn("../test.mp4");
@@ -129,7 +129,7 @@ public class VerificationServiceTest {
     }
 
     @Test
-    public void testSaveFile_IOException() throws IOException {
+    void testSaveFile_IOException() throws IOException {
         MultipartFile file = mock(MultipartFile.class);
         when(file.isEmpty()).thenReturn(false);
         when(file.getOriginalFilename()).thenReturn("test.mp4");
