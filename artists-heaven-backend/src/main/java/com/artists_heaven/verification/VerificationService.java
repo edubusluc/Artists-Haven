@@ -30,7 +30,6 @@ public class VerificationService {
         this.verificationRepository = verificationRepository;
     }
 
-
     public Artist validateArtist(String email) {
         return artistRepository.findByEmail(email);
     }
@@ -55,31 +54,34 @@ public class VerificationService {
 
     public String saveFile(MultipartFile file) throws IOException {
 
-        if (file.isEmpty()) throw new IllegalArgumentException("No se ha enviado ningún archivo");
+        if (file.isEmpty()) {
+            throw new IllegalArgumentException("No se ha enviado ningún archivo");
+        }
 
         String originalFileName = file.getOriginalFilename();
-        if (originalFileName == null) throw new IllegalArgumentException("El nombre del archivo no puede ser nulo");
+        if (originalFileName == null || originalFileName.trim().isEmpty()) {
+            throw new IllegalArgumentException("El nombre del archivo no puede ser nulo o vacío");
+        }
 
-        String fileName = StringUtils.cleanPath(file.getOriginalFilename());
+        // Asegurarse de que el nombre del archivo esté limpio y no sea nulo
+        String fileName = StringUtils.cleanPath(originalFileName.trim());
         Path targetPath = Paths.get(UPLOAD_DIR, fileName).normalize();
 
         if (!targetPath.startsWith(TARGET_PATH)) {
-            throw new IllegalArgumentException("Entry is outside of the target directory");
+            throw new IllegalArgumentException("La entrada está fuera del directorio objetivo");
         }
 
         try {
-            // Save the image to the directory
+            // Guardar el archivo en el directorio especificado
             Files.copy(file.getInputStream(), targetPath);
-                // Add the image's URL to the list (adjust the URL according to the system)
+            // Construir la URL relativa del archivo
             fileName = "/verification_media/" + fileName;
         } catch (IOException e) {
-            // Throw an exception if an error occurs while saving the image
-            throw new IllegalArgumentException("Error while saving image.");
+            // Lanzar una excepción si ocurre un error al guardar el archivo
+            throw new IllegalArgumentException("Error al guardar la imagen.", e);
         }
+
         return fileName;
     }
-    
-    
-    
-    
+
 }

@@ -116,7 +116,33 @@ public class VerificationServiceTest {
     }
 
     @Test
-    void testSaveFile_OutsideTargetDirectory() {
+    public void testSaveFile_NullFileName() {
+        MultipartFile file = mock(MultipartFile.class);
+        when(file.isEmpty()).thenReturn(false);
+        when(file.getOriginalFilename()).thenReturn(null);
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            verificationService.saveFile(file);
+        });
+
+        assertEquals("El nombre del archivo no puede ser nulo o vacío", exception.getMessage());
+    }
+
+    @Test
+    public void testSaveFile_EmptyFileName() {
+        MultipartFile file = mock(MultipartFile.class);
+        when(file.isEmpty()).thenReturn(false);
+        when(file.getOriginalFilename()).thenReturn(" ");
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            verificationService.saveFile(file);
+        });
+
+        assertEquals("El nombre del archivo no puede ser nulo o vacío", exception.getMessage());
+    }
+
+    @Test
+    public void testSaveFile_InvalidPath() {
         MultipartFile file = mock(MultipartFile.class);
         when(file.isEmpty()).thenReturn(false);
         when(file.getOriginalFilename()).thenReturn("../test.mp4");
@@ -125,20 +151,21 @@ public class VerificationServiceTest {
             verificationService.saveFile(file);
         });
 
-        assertEquals("Entry is outside of the target directory", exception.getMessage());
+        assertEquals("La entrada está fuera del directorio objetivo", exception.getMessage());
     }
 
     @Test
-    void testSaveFile_IOException() throws IOException {
+    public void testSaveFile_IOException() throws IOException {
         MultipartFile file = mock(MultipartFile.class);
         when(file.isEmpty()).thenReturn(false);
         when(file.getOriginalFilename()).thenReturn("test.mp4");
-        when(file.getInputStream()).thenThrow(new IOException("Error"));
+        when(file.getInputStream()).thenThrow(new IOException("Test IOException"));
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
             verificationService.saveFile(file);
         });
 
-        assertEquals("Error while saving image.", exception.getMessage());
+        assertEquals("Error al guardar la imagen.", exception.getMessage());
     }
+
 }

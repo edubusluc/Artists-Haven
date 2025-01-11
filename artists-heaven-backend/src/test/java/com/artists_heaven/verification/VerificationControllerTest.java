@@ -34,7 +34,7 @@ public class VerificationControllerTest {
     }
 
     @Test
-    public void testSendValidation_ArtistNotFound() {
+    void testSendValidation_ArtistNotFound() {
         String email = "test@example.com";
         MultipartFile video = mock(MultipartFile.class);
 
@@ -47,7 +47,7 @@ public class VerificationControllerTest {
     }
 
     @Test
-    public void testSendValidation_ArtistNotEligible() {
+    void testSendValidation_ArtistNotEligible() {
         String email = "test@example.com";
         MultipartFile video = mock(MultipartFile.class);
         Artist artist = new Artist();
@@ -62,7 +62,7 @@ public class VerificationControllerTest {
     }
 
     @Test
-    public void testSendValidation_HasPendingVerification() {
+    void testSendValidation_HasPendingVerification() {
         String email = "test@example.com";
         MultipartFile video = mock(MultipartFile.class);
         Artist artist = new Artist();
@@ -78,7 +78,7 @@ public class VerificationControllerTest {
     }
 
     @Test
-    public void testSendValidation_Success() throws IOException {
+    void testSendValidation_Success() throws IOException {
         String email = "test@example.com";
         MultipartFile video = mock(MultipartFile.class);
         Artist artist = new Artist();
@@ -99,7 +99,7 @@ public class VerificationControllerTest {
     }
 
     @Test
-    public void testSendValidation_Exception() {
+    void testSendValidation_Exception() {
         String email = "test@example.com";
         MultipartFile video = mock(MultipartFile.class);
 
