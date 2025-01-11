@@ -25,8 +25,8 @@ class CategoryTest {
 
     @Test
     void testCategoryCreation2() {
-        Category category = new Category(1L);
-        assertEquals(1L, category.getId());
+        Category categoryTest = new Category(1L);
+        assertEquals(1L, categoryTest.getId());
     }
 
     @Test

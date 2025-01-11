@@ -33,5 +33,5 @@ public class Artist extends User {
 
     @OneToMany(mappedBy = "artist")
     @JsonManagedReference
-    private Set<Event> events;
+    private transient Set<Event> events;
 }

@@ -2,6 +2,7 @@ package com.artists_heaven.product;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -20,6 +21,7 @@ import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.transaction.Transactional;
@@ -31,6 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -93,7 +96,7 @@ public class ProductServiceTest {
             productService.registerProduct(productDTO);
         });
 
-        assertEquals("No se ha podido crear el producto", exception.getMessage());
+        assertEquals("Unable to create the product", exception.getMessage());
         verify(productRepository, times(1)).save(any(Product.class));
     }
 
@@ -135,9 +138,9 @@ public class ProductServiceTest {
         Optional<Product> product = Optional.of(new Product());
         when(productRepository.findById(productId)).thenReturn(product);
 
-        Optional<Product> result = productService.findById(productId);
+        Product result = productService.findById(productId);
 
-        assertTrue(result.isPresent());
+        assertNotNull(result);
         verify(productRepository, times(1)).findById(productId);
     }
 
@@ -175,6 +178,78 @@ public class ProductServiceTest {
         assertEquals(productDTO.getSizes(), product.getSize());
         assertEquals(productDTO.getCategories(), product.getCategories());
         verify(productRepository, times(1)).save(product);
+    }
+
+    @Test
+    void testUpdateProductWithNewImages() throws IOException {
+        Product product = new Product();
+        product.setImages(new ArrayList<>());
+
+        ProductDTO productDTO = new ProductDTO();
+        productDTO.setCategories(new HashSet<>());
+        productDTO.setDescription("Updated Description");
+        productDTO.setName("Updated Name");
+        productDTO.setPrice((float) 200.0);
+        productDTO.setSizes(new HashMap<>());
+        productDTO.setImages(new ArrayList<>());
+
+        MultipartFile newImage = mock(MultipartFile.class);
+        when(newImage.getOriginalFilename()).thenReturn("newImage.jpg");
+        when(newImage.getInputStream()).thenReturn(new ByteArrayInputStream("image data".getBytes()));
+        List<MultipartFile> newImages = List.of(newImage);
+
+        try (MockedStatic<Files> mockedFiles = Mockito.mockStatic(Files.class)) {
+            mockedFiles.when(() -> Files.copy(any(InputStream.class), any(Path.class))).thenAnswer(invocation -> null);
+
+            productService.updateProduct(product, null, newImages, productDTO);
+
+            assertEquals(productDTO.getName(), product.getName());
+            assertEquals(productDTO.getDescription(), product.getDescription());
+            assertEquals(productDTO.getPrice(), product.getPrice());
+            assertEquals(productDTO.getSizes(), product.getSize());
+            assertEquals(productDTO.getCategories(), product.getCategories());
+            assertTrue(product.getImages().contains("/product_media/newImage.jpg"));
+            verify(productRepository, times(1)).save(product);
+        }
+    }
+
+    @Test
+    void testUpdateProductWithRemovedAndNewImages() throws IOException {
+        Product product = new Product();
+        product.setImages(new ArrayList<>(List.of("/product_media/image1.jpg", "/product_media/image2.jpg")));
+
+        ProductDTO productDTO = new ProductDTO();
+        productDTO.setCategories(new HashSet<>());
+        productDTO.setDescription("Updated Description");
+        productDTO.setName("Updated Name");
+        productDTO.setPrice((float) 200.0);
+            productDTO.setSizes(new HashMap<>());
+        productDTO.setImages(new ArrayList<>());
+
+        MultipartFile removedImage = mock(MultipartFile.class);
+        when(removedImage.getOriginalFilename()).thenReturn("image1.jpg");
+        List<MultipartFile> removedImages = List.of(removedImage);
+
+        MultipartFile newImage = mock(MultipartFile.class);
+        when(newImage.getOriginalFilename()).thenReturn("newImage.jpg");
+        when(newImage.getInputStream()).thenReturn(new ByteArrayInputStream("image data".getBytes()));
+        List<MultipartFile> newImages = List.of(newImage);
+
+        try (MockedStatic<Files> mockedFiles = Mockito.mockStatic(Files.class)) {
+            mockedFiles.when(() -> Files.delete(any(Path.class))).thenAnswer(invocation -> null);
+            mockedFiles.when(() -> Files.copy(any(InputStream.class), any(Path.class))).thenAnswer(invocation -> null);
+
+            productService.updateProduct(product, removedImages, newImages, productDTO);
+
+            assertEquals(productDTO.getName(), product.getName());
+            assertEquals(productDTO.getDescription(), product.getDescription());
+            assertEquals(productDTO.getPrice(), product.getPrice());
+            assertEquals(productDTO.getSizes(), product.getSize());
+            assertEquals(productDTO.getCategories(), product.getCategories());
+            assertFalse(product.getImages().contains("/product_media/image1.jpg"));
+            assertTrue(product.getImages().contains("/product_media/newImage.jpg"));
+            verify(productRepository, times(1)).save(product);
+        }
     }
 
     @Test
@@ -225,11 +300,23 @@ public class ProductServiceTest {
                     () -> productService.deleteImages(files));
 
             // Comprueba el mensaje de la excepción
-            assertEquals("Error al eliminar las imágenes.", exception.getMessage());
+            assertEquals("Error deleting the images.", exception.getMessage());
 
             // Verifica que Files.delete fue llamado correctamente
             mockedFiles.verify(() -> Files.delete(mockPath), times(1));
         }
+    }
+
+    @Test
+    void testDeleteImagesOutsideTargetDirectory() {
+        List<MultipartFile> images = new ArrayList<>();
+        images.add(new MockMultipartFile("file", "../test.jpg", "image/jpeg", new byte[] { 1, 2, 3, 4 }));
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            productService.deleteImages(images);
+        });
+
+        assertEquals("Entry is outside of the target directory", exception.getMessage());
     }
 
     @Test
@@ -255,6 +342,36 @@ public class ProductServiceTest {
             assertEquals(1, result.size());
             assertTrue(result.get(0).contains("/product_media/test.jpg"));
 
+        }
+    }
+
+    @Test
+    void testSaveImagesInvalidFilename() {
+        List<MultipartFile> images = new ArrayList<>();
+        images.add(new MockMultipartFile("file", "../test.jpg", "image/jpeg", new byte[] { 1, 2, 3, 4 }));
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            productService.saveImages(images);
+        });
+
+        assertEquals("Entry is outside of the target directory", exception.getMessage());
+    }
+
+    @Test
+    void testSaveImagesIOException() {
+        List<MultipartFile> images = new ArrayList<>();
+        images.add(new MockMultipartFile("file", "test.jpg", "image/jpeg", new byte[] { 1, 2, 3, 4 }));
+
+        try (MockedStatic<Files> mockedFiles = mockStatic(Files.class)) {
+            mockedFiles.when(() -> Files.copy(any(InputStream.class), any(Path.class)))
+                    .thenThrow(new IOException("Test IOException"));
+
+            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+                productService.saveImages(images);
+            });
+
+            assertEquals("Error while saving images.", exception.getMessage());
+            mockedFiles.verify(() -> Files.copy(any(InputStream.class), any(Path.class)), times(1));
         }
     }
 

@@ -30,49 +30,95 @@ public class EventService {
         this.artistRepository = artistRepository;
     }
 
+    /**
+     * Retrieves an event by its ID.
+     *
+     * @param id the ID of the event to retrieve.
+     * @return the event corresponding to the given ID.
+     * @throws IllegalArgumentException if no event is found with the given ID.
+     */
     public Event getEventById(Long id) {
         return eventRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Event not found"));
     }
 
+    /**
+     * Retrieves all events from the repository.
+     *
+     * @return a list of all events.
+     */
     public List<Event> getAllEvents() {
         return eventRepository.findAll();
     }
 
+    /**
+     * Deletes an event by its ID.
+     *
+     * @param id the ID of the event to delete.
+     * @throws IllegalArgumentException if the event with the given ID is not found.
+     */
     public void deleteEvent(Long id) {
+        // Retrieve the event by ID, throw an exception if not found
         Event event = eventRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Event not found"));
 
+        // Delete the retrieved event
         eventRepository.delete(event);
     }
 
+    /**
+     * Checks if the currently authenticated user is an artist.
+     *
+     * @return true if the authenticated user is an artist, false otherwise.
+     */
     public Boolean isArtist() {
+        // Retrieve the authentication object from the security context
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        // Get the principal (the authenticated user)
         Object principalUser = authentication.getPrincipal();
-        if (principalUser instanceof Artist) {
-            return true;
-        } else {
-            return false;
-        }
+
+        // Check if the principal is an instance of Artist and return the result
+        return principalUser instanceof Artist;
     }
 
+    /**
+     * Validates the event date to ensure it is not null and not in the past.
+     *
+     * @param eventDate the date of the event to be validated.
+     * @throws IllegalArgumentException if the event date is null or in the past.
+     */
     private void validateEventDate(LocalDate eventDate) {
+        // Check if the event date is null
         if (eventDate == null) {
             throw new IllegalArgumentException("Event date cannot be null");
         }
 
+        // Check if the event date is in the past
         if (eventDate.isBefore(LocalDate.now())) {
             throw new IllegalArgumentException("Event date cannot be in the past");
         }
     }
 
+    /**
+     * Creates a new event based on the provided EventDTO and saves it in the
+     * repository.
+     *
+     * @param eventDTO the DTO containing event details.
+     * @return the newly created Event entity.
+     * @throws IllegalArgumentException if the artist is not found, the event date
+     *                                  is invalid, or any other error occurs.
+     */
     public Event newEvent(EventDTO eventDTO) {
         try {
+            // Fetch the artist associated with the event
             Artist artist = artistRepository.findById(eventDTO.getArtistId())
                     .orElseThrow(() -> new IllegalArgumentException("Artist not found"));
 
+            // Validate the event date
             validateEventDate(eventDTO.getDate());
 
+            // Map the EventDTO to an Event entity
             Event event = new Event();
             event.setName(eventDTO.getName());
             event.setDescription(eventDTO.getDescription());
@@ -81,91 +127,146 @@ public class EventService {
             event.setMoreInfo(eventDTO.getMoreInfo());
             event.setImage(eventDTO.getImage());
             event.setArtist(artist);
+
+            // Save and return the event
             return eventRepository.save(event);
         } catch (Exception e) {
             throw new IllegalArgumentException(e.getMessage());
         }
     }
 
-    public String saveImages(MultipartFile image)  {
+    /**
+     * Saves the provided image file to the server and returns its accessible URL.
+     *
+     * @param image the image file to be saved.
+     * @return the URL of the saved image.
+     * @throws IllegalArgumentException if the file is not a valid image or cannot
+     *                                  be saved.
+     */
+    public String saveImages(MultipartFile image) {
         String imageUrl = "";
-    
-        // Validar y sanitizar el nombre del archivo original
+
+        // Get the original filename
         String originalFilename = image.getOriginalFilename();
-        
-        
-        // Validar que el archivo no esté vacío
+
+        // Validate the filename
         if (originalFilename == null || originalFilename.isEmpty()) {
-            throw new IllegalArgumentException("El nombre del archivo no es válido.");
+            throw new IllegalArgumentException("The file name is invalid.");
         }
 
+        // Sanitize the filename to remove any invalid characters
         originalFilename = sanitizeFilename(originalFilename);
-    
-        // Crear un nuevo nombre de archivo seguro
+
+        // Generate a unique filename to prevent conflicts
         String fileName = UUID.randomUUID().toString() + "_" + originalFilename;
         Path targetPath = Paths.get(UPLOAD_DIR, fileName);
-    
+
         try {
-            // Validar el contenido del archivo (puedes implementar validaciones adicionales si es necesario)
+            // Validate the file (check if it is empty or not a valid image)
             if (image.isEmpty() || !isValidImage(image)) {
-                throw new IllegalArgumentException("El archivo no es una imagen válida.");
+                throw new IllegalArgumentException("The file is not a valid image.");
             }
-    
-            // Guardar la imagen en el directorio
+
+            // Save the image to the specified directory
             Files.copy(image.getInputStream(), targetPath);
-            
-            // Agregar la URL o nombre del archivo a la lista (ajustado según la necesidad)
+
+            // Generate the URL for accessing the saved image
             imageUrl = "/event_media/" + fileName;
         } catch (IOException e) {
-            throw new IllegalArgumentException("Error al guardar las imágenes.");
+            throw new IllegalArgumentException("Error while saving the image.", e);
         }
-    
+
         return imageUrl;
     }
-    
-    // Método para sanitizar el nombre del archivo
+
+    /**
+     * Sanitizes the provided filename by replacing invalid characters with an
+     * underscore.
+     *
+     * @param filename the original filename to sanitize.
+     * @return a sanitized version of the filename, ensuring it only contains valid
+     *         characters.
+     */
     private String sanitizeFilename(String filename) {
+        // Replace any character that is not a letter, number, dot, underscore, or
+        // hyphen with an underscore
         return filename.replaceAll("[^a-zA-Z0-9\\._-]", "_");
     }
-    
-    // Método para validar el contenido del archivo
+
+    /**
+     * Checks if the provided file is a valid image.
+     *
+     * @param image the MultipartFile to validate.
+     * @return true if the file is a JPEG or PNG image, false otherwise.
+     */
     private boolean isValidImage(MultipartFile image) {
-        // Aquí puedes agregar validaciones adicionales según el tipo de archivo que esperas
+        // Get the content type (MIME type) of the uploaded file
         String contentType = image.getContentType();
+
+        // Return true if the content type is not null and matches either JPEG or PNG
+        // formats
         return contentType != null && (contentType.equals("image/jpeg") || contentType.equals("image/png"));
     }
 
+    /**
+     * Retrieves all events associated with a specific artist.
+     *
+     * @param id the ID of the artist whose events are to be retrieved.
+     * @return a list of events linked to the specified artist.
+     */
     public List<Event> getAllMyEvents(Long id) {
+        // Query the repository to find all events by the artist's ID
         return eventRepository.findByArtistId(id);
     }
 
+    /**
+     * Deletes the specified image from the storage directory.
+     *
+     * @param removedImage the path of the image to be deleted.
+     * @throws IllegalArgumentException if an error occurs while deleting the image.
+     */
     public void deleteImages(String removedImage) {
+        // Clean the file path to prevent security issues
         String fileName = StringUtils.cleanPath(removedImage);
+
+        // Create the target path to the file in the resources directory
         Path targetPath = Paths.get("artists-heaven-backend/src/main/resources", fileName).normalize();
 
         try {
+            // Attempt to delete the file
             Files.delete(targetPath);
         } catch (IOException e) {
-            throw new IllegalArgumentException("Error al eliminar las imágenes.");
+            // Throw an exception if the file cannot be deleted
+            throw new IllegalArgumentException("Error while deleting the image.");
         }
     }
 
+    /**
+     * Updates an existing event with the provided event data.
+     *
+     * @param event    the existing event to be updated.
+     * @param eventDTO the DTO containing the new event details.
+     * @throws IllegalArgumentException if the event date is in the past.
+     */
     public void updateEvent(Event event, EventDTO eventDTO) {
+        // Get the current date to validate the event date
         LocalDate actualDate = LocalDate.now();
-        
+
+        // Check if the event date is in the past
         if (eventDTO.getDate().isBefore(actualDate)) {
             throw new IllegalArgumentException("Event date cannot be in the past");
         }
-    
+
+        // Update the event fields with the new values from eventDTO
         event.setName(eventDTO.getName());
         event.setDescription(eventDTO.getDescription());
         event.setDate(eventDTO.getDate());
         event.setLocation(eventDTO.getLocation());
         event.setMoreInfo(eventDTO.getMoreInfo());
         event.setImage(eventDTO.getImage());
-        
+
+        // Save the updated event to the repository
         eventRepository.save(event);
     }
-    
 
 }
