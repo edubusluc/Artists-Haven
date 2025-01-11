@@ -129,7 +129,7 @@ public class VerificationServiceTest {
     }
 
     @Test
-    public void testSaveFile_EmptyFile() {
+    void testSaveFile_EmptyFile() {
         MultipartFile file = mock(MultipartFile.class);
         when(file.isEmpty()).thenReturn(true);
 
@@ -141,7 +141,7 @@ public class VerificationServiceTest {
     }
 
     @Test
-    public void testSaveFile_IOException() throws IOException {
+    void testSaveFile_IOException() throws IOException {
         MultipartFile file = mock(MultipartFile.class);
         when(file.isEmpty()).thenReturn(false);
         when(file.getOriginalFilename()).thenReturn("test.mp4");
