@@ -2,6 +2,7 @@ package com.artists_heaven.product;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -20,6 +21,7 @@ import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.transaction.Transactional;
@@ -31,6 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -255,6 +258,36 @@ public class ProductServiceTest {
             assertEquals(1, result.size());
             assertTrue(result.get(0).contains("/product_media/test.jpg"));
 
+        }
+    }
+
+    @Test
+    void testSaveImagesInvalidFilename() {
+        List<MultipartFile> images = new ArrayList<>();
+        images.add(new MockMultipartFile("file", "../test.jpg", "image/jpeg", new byte[] { 1, 2, 3, 4 }));
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            productService.saveImages(images);
+        });
+
+        assertEquals("Entry is outside of the target directory", exception.getMessage());
+    }
+
+    @Test
+    void testSaveImagesIOException() throws IOException {
+        List<MultipartFile> images = new ArrayList<>();
+        images.add(new MockMultipartFile("file", "test.jpg", "image/jpeg", new byte[] { 1, 2, 3, 4 }));
+
+        try (MockedStatic<Files> mockedFiles = mockStatic(Files.class)) {
+            mockedFiles.when(() -> Files.copy(any(InputStream.class), any(Path.class)))
+                    .thenThrow(new IOException("Test IOException"));
+
+            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+                productService.saveImages(images);
+            });
+
+            assertEquals("Error while saving images.", exception.getMessage());
+            mockedFiles.verify(() -> Files.copy(any(InputStream.class), any(Path.class)), times(1));
         }
     }
 
