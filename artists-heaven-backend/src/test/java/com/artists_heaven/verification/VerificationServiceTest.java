@@ -1,0 +1,144 @@
+package com.artists_heaven.verification;
+
+import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.springframework.web.multipart.MultipartFile;
+import com.artists_heaven.entities.artist.Artist;
+import com.artists_heaven.entities.artist.ArtistRepository;
+import java.io.IOException;
+import java.util.List;
+
+public class VerificationServiceTest {
+
+    @Mock
+    private ArtistRepository artistRepository;
+
+    @Mock
+    private VerificationRepository verificationRepository;
+
+    @InjectMocks
+    private VerificationService verificationService;
+
+    @BeforeEach
+    public void setUp() {
+        MockitoAnnotations.openMocks(this);
+    }
+
+    @Test
+    public void testValidateArtist() {
+        String email = "test@example.com";
+        Artist artist = new Artist();
+        when(artistRepository.findByEmail(email)).thenReturn(artist);
+
+        Artist result = verificationService.validateArtist(email);
+
+        assertEquals(artist, result);
+    }
+
+    @Test
+    public void testIsArtistEligibleForVerification_True() {
+        Artist artist = new Artist();
+        artist.setIsvalid(false);
+
+        boolean result = verificationService.isArtistEligibleForVerification(artist);
+
+        assertTrue(result);
+    }
+
+    @Test
+    public void testIsArtistEligibleForVerification_False() {
+        Artist artist = new Artist();
+        artist.setIsvalid(true);
+
+        boolean result = verificationService.isArtistEligibleForVerification(artist);
+
+        assertFalse(result);
+    }
+
+    @Test
+    public void testHasPendingVerification_True() {
+        Artist artist = new Artist();
+        artist.setId(1L);
+        Verification verification = new Verification();
+        verification.setStatus(VerificationStatus.PENDING);
+        when(verificationRepository.findByArtistId(artist.getId())).thenReturn(List.of(verification));
+
+        boolean result = verificationService.hasPendingVerification(artist);
+
+        assertTrue(result);
+    }
+
+    @Test
+    public void testCreateVerification() {
+        Artist artist = new Artist();
+        artist.setId(1L);
+        String videoUrl = "http://example.com/video.mp4";
+
+        verificationService.createVerification(artist, videoUrl);
+
+        ArgumentCaptor<Verification> verificationCaptor = ArgumentCaptor.forClass(Verification.class);
+        verify(verificationRepository).save(verificationCaptor.capture());
+
+        Verification savedVerification = verificationCaptor.getValue();
+        assertEquals(artist, savedVerification.getArtist());
+        assertEquals(videoUrl, savedVerification.getVideoUrl());
+        assertNotNull(savedVerification.getDate());
+        assertEquals(VerificationStatus.PENDING, savedVerification.getStatus());
+    }
+
+    @Test
+    public void testHasPendingVerification_False() {
+        Artist artist = new Artist();
+        artist.setId(1L);
+        when(verificationRepository.findByArtistId(artist.getId())).thenReturn(List.of());
+
+        boolean result = verificationService.hasPendingVerification(artist);
+
+        assertFalse(result);
+    }
+
+    @Test
+    public void testSaveFile_EmptyFile() {
+        MultipartFile file = mock(MultipartFile.class);
+        when(file.isEmpty()).thenReturn(true);
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            verificationService.saveFile(file);
+        });
+
+        assertEquals("No se ha enviado ningún archivo", exception.getMessage());
+    }
+
+    @Test
+    public void testSaveFile_OutsideTargetDirectory() {
+        MultipartFile file = mock(MultipartFile.class);
+        when(file.isEmpty()).thenReturn(false);
+        when(file.getOriginalFilename()).thenReturn("../test.mp4");
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            verificationService.saveFile(file);
+        });
+
+        assertEquals("Entry is outside of the target directory", exception.getMessage());
+    }
+
+    @Test
+    public void testSaveFile_IOException() throws IOException {
+        MultipartFile file = mock(MultipartFile.class);
+        when(file.isEmpty()).thenReturn(false);
+        when(file.getOriginalFilename()).thenReturn("test.mp4");
+        when(file.getInputStream()).thenThrow(new IOException("Error"));
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            verificationService.saveFile(file);
+        });
+
+        assertEquals("Error while saving image.", exception.getMessage());
+    }
+}
