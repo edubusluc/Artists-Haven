@@ -93,7 +93,7 @@ public class ProductServiceTest {
             productService.registerProduct(productDTO);
         });
 
-        assertEquals("No se ha podido crear el producto", exception.getMessage());
+        assertEquals("Unable to create the product", exception.getMessage());
         verify(productRepository, times(1)).save(any(Product.class));
     }
 
@@ -135,9 +135,9 @@ public class ProductServiceTest {
         Optional<Product> product = Optional.of(new Product());
         when(productRepository.findById(productId)).thenReturn(product);
 
-        Optional<Product> result = productService.findById(productId);
+        Product result = productService.findById(productId);
 
-        assertTrue(result.isPresent());
+        assertTrue(result != null);
         verify(productRepository, times(1)).findById(productId);
     }
 
@@ -225,7 +225,7 @@ public class ProductServiceTest {
                     () -> productService.deleteImages(files));
 
             // Comprueba el mensaje de la excepción
-            assertEquals("Error al eliminar las imágenes.", exception.getMessage());
+            assertEquals("Error deleting the images.", exception.getMessage());
 
             // Verifica que Files.delete fue llamado correctamente
             mockedFiles.verify(() -> Files.delete(mockPath), times(1));
