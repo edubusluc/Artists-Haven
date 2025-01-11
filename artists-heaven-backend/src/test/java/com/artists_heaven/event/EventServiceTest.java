@@ -3,19 +3,23 @@ package com.artists_heaven.event;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.*;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.multipart.MultipartFile;
@@ -24,6 +28,9 @@ import com.artists_heaven.entities.artist.Artist;
 import com.artists_heaven.entities.artist.ArtistRepository;
 
 class EventServiceTest {
+
+    private static final String UPLOAD_DIR = "artists-heaven-backend/src/main/resources/event_media/";
+
 
     @Mock
     private EventRepository eventRepository;
@@ -156,24 +163,25 @@ class EventServiceTest {
     }
 
 
-    // @Test
-    // void testSaveImagesSuccess() throws IOException {
-    //     String originalFileName = UUID.randomUUID() +"test.jpg";
+@Test
+    void testSaveImagesSuccess() throws IOException {
+        String originalFilename = "test.jpg";
+        String sanitizedFilename = "test.jpg"; // Assuming sanitizeFilename does not change the name
+        String fileName = UUID.randomUUID().toString() + "_" + sanitizedFilename;
+        Path targetPath = Paths.get(UPLOAD_DIR, fileName);
 
-    //     when(multipartFile.getOriginalFilename()).thenReturn(originalFileName);
-    //     when(multipartFile.getInputStream()).thenReturn(mock(InputStream.class));
+        MultipartFile multipartFile = new MockMultipartFile("file", originalFilename, "image/jpeg", new byte[]{1, 2, 3, 4});
 
-    //     String imageUrl = eventService.saveImages(multipartFile);
+        // Mock the static method Files.copy
+        try (MockedStatic<Files> mockedFiles = mockStatic(Files.class)) {
+            mockedFiles.when(() -> Files.copy(any(InputStream.class), eq(targetPath))).thenAnswer(invocation -> null);
 
-    //     assertTrue(imageUrl.contains("/event_media/"));
-    //     verify(multipartFile, times(1)).getOriginalFilename();
-    //     verify(multipartFile, times(1)).getInputStream();
+            String imageUrl = eventService.saveImages(multipartFile);
 
-    //     // Clean up the created file
-    //     eventService.deleteImages(imageUrl);
-
-        
-    // }
+            assertTrue(imageUrl.contains("/event_media/"));
+            assertTrue(imageUrl.contains(sanitizedFilename));
+        }
+    }
 
     @Test
     void testDeleteEventSuccess() {
@@ -242,7 +250,7 @@ class EventServiceTest {
                 eventService.deleteImages(removedImage);
             });
 
-            assertEquals("Error al eliminar las imágenes.", exception.getMessage());
+            assertEquals("Error while deleting the image.", exception.getMessage());
             mockedFiles.verify(() -> Files.delete(targetPath), times(1));
         }
     }
