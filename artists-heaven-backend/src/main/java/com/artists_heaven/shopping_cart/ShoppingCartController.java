@@ -12,7 +12,6 @@ import org.springframework.http.ResponseEntity;
 
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -75,7 +74,7 @@ public class ShoppingCartController {
             List<CartItem> cartItems = shoppingCart.getItems();
             List<CartItemDTO> cartItemDTOs = cartItems.stream()
                     .map(this::mapToCartItemDTO)
-                    .collect(Collectors.toList());
+                    .toList();
 
             ShoppingCartDTO shoppingCartDTO = new ShoppingCartDTO();
             shoppingCartDTO.setId(shoppingCart.getId());
@@ -105,7 +104,7 @@ public class ShoppingCartController {
             // Mapear los elementos del carrito a DTO
             List<CartItemDTO> cartItemDTOs = cartItems.stream()
                     .map(this::mapToCartItemDTO)
-                    .collect(Collectors.toList());
+                    .toList();
 
             return ResponseEntity.ok(cartItemDTOs); // 200
         } catch (AuthenticationException e) {
@@ -132,7 +131,7 @@ public class ShoppingCartController {
             // Mapear los elementos del carrito a DTO
             List<CartItemDTO> cartItemDTOs = cartItems.stream()
                     .map(this::mapToCartItemDTO)
-                    .collect(Collectors.toList());
+                    .toList();
     
             return ResponseEntity.ok(cartItemDTOs); // 200
         } catch (Exception e) {
@@ -158,7 +157,7 @@ public class ShoppingCartController {
             // Mapear los elementos del carrito a DTO
             List<CartItemDTO> cartItemDTOs = cartItems.stream()
                     .map(this::mapToCartItemDTO)
-                    .collect(Collectors.toList());
+                    .toList();
     
             return ResponseEntity.ok(cartItemDTOs); // 200
         } catch (Exception e) {
@@ -180,7 +179,7 @@ public class ShoppingCartController {
             // Mapear los elementos del carrito a DTO
             List<CartItemDTO> cartItemDTOs = cartItems.stream()
                     .map(this::mapToCartItemDTO)
-                    .collect(Collectors.toList());
+                    .toList();
     
             return ResponseEntity.ok(cartItemDTOs); // 200
         } catch (Exception e) {
