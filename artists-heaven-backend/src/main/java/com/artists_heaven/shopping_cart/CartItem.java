@@ -1,4 +1,4 @@
-package com.artists_heaven.shoppingCart;
+package com.artists_heaven.shopping_cart;
 
 import com.artists_heaven.product.Product;
 import com.fasterxml.jackson.annotation.JsonIgnore;

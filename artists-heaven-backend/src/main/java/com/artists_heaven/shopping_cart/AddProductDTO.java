@@ -1,4 +1,4 @@
-package com.artists_heaven.shoppingCart;
+package com.artists_heaven.shopping_cart;
 
 import lombok.Getter;
 import lombok.Setter;

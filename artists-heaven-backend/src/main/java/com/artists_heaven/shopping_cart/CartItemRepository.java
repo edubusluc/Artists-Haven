@@ -1,4 +1,4 @@
-package com.artists_heaven.shoppingCart;
+package com.artists_heaven.shopping_cart;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
