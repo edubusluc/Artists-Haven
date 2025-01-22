@@ -5,7 +5,6 @@ import org.junit.jupiter.api.Test;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -216,7 +215,7 @@ public class ShoppingCartControllerTest {
         product.setPrice(10.0f);
 
         // Simulamos que el usuario no está autenticado
-        when(shoppingCartService.addProducts(anyLong(), product, request.getSize(),1))
+        when(shoppingCartService.addProducts(100L, product, request.getSize(),1))
                 .thenThrow(new AuthenticationException("User not authenticated") {
                 });
 
@@ -237,16 +236,16 @@ public class ShoppingCartControllerTest {
         request.setSize(null);
 
         Product product = new Product();
-        product.setId(1L);
-        product.setName("Test Product");
-        product.setPrice(10.0f);
+        product.setId(null);
+        product.setName(null);
+        product.setPrice(null);
 
         User user = new User();
         user.setId(1L); // Asignar ID al usuario
 
         CartItem cartItem = new CartItem();
-        cartItem.setProduct(product);
-        cartItem.setSize("M");
+        cartItem.setProduct(null);
+        cartItem.setSize(null);
         cartItem.setQuantity(1);
 
         List<CartItem> cartItems = new ArrayList<>();
@@ -264,7 +263,7 @@ public class ShoppingCartControllerTest {
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
         // Simulamos que ocurre un error inesperado
-        when(shoppingCartService.addProducts(anyLong(), product, request.getSize(), 1))
+        when(shoppingCartService.addProducts(100L, product, request.getSize(), 1))
                 .thenThrow(new RuntimeException("Unexpected error"));
 
         // Ejecución y verificación
