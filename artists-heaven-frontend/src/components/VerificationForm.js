@@ -33,6 +33,8 @@ function VerificationForm() {
     };
 
     return (
+        <>
+        <p>EL TAMAÑO MÁXIMO DEL ARCHIVO SON 50MB</p>
         <><form onSubmit={handleSubmit}>
             <textarea
                 placeholder="Descripción"
@@ -50,6 +52,7 @@ function VerificationForm() {
         <Link to="/">
         <button>Home</button>
       </Link></>
+      </>
     );
 }
 
