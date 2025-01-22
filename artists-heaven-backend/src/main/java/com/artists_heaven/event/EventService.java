@@ -118,6 +118,11 @@ public class EventService {
             // Validate the event date
             validateEventDate(eventDTO.getDate());
 
+            //Validate the artist is verified
+            if (!artist.getIsvalid()) {
+                throw new IllegalArgumentException("Artist is not verified");
+            }
+
             // Map the EventDTO to an Event entity
             Event event = new Event();
             event.setName(eventDTO.getName());

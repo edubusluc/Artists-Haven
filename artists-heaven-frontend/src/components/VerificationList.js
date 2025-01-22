@@ -100,7 +100,7 @@ const VerificationList = () => {
     };
 
     if (loading) return <p>Loading...</p>;
-    if (rol != "ADMIN") return <><p>No tienes permiso para acceder a esta página</p><button onClick={() => navigate('/')} className="btn btn-primary">
+    if (rol !== "ADMIN") return <><p>No tienes permiso para acceder a esta página</p><button onClick={() => navigate('/')} className="btn btn-primary">
         Volver al inicio
     </button></>;
 

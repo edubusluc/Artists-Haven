@@ -135,6 +135,7 @@ public class AuthService {
         Map<String, String> response = new HashMap<>();
         response.put("token", token);
         response.put("email", email);
+        response.put("role", user.getRole().toString());
 
         return response;
     }

@@ -1,18 +1,17 @@
-import React, { useEffect, useState } from 'react';
-import { BrowserRouter as Router, Route, Routes, Link } from 'react-router-dom';
+import React from 'react';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { GoogleOAuthProvider } from '@react-oauth/google';
-import { GoogleLogin } from '@react-oauth/google';
+import Header from './components/Header';
+import HomePage from './components/HomePage';
 import UserList from './components/UserList';
 import UserRegister from './components/UserRegister';
 import ArtistsRegister from './components/ArtistsRegister';
 import UserLogin from './components/UserLogin';
-import Logout from './components/Logout';
 import UserProfile from './components/UserProfile';
 import EditProfile from './components/EditProfile';
 import EmailForm from './components/EmailForm';
 import VerificationForm from './components/VerificationForm';
 import VerificationList from './components/VerificationList';
-import { checkTokenExpiration } from './utils/authUtils';
 import CreateProductForm from './components/CreateProductForm';
 import ProductsList from './components/ProductsList';
 import EditProduct from './components/EditProduct';
@@ -20,153 +19,16 @@ import CreateEventForm from './components/CreateEventForm';
 import AllMyEvents from './components/AllMyEvents';
 import FAQ from './components/FAQ';
 import EditMyEvent from './components/EditMyEvent';
+import ProductDetails from './components/ProductDetails';
+import { CartProvider } from './context/CartContext';
+import './style.css';
+import AllEvents from './components/AllEvents';
 
-const HomePage = () => {
-  const [userEmail, setUserEmail] = useState(null);
-  const rol = localStorage.getItem("role");
-
-  useEffect(() => {
-    if (!localStorage.getItem('firstTime')) {
-      localStorage.setItem('firstTime', true);
-    }
-    checkTokenExpiration();
-    const storedEmail = localStorage.getItem('userEmail');
-    if (storedEmail) {
-      setUserEmail(storedEmail);
-    }
-  }, []);
-
-  const handleGoogleLoginSuccess = async (response) => {
-    console.log('Google login successful:', response);
-    const googleToken = response.credential;
-
-    try {
-      // Enviar el token de Google al backend usando fetch
-      const backendResponse = await fetch('/api/auth/google-login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ idTokenString: googleToken }),
-      });
-
-      if (!backendResponse.ok) {
-        throw new Error('Error during Google login');
-      }
-
-      const data = await backendResponse.json();
-      const jwtToken = data.token;  // Asegúrate de obtener el token del objeto JSON
-
-      // Guardar el token JWT en el almacenamiento local
-      localStorage.setItem('authToken', jwtToken);
-      localStorage.setItem('userEmail', data.email);
-
-      // Redirigir al usuario a la página principal (u otra página)
-      window.location.href = '/';
-    } catch (error) {
-      console.error('Error during Google login:', error);
-    }
-  };
-
-
-  const handleGoogleLoginError = (error) => {
-    console.log('Google login failed:', error);
-  };
-
-  return (
-    <div>
-      <h1>Bienvenido a la App</h1>
-
-      {userEmail ? (
-        <>
-          <p>Email: {userEmail}</p>
-          <p>Ver Perfil:</p>
-          <Link to="/users/profile">
-            <button>Perfil</button>
-          </Link>
-        </>
-      ) : (
-        <>
-          <p>No has iniciado sesión:</p>
-          <Link to="/artists/register">
-            <button>Registrar Artista</button>
-          </Link>
-          <p>Login de usuario:</p>
-          <Link to="/auth/login">
-            <button>Login Usuario</button>
-          </Link>
-          <p>O inicia sesión con Google:</p>
-          <GoogleLogin
-            onSuccess={handleGoogleLoginSuccess}
-            onError={handleGoogleLoginError}
-          />
-        </>
-      )}
-
-      <p>Haz clic en el siguiente botón para ver la lista de usuarios:</p>
-      <Link to="/users">
-        <button>Ir a UserList</button>
-      </Link>
-
-      <p>Mandar reporte</p>
-      <Link to="/email">
-        <button>Report</button>
-      </Link>
-
-
-      <p>Listado de Producto</p>
-      <Link to="/product/all">
-        <button>All Product</button>
-      </Link>
-
-
-      <p>Nuevo Producto</p>
-      <Link to="/product/new">
-        <button>New Product</button>
-      </Link>
-
-      <p>Nuevo Evento</p>
-      <Link to="/event/new">
-        <button>New Event</button>
-      </Link>
-
-      <p>Mis Eventos</p>
-      <Link to="/event/allMyEvents">
-        <button>My Events</button>
-      </Link>
-
-      <p>FAQ</p>
-      <Link to="/FAQ">
-        <button>FAQ</button>
-      </Link>
-
-
-      <br />
-      <p>O haz clic para registrar un nuevo usuario:</p>
-      <Link to="/user/register">
-        <button>Registrar Usuario</button>
-      </Link>
-      <p>O haz clic para registrar un nuevo artista:</p>
-
-      {rol === "ARTIST" && <Link to="/verification">
-        <button>Send Verification Request</button>
-      </Link>}
-
-      {rol === "ADMIN" && <Link to="/admin/verification/pending">
-        <button>View Verification Request</button>
-      </Link>}
-
-      
-
-      {userEmail && <Logout />}
-    </div>
-  );
-};
-
-const App = () => {
-  return (
-    <GoogleOAuthProvider clientId="1048927197271-g7tartu6gacs0jv8fgoa5braq8b2ck7p.apps.googleusercontent.com">
+const App = () => (
+  <GoogleOAuthProvider clientId="1048927197271-g7tartu6gacs0jv8fgoa5braq8b2ck7p.apps.googleusercontent.com">
+    <CartProvider>
       <Router>
+        <Header />
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/users" element={<UserList />} />
@@ -182,13 +44,15 @@ const App = () => {
           <Route path="/product/all" element={<ProductsList />} />
           <Route path="/product/edit/:id" element={<EditProduct />} />
           <Route path="/event/new" element={<CreateEventForm />} />
-          <Route path="/event/allMyEvents" element={<AllMyEvents />} />
+          <Route path="/event/all-my-events" element={<AllMyEvents />} />
           <Route path="/FAQ" element={<FAQ />} />
           <Route path="/event/edit/:id" element={<EditMyEvent />} />
+          <Route path="/product/details/:id" element={<ProductDetails />} />
+          <Route path="/event/all-events" element={<AllEvents />} />
         </Routes>
       </Router>
-    </GoogleOAuthProvider>
-  );
-};
+    </CartProvider>
+  </GoogleOAuthProvider>
+);
 
 export default App;

@@ -127,7 +127,7 @@ public class AuthControllerTest {
     @Test
     public void testGoogleLogin_withExistingUser() throws Exception {
         // Crear un mapa simulado para la respuesta de handleGoogleLogin
-        Map<String, String> mockResponse = Map.of("token", "mockJwtToken", "email", "user@example.com");
+        Map<String, String> mockResponse = Map.of("token", "mockJwtToken", "email", "user@example.com", "role", "USER");
 
         // Mockear el comportamiento del servicio
         when(authService.handleGoogleLogin(anyString())).thenReturn(mockResponse);

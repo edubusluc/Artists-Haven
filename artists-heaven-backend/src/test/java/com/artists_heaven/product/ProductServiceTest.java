@@ -55,7 +55,7 @@ public class ProductServiceTest {
 
     @Test
     @Transactional
-    public void registerProductTest() throws Exception {
+    void registerProductTest() throws Exception {
         ProductDTO productDTO = new ProductDTO();
         productDTO.setCategories(new HashSet<>());
         productDTO.setDescription("Description");

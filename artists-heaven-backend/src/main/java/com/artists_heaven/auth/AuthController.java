@@ -79,11 +79,12 @@ public class AuthController {
              // Retrieve the generated JWT token and user email from the response map
             String token = map.get("token");
             String email = map.get("email");
+            String role = map.get("role");
 
             // Check if the token is successfully generated
             if (token != null) {
                 // Return a successful response containing the JWT token and user email
-                return new ResponseEntity<>(Map.of("token", token, "email",email), HttpStatus.OK);
+                return new ResponseEntity<>(Map.of("token", token, "email",email, "role",role), HttpStatus.OK);
             } else {
                  // Return an Unauthorized response if the ID token is invalid
                 return new ResponseEntity<>(Map.of("error", "Invalid ID token"), HttpStatus.UNAUTHORIZED);
