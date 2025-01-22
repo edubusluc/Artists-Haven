@@ -23,6 +23,11 @@ import org.mockito.MockitoAnnotations;
 import com.artists_heaven.entities.user.User;
 import com.artists_heaven.entities.user.UserService;
 import com.artists_heaven.product.Product;
+import com.artists_heaven.shopping_cart.CartItem;
+import com.artists_heaven.shopping_cart.CartItemRepository;
+import com.artists_heaven.shopping_cart.ShoppingCart;
+import com.artists_heaven.shopping_cart.ShoppingCartRepository;
+import com.artists_heaven.shopping_cart.ShoppingCartService;
 
 public class ShoppingCartServiceTest {
 
