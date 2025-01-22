@@ -39,6 +39,12 @@ public class SecurityConfiguration {
         "/api/product/product_media/**",
         "/api/product/details/{id}",
         "/api/event/event_media/**",
+        "/api/myShoppingCart",
+        "/api/myShoppingCart/addProducts",
+        "/api/myShoppingCart/deleteProducts",
+        "/api/event/allEvents",
+        "/api/myShoppingCart/addProductsNonAuthenticate",
+        "/api/myShoppingCart/deleteProductsNonAuthenticated",
     };
 
     // Endpoints accessible only by ADMIN users
