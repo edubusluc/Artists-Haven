@@ -134,6 +134,7 @@ class EventServiceTest {
         eventDto.setArtistId(1L);
 
         Artist artist = new Artist();
+        artist.setIsvalid(true);
         when(artistRepository.findById(anyLong())).thenReturn(Optional.of(artist));
         when(eventRepository.save(any(Event.class))).thenThrow(new RuntimeException("Invalid data"));
 
@@ -154,6 +155,7 @@ class EventServiceTest {
         eventDto.setImage("Image");
         eventDto.setArtistId(1L);
         Artist artist = new Artist();
+        artist.setIsvalid(true);
         when(artistRepository.findById(anyLong())).thenReturn(Optional.of(artist));
         when(eventRepository.save(any(Event.class))).thenReturn(new Event());
 
