@@ -35,6 +35,12 @@ import com.artists_heaven.entities.user.User;
 import com.artists_heaven.entities.user.UserService;
 import com.artists_heaven.product.Product;
 import com.artists_heaven.product.ProductService;
+import com.artists_heaven.shopping_cart.AddProductDTO;
+import com.artists_heaven.shopping_cart.AddProductNonAuthenticatedDTO;
+import com.artists_heaven.shopping_cart.CartItem;
+import com.artists_heaven.shopping_cart.ShoppingCart;
+import com.artists_heaven.shopping_cart.ShoppingCartController;
+import com.artists_heaven.shopping_cart.ShoppingCartService;
 
 public class ShoppingCartControllerTest {
 
@@ -171,10 +177,10 @@ public class ShoppingCartControllerTest {
         cartItems.add(cartItem);
 
         // Configuración de mocks
-        when(shoppingCartService.addProducts(eq(user.getId()), eq(product), eq(request.getSize()), eq(1)))
+        when(shoppingCartService.addProducts(user.getId(), product, request.getSize(), 1))
                 .thenReturn(cartItems);
-        when(productService.findById(eq(request.getProductId()))).thenReturn(product);
-        when(userService.getUserById(eq(user.getId()))).thenReturn(user); // Simula la obtención del usuario
+        when(productService.findById(request.getProductId())).thenReturn(product);
+        when(userService.getUserById(user.getId())).thenReturn(user); // Simula la obtención del usuario
 
         // Simular autenticación en el SecurityContext
         Authentication authentication = mock(Authentication.class);
@@ -210,7 +216,7 @@ public class ShoppingCartControllerTest {
         product.setPrice(10.0f);
 
         // Simulamos que el usuario no está autenticado
-        when(shoppingCartService.addProducts(anyLong(), eq(product), eq(request.getSize()), eq(1)))
+        when(shoppingCartService.addProducts(anyLong(), product, request.getSize(),1))
                 .thenThrow(new AuthenticationException("User not authenticated") {
                 });
 
@@ -247,10 +253,10 @@ public class ShoppingCartControllerTest {
         cartItems.add(cartItem);
 
         // Configuración de mocks
-        when(shoppingCartService.addProducts(eq(user.getId()), eq(product), eq(request.getSize()), eq(1)))
+        when(shoppingCartService.addProducts(user.getId(), product, request.getSize(), 1))
                 .thenReturn(cartItems);
-        when(productService.findById(eq(request.getProductId()))).thenReturn(product);
-        when(userService.getUserById(eq(user.getId()))).thenReturn(user); // Simula la obtención del usuario
+        when(productService.findById(request.getProductId())).thenReturn(product);
+        when(userService.getUserById(user.getId())).thenReturn(user); // Simula la obtención del usuario
 
         // Simular autenticación en el SecurityContext
         Authentication authentication = mock(Authentication.class);
@@ -258,7 +264,7 @@ public class ShoppingCartControllerTest {
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
         // Simulamos que ocurre un error inesperado
-        when(shoppingCartService.addProducts(anyLong(), eq(product), eq(request.getSize()), eq(1)))
+        when(shoppingCartService.addProducts(anyLong(), product, request.getSize(), 1))
                 .thenThrow(new RuntimeException("Unexpected error"));
 
         // Ejecución y verificación
