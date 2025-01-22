@@ -136,8 +136,6 @@ public class ShoppingCartController {
     
             return ResponseEntity.ok(cartItemDTOs); // 200
         } catch (Exception e) {
-            // Log del error para depuración
-            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build(); // 500
         }
     }
@@ -164,8 +162,6 @@ public class ShoppingCartController {
     
             return ResponseEntity.ok(cartItemDTOs); // 200
         } catch (Exception e) {
-            // Log del error para depuración
-            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build(); // 500
         }
     }
@@ -188,8 +184,6 @@ public class ShoppingCartController {
     
             return ResponseEntity.ok(cartItemDTOs); // 200
         } catch (Exception e) {
-            // Log del error para depuración
-            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build(); // 500
         }
     }
