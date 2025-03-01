@@ -52,7 +52,7 @@ public class UserControllerTest {
 
         @Test
         public void testGetAllUsers() throws Exception {
-                User user = new User(1L, "Jane", "Doe", "JaneDoe", "jane.doe@example.com", "password1234",
+                User user = new User(1L, "Jane", "Doe", "JaneDoe", "jane.doe@example.com", "password1234", "1234567890", "Street 123", "1234", "Seville", "Spain",
                                 UserRole.USER, null);
 
                 when(userService.getAllUsers()).thenReturn(Collections.singletonList(user));
@@ -66,8 +66,8 @@ public class UserControllerTest {
         @Test
         public void testRegisterUser() throws Exception {
                 // Mockea el comportamiento del servicio
-                User registeredUser = new User(1L, "Jane", "Doe", "JaneDoe", "jane.doe@example.com", "password1234",
-                                UserRole.USER,null) ;
+                User registeredUser = new User(1L, "Jane", "Doe", "JaneDoe", "jane.doe@example.com", "password1234", "1234567890", "Street 123", "1234", "Seville", "Spain",
+                                UserRole.USER, null);
                 when(userService.registerUser(any(User.class))).thenReturn(registeredUser);
 
                 // Realiza la solicitud POST para registrar un nuevo usuario
@@ -97,9 +97,9 @@ public class UserControllerTest {
         @Test
         public void testGetUserProfile() throws Exception {
                 // Simular un usuario autenticado
-                User user = new User(1L, "John", "Doe", "JohnDoe", "john.doe@example.com", "password1234",
-                                UserRole.USER,null);
-                when(userRepository.findByEmail("john.doe@example.com")).thenReturn(user);
+                User user = new User(1L, "Jane", "Doe", "JaneDoe", "jane.doe@example.com", "password1234", "1234567890", "Street 123", "1234", "Seville", "Spain",
+                                UserRole.USER, null);
+                when(userRepository.findByEmail("jane.doe@example.com")).thenReturn(user);
 
                 // Simular autenticación
                 Authentication authentication = mock(Authentication.class);
@@ -112,7 +112,7 @@ public class UserControllerTest {
                 // Realizar la solicitud GET
                 mockMvc.perform(get("/api/users/profile").principal(principal))
                                 .andExpect(status().isOk())
-                                .andExpect(jsonPath("$.email").value("john.doe@example.com"));
+                                .andExpect(jsonPath("$.email").value("jane.doe@example.com"));
         }
 
         @Test

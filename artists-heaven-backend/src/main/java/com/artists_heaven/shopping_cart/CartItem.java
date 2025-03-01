@@ -29,4 +29,5 @@ public class CartItem {
     @ManyToOne
     @JsonIgnore
     private ShoppingCart shoppingCart;
+
 }

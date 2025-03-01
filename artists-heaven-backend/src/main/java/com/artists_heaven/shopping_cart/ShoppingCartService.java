@@ -9,6 +9,8 @@ import com.artists_heaven.entities.user.User;
 import com.artists_heaven.entities.user.UserService;
 import com.artists_heaven.product.Product;
 
+import jakarta.transaction.Transactional;
+
 @Service
 public class ShoppingCartService {
 
@@ -131,5 +133,17 @@ public class ShoppingCartService {
             toModify.setQuantity(toModify.getQuantity() - 1);
         }  
         return shoppingCartItems;
+    }
+
+    @Transactional
+    public void deleteShoppingCartUserItems(Long userId) {
+        ShoppingCart shoppingCart = getShoppingCart(userId);
+        List<CartItem> items = shoppingCart.getItems(); 
+        for(CartItem item : items){
+            cartItemRepository.delete(item);
+        }
+        shoppingCart.setItems(new ArrayList<>());
+        shoppingCartRepository.save(shoppingCart);
+        
     }
 }

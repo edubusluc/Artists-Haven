@@ -22,8 +22,10 @@ import jakarta.persistence.Inheritance;
 import jakarta.persistence.InheritanceType;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -62,6 +64,23 @@ public class User implements UserDetails {
     @Column(name = "password")
     @NotBlank
     private String password;
+
+    @NotBlank
+    @Size(min = 10, max = 15, message = "El número debe tener entre 10 y 15 dígitos")
+    @Digits(integer = 15, fraction = 0, message = "El número debe contener solo dígitos")
+    private String phone;
+
+    @NotBlank
+    private String address;
+
+    @NotBlank
+    private String postalCode;
+
+    @NotBlank
+    private String city;
+
+    @NotBlank  
+    private String country;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "role", nullable = false)
