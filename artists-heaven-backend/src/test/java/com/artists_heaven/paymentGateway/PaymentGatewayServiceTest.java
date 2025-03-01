@@ -58,7 +58,7 @@ public class PaymentGatewayServiceTest {
     List<CartItemDTO> items = new ArrayList<>();
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         MockitoAnnotations.openMocks(this);
         configurationTest();
     }

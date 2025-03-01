@@ -17,7 +17,7 @@ public class OrderItem {
     private String size;
     private Integer quantity;
 
-    public OrderItem(Long productId, int quantity, String size, Order order) {
+    public OrderItem(Long productId, int quantity, String size) {
         this.productId = productId;
         this.quantity = quantity;
         this.size = size;

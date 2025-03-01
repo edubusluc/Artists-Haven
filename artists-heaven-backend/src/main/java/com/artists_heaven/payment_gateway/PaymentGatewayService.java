@@ -5,7 +5,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -523,7 +522,7 @@ public class PaymentGatewayService {
 
             // Create an OrderItem for this product entry and add it to the repository and
             // items list.
-            OrderItem item = new OrderItem(productId, quantity, size, order);
+            OrderItem item = new OrderItem(productId, quantity, size);
             orderItemRepository.save(item);
             items.add(item);
         }
