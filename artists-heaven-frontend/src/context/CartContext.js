@@ -6,37 +6,47 @@ export const CartProvider = ({ children }) => {
     const [shoppingCart, setShoppingCart] = useState({ items: [] });
     const [authToken] = useState(localStorage.getItem("authToken"));
 
+    // Cargar carrito desde localStorage si no hay authToken
     useEffect(() => {
-        const fetchShoppingCart = async () => {
-            try {
-                const response = await fetch(`/api/myShoppingCart`, {
-                    
-                    method: "GET",
-                    headers: {
-                        Authorization: `Bearer ${authToken}`,
-                    },
-                });
-
-                if (!response.ok) {
-                    throw new Error("Error al obtener el carrito de compras");
-                }
-
-                const text = await response.text();
-                const data = text ? JSON.parse(text) : { items: [] };
-                setShoppingCart(data);
-            } catch (error) {
-                console.error("Error:", error);
+        if (!authToken) {
+            const storedCart = localStorage.getItem("shoppingCart");
+            if (storedCart) {
+                setShoppingCart(JSON.parse(storedCart));
             }
-        };
+        } else {
+            const fetchShoppingCart = async () => {
+                try {
+                    const response = await fetch(`/api/myShoppingCart`, {
+                        method: "GET",
+                        headers: {
+                            Authorization: `Bearer ${authToken}`,
+                        },
+                    });
 
-        fetchShoppingCart();
+                    if (!response.ok) {
+                        throw new Error("Error al obtener el carrito de compras");
+                    }
+
+                    const text = await response.text();
+                    const data = text ? JSON.parse(text) : { items: [] };
+                    setShoppingCart(data);
+                } catch (error) {
+                    console.error("Error:", error);
+                }
+            };
+
+            fetchShoppingCart();
+        }
     }, [authToken]);
 
+    // Actualizar carrito tanto en el estado como en localStorage
     const updateShoppingCart = (data) => {
         if (Array.isArray(data)) {
             setShoppingCart({ items: data });
+            localStorage.setItem("shoppingCart", JSON.stringify({ items: data }));
         } else {
             setShoppingCart(data);
+            localStorage.setItem("shoppingCart", JSON.stringify(data));
         }
     };
 

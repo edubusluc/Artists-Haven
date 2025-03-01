@@ -54,6 +54,15 @@ public class EmailSenderService {
         sendEmail(MODERATOR_EMAIL, subject, body);
     }
 
+    public void sendPurchaseConfirmationEmail(String userEmail){
+        // Create the subject line and body content for the report email
+        String subject = "Compra realizada con éxito";
+        String body = "Gracias por su compra en Artists Heaven. Su pedido ha sido confirmado y se encuentra en proceso de envío.";
+
+        // Send the email to the user
+        sendEmail(userEmail, subject, body);
+    }
+
     /**
      * Helper method to send an email with a specified recipient, subject, and body.
      *

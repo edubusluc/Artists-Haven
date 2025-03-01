@@ -3,13 +3,29 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faShoppingCart } from "@fortawesome/free-solid-svg-icons";
 import { CartContext } from "../context/CartContext";
 import { Link } from "react-router-dom";
+import { loadStripe } from "@stripe/stripe-js";
+
+// Cargar Stripe con tu clave pública
+const stripePromise = loadStripe("tu_clave_publica_de_stripe");
 
 const Header = () => {
-    const { shoppingCart, handleDeleteProduct } = useContext(CartContext);
+    const { shoppingCart: contextShoppingCart, handleDeleteProduct } = useContext(CartContext);
+    const [shoppingCart, setShoppingCart] = useState({ items: [] });
     const [isDropdownVisible, setDropdownVisible] = useState(false);
     const [authToken] = useState(localStorage.getItem("authToken"));
 
-    useEffect(() => { }, [shoppingCart]);
+    // Cargar carrito desde localStorage si el usuario no está autenticado
+    useEffect(() => {
+        if (!authToken) {
+            const storedCart = localStorage.getItem("shoppingCart");
+            if (storedCart) {
+                setShoppingCart(JSON.parse(storedCart)); // Establecer carrito desde localStorage
+            }
+        } else {
+            // Si el usuario está autenticado, usar el carrito desde el contexto
+            setShoppingCart(contextShoppingCart);
+        }
+    }, [authToken, contextShoppingCart]);
 
     const handleMouseEnter = () => {
         setDropdownVisible(true);
@@ -29,7 +45,29 @@ const Header = () => {
         return total;
     };
 
-    console.log(shoppingCart);
+    const handleRedirectToPayment = async () => {
+        // Obtén la instancia de Stripe
+        const stripe = await stripePromise;
+
+        // Enviar el carrito al backend para generar la sesión de pago
+        fetch("/api/payment_process/checkout", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                'Authorization': `Bearer ${authToken}`,
+            },
+            body: JSON.stringify(shoppingCart.items),
+        })
+            .then((response) => response.text())
+            .then((data) => {
+                window.location.href = data;
+                setShoppingCart({ items: [] }); // Vaciar carrito   
+                localStorage.removeItem("shoppingCart"); // Eliminar carrito de localStorage
+            })
+            .catch((error) => {
+                console.error("Error al crear la sesión de pago: " + error);
+            });
+    };
 
     return (
         <div
@@ -70,7 +108,6 @@ const Header = () => {
                             <ul>
                                 {shoppingCart.items.map((item, index) => (
                                     <li key={`${item.product.id}-${item.size}`}>
-                                        {index}
                                         {item.product.name} - Talla: {item.size} - Cantidad: {item.quantity} - Precio: {item.product.price * item.quantity}€
                                         <button
                                             onClick={() => handleDeleteProduct(index)}
@@ -85,6 +122,9 @@ const Header = () => {
                             <p>¡Añada algún producto a su carrito!</p>
                         )}
                         <p>Total: {calculateTotalPrice()}€</p>
+                        {shoppingCart && shoppingCart.items && shoppingCart.items.length > 0 && (
+                            <button onClick={handleRedirectToPayment}>Ir a la Pasarela de Pago</button>
+                        )}
                     </div>
                 )}
             </div>

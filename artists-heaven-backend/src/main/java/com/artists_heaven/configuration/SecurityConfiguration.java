@@ -45,6 +45,8 @@ public class SecurityConfiguration {
         "/api/event/allEvents",
         "/api/myShoppingCart/addProductsNonAuthenticate",
         "/api/myShoppingCart/deleteProductsNonAuthenticated",
+        "/api/payment_process/checkout",
+        "/api/payment_process/stripeWebhook",
     };
 
     // Endpoints accessible only by ADMIN users

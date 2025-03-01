@@ -9,6 +9,6 @@ public class CartItemDTO {
 
     private ProductItemDTO product;
     private String size;
-    private int quantity;
+    private Integer quantity;
 
 }

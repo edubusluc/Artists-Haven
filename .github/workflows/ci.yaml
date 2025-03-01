@@ -40,6 +40,8 @@ jobs:
           echo "POSTGRES_PASSWORD=${{ secrets.DB_PASSWORD }}" >> artists-heaven-backend/src/main/resources/.env
           echo "POSTGRES_DB=test_artists_heaven" >> artists-heaven-backend/src/main/resources/.env
           echo "EMAIL_PASSWORD=${{ secrets.EMAIL_PASSWORD }}" >> artists-heaven-backend/src/main/resources/.env
+          echo "STRIPE_KEY=${{ secrets.STRIPE_KEY }}" >> artists-heaven-backend/src/main/resources/.env
+          echo "STRIPE_WEBHOOK=${{ secrets.STRIPE_WEBHOOK }}" >> artists-heaven-backend/src/main/resources/.env
 
       # Set up JDK
       - name: Set up JDK 20.0.2
