@@ -51,7 +51,7 @@ public class UserControllerTest {
         }
 
         @Test
-        public void testGetAllUsers() throws Exception {
+        void testGetAllUsers() throws Exception {
                 User user = new User(1L, "Jane", "Doe", "JaneDoe", "jane.doe@example.com", "password1234", "1234567890", "Street 123", "1234", "Seville", "Spain",
                                 UserRole.USER, null);
 
@@ -64,7 +64,7 @@ public class UserControllerTest {
         }
 
         @Test
-        public void testRegisterUser() throws Exception {
+        void testRegisterUser() throws Exception {
                 // Mockea el comportamiento del servicio
                 User registeredUser = new User(1L, "Jane", "Doe", "JaneDoe", "jane.doe@example.com", "password1234", "1234567890", "Street 123", "1234", "Seville", "Spain",
                                 UserRole.USER, null);
@@ -81,7 +81,7 @@ public class UserControllerTest {
         }
 
         @Test
-        public void testRegisterUserBadRequest() throws Exception {
+        void testRegisterUserBadRequest() throws Exception {
                 // Simula una excepción en el servicio
                 when(userService.registerUser(any(User.class)))
                                 .thenThrow(new IllegalArgumentException("Invalid user data"));
@@ -95,7 +95,7 @@ public class UserControllerTest {
         }
 
         @Test
-        public void testGetUserProfile() throws Exception {
+        void testGetUserProfile() throws Exception {
                 // Simular un usuario autenticado
                 User user = new User(1L, "Jane", "Doe", "JaneDoe", "jane.doe@example.com", "password1234", "1234567890", "Street 123", "1234", "Seville", "Spain",
                                 UserRole.USER, null);
@@ -116,7 +116,7 @@ public class UserControllerTest {
         }
 
         @Test
-        public void testGetUserArtistProfile() throws Exception {
+        void testGetUserArtistProfile() throws Exception {
                 // Simular un usuario autenticado
                 Artist artist = new Artist();
                 artist.setId(1L);

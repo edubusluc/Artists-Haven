@@ -29,8 +29,6 @@ import com.artists_heaven.product.ProductService;
 import com.artists_heaven.shopping_cart.CartItemDTO;
 import com.artists_heaven.shopping_cart.ProductItemDTO;
 import com.artists_heaven.shopping_cart.ShoppingCartService;
-import com.stripe.exception.StripeException;
-
 public class PaymentGatewayServiceTest {
 
     @Mock
@@ -101,7 +99,7 @@ public class PaymentGatewayServiceTest {
     }
 
     @Test
-    void testCheckoutProducts_Success() throws StripeException {
+    void testCheckoutProducts_Success(){
         // Configurar el producto para que esté disponible
         product.getSize().put("M", 10); // Producto disponible con stock
 
@@ -131,7 +129,7 @@ public class PaymentGatewayServiceTest {
     }
 
     @Test
-    void testCheckoutProducts_SuccessAnonymous() throws StripeException {
+    void testCheckoutProducts_SuccessAnonymous(){
         // Configurar el producto para que esté disponible
         product.getSize().put("M", 10); // Producto disponible con stock
 

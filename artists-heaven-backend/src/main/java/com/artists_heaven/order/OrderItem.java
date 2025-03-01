@@ -17,14 +17,9 @@ public class OrderItem {
     private String size;
     private Integer quantity;
 
-    @ManyToOne
-    @JoinColumn(name = "order_id", nullable = false)
-    private Order order;
-
     public OrderItem(Long productId, int quantity, String size, Order order) {
         this.productId = productId;
         this.quantity = quantity;
         this.size = size;
-        this.order = order;
     }
 }
