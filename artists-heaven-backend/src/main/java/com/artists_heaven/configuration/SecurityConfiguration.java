@@ -47,6 +47,7 @@ public class SecurityConfiguration {
         "/api/myShoppingCart/deleteProductsNonAuthenticated",
         "/api/payment_process/checkout",
         "/api/payment_process/stripeWebhook",
+        "/api/rating/productReview/**",
     };
 
     // Endpoints accessible only by ADMIN users
@@ -69,7 +70,8 @@ public class SecurityConfiguration {
 
     private static final String[] AUTHENTICATED_ENDPOINTS = {
         "/api/users/profile/edit",
-        "/api/users/profile"
+        "/api/users/profile",
+        "/api/rating/new",
     };
 
     @Bean

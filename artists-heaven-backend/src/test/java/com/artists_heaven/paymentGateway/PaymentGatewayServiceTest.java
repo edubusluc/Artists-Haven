@@ -2,6 +2,7 @@ package com.artists_heaven.paymentGateway;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -29,6 +30,7 @@ import com.artists_heaven.product.ProductService;
 import com.artists_heaven.shopping_cart.CartItemDTO;
 import com.artists_heaven.shopping_cart.ProductItemDTO;
 import com.artists_heaven.shopping_cart.ShoppingCartService;
+
 public class PaymentGatewayServiceTest {
 
     @Mock
@@ -86,20 +88,22 @@ public class PaymentGatewayServiceTest {
     }
 
     @Test
-    void testCheckoutProducts_ProductNotAvailable() {
+    void testCheckoutProducts_ProductNotAvailable() throws Exception {
         // Mock de findById para que devuelva el producto configurado
         when(productService.findById(1L)).thenReturn(product);
 
-        // Llamada al método que se va a probar
-        String result = paymentGatewayService.checkoutProducts(items, 1L);
+        // Llamada al método que se va a probar y captura de la excepción
+        Exception exception = assertThrows(Exception.class, () -> {
+            paymentGatewayService.checkoutProducts(items, 1L);
+        });
 
         // Verificación de que el mensaje es el esperado cuando el producto no está
         // disponible
-        assertEquals("No se ha completado el pago: Producto no disponible", result);
+        assertEquals("No se ha completado el pago: Producto no disponible", exception.getMessage());
     }
 
     @Test
-    void testCheckoutProducts_Success(){
+    void testCheckoutProducts_Success() throws Exception {
         // Configurar el producto para que esté disponible
         product.getSize().put("M", 10); // Producto disponible con stock
 
@@ -129,7 +133,7 @@ public class PaymentGatewayServiceTest {
     }
 
     @Test
-    void testCheckoutProducts_SuccessAnonymous(){
+    void testCheckoutProducts_SuccessAnonymous() throws Exception {
         // Configurar el producto para que esté disponible
         product.getSize().put("M", 10); // Producto disponible con stock
 
@@ -149,7 +153,5 @@ public class PaymentGatewayServiceTest {
         // Verificación de que el resultado no es nulo y contiene la URL de éxito
         assertNotNull(result);
     }
-    
-
 
 }

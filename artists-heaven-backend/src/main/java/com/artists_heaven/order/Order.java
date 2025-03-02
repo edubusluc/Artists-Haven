@@ -1,6 +1,7 @@
 package com.artists_heaven.order;
 
 import java.util.List;
+
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -35,9 +36,12 @@ public class Order {
 
     private String country;
 
-
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItem> items;
 
     private Long userId;
+
+    public Order() {
+    }
+
 }

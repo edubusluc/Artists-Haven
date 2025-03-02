@@ -75,16 +75,17 @@ public class PaymentGatewayService {
      * @param id    the ID of the user initiating the checkout process.
      * @return a message indicating whether the payment was successful or if an
      *         issue occurred.
+     * @throws Exception
      * @throws IllegalArgumentException if any of the products in the cart are
      *                                  unavailable.
      */
-    public String checkoutProducts(List<CartItemDTO> items, Long id) {
+    public String checkoutProducts(List<CartItemDTO> items, Long id) throws Exception {
         // Check if all products in the cart are available for purchase.
         boolean productAvailable = checkProductAvailable(items);
 
         // If any product is unavailable, return an error message.
         if (!productAvailable) {
-            return "No se ha completado el pago: Producto no disponible";
+            throw new Exception("No se ha completado el pago: Producto no disponible");
         }
 
         // Process the payment session if all products are available.

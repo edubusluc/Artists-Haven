@@ -95,7 +95,7 @@ public class PaymentGatewayControllerTest {
         mockMvc.perform(post("/api/payment_process/checkout")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(new ObjectMapper().writeValueAsString(items)))
-                .andExpect(status().isOk());
+                .andExpect(status().isInternalServerError());
     }
 
     @Test
