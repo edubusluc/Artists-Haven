@@ -11,7 +11,7 @@ const CreateEventForm = () => {
 
     const [image, setImage] = useState(null);
     const [message, setMessage] = useState("");
-      const [authToken, setAuthToken] = useState(localStorage.getItem("authToken"));
+    const [authToken, setAuthToken] = useState(localStorage.getItem("authToken"));
 
     const handleChange = (e) => {
         const { name, value } = e.target;

@@ -28,7 +28,7 @@ public class PaymentGatewayController {
 
     // Endpoint to handle the checkout process for payment
     @PostMapping("/checkout")
-    public String paymentCheckout(@RequestBody List<CartItemDTO> items) {
+    public ResponseEntity<String>  paymentCheckout(@RequestBody List<CartItemDTO> items) {
         // Get the current authenticated user
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         Object principalUser = authentication.getPrincipal();
@@ -41,10 +41,10 @@ public class PaymentGatewayController {
 
         try {
             // Process the payment checkout and return the result
-            return paymentGatewayService.checkoutProducts(items, id);
+            return ResponseEntity.ok(paymentGatewayService.checkoutProducts(items, id));
         } catch (Exception e) {
             // Return an error message if the payment processing fails
-            return "Error en el procesamiento del pago: " + e.getMessage();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
 
