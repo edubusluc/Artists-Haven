@@ -116,6 +116,13 @@ const HomePage = () => {
       </div>
 
       <div className="category">
+        <h3>Orders</h3>
+        <Link to="/orders/myOrders">
+          <button>My Orders</button>
+        </Link>
+      </div>
+
+      <div className="category">
         <h3>Event</h3>
         {rol == 'ARTIST' && (
           <>
