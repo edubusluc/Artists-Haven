@@ -3,6 +3,7 @@ package com.artists_heaven.rating;
 import org.hibernate.validator.constraints.Length;
 
 import com.artists_heaven.entities.user.User;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -34,6 +35,7 @@ public class Rating {
 
     @ManyToOne
     @NotNull
+    @JsonIgnore
     private User user;
 
 }

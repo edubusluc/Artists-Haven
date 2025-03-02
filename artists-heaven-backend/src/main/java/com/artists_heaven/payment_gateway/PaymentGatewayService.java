@@ -523,7 +523,7 @@ public class PaymentGatewayService {
 
             // Create an OrderItem for this product entry and add it to the repository and
             // items list.
-            OrderItem item = new OrderItem(productId, quantity, size);
+            OrderItem item = new OrderItem(productId, quantity, size, product.getName(), product.getPrice());
             orderItemRepository.save(item);
             items.add(item);
         }
