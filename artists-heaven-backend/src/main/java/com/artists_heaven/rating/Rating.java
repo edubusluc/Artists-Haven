@@ -4,6 +4,7 @@ import org.hibernate.validator.constraints.Length;
 
 import com.artists_heaven.entities.user.User;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -37,5 +38,11 @@ public class Rating {
     @NotNull
     @JsonIgnore
     private User user;
+
+    @JsonProperty("email") // Esto asegura que solo se incluya el email del usuario
+    public String getUserEmail() {
+        return user != null ? user.getEmail() : null;
+    }
+
 
 }

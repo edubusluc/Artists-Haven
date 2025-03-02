@@ -142,7 +142,7 @@ const ProductDetails = () => {
                             </div>
                             <div className="review-comment">
                                 <p>{review.comment}</p> {/* Muestra el comentario */}
-                                <p>{review.user.email}</p>
+                                <p>{review.email}</p>
                             </div>
                         </div>
                     ))

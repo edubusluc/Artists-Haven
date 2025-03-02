@@ -42,7 +42,12 @@ const ProductList = () => {
             {products.length > 0 ? (
                 products.map((product) => (
                     <div key={product.id} className="product-item">
-                        <h2>{product.name}</h2>
+                        <h2>
+                            {product.name}{" "}
+                            <span style={{ color: product.available ? "green" : "red" }}>
+                                {product.available ? "Available" : "Out of Stock"}
+                            </span>
+                        </h2>
                         <p>{product.description}</p>
                         <p>Precio: ${product.price}</p>
                         <div className="product-images">
@@ -56,21 +61,25 @@ const ProductList = () => {
                                 />
                             ))}
                         </div>
-                        <div className="product-sizes">
-                            <h3>Tamaños disponibles:</h3>
-                            <ul>
-                                {Object.entries(product.size).map(([size, quantity]) => (
-                                    <li key={size}>
-                                        {size}: {quantity} unidades
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
+                        {product.available && (
+                            <div className="product-sizes">
+                                <h3>Tamaños disponibles:</h3>
+                                <ul>
+                                    {Object.entries(product.size).map(([size, quantity]) => (
+                                        <li key={size}>
+                                            {size}: {quantity} unidades
+                                        </li>
+                                    ))}
+                                </ul>
+                                {/* Botón para ver los detalles del producto */}
+                                <button onClick={() => navigate(`/product/details/${product.id}`)} className="btn btn-primary">
+                                    Ver Detalles
+                                </button>
+                            </div>
+                        )}
 
-                        {/* Botón para ver los detalles del producto */}
-                        <button onClick={() => navigate(`/product/details/${product.id}`)} className="btn btn-primary">
-                            Ver Detalles
-                        </button>
+
+
 
                         {role === 'ADMIN' && (
                             <>
