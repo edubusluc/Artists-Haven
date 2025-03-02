@@ -48,25 +48,32 @@ const Header = () => {
     const handleRedirectToPayment = async () => {
         // Obtén la instancia de Stripe
         const stripe = await stripePromise;
-
-        // Enviar el carrito al backend para generar la sesión de pago
-        fetch("/api/payment_process/checkout", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                'Authorization': `Bearer ${authToken}`,
-            },
-            body: JSON.stringify(shoppingCart.items),
-        })
-            .then((response) => response.text())
-            .then((data) => {
-                window.location.href = data;
-                setShoppingCart({ items: [] }); // Vaciar carrito   
-                localStorage.removeItem("shoppingCart"); // Eliminar carrito de localStorage
-            })
-            .catch((error) => {
-                console.error("Error al crear la sesión de pago: " + error);
+    
+        try {
+            // Enviar el carrito al backend para generar la sesión de pago
+            const response = await fetch("/api/payment_process/checkout", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    'Authorization': `Bearer ${authToken}`,
+                },
+                body: JSON.stringify(shoppingCart.items),
             });
+    
+            // Comprobar si la respuesta fue exitosa
+            if (!response.ok) {
+                // Si la respuesta no es 2xx (error 400 o 500), lanzamos el error para el catch
+                throw new Error(`Error ${response.status}: ${await response.text()}`);
+            }
+    
+            const data = await response.text();
+            window.location.href = data;
+            setShoppingCart({ items: [] }); // Vaciar carrito   
+            localStorage.removeItem("shoppingCart"); // Eliminar carrito de localStorage
+        } catch (error) {
+            // Maneja el error en caso de fallo
+            alert("Ocurrió un error: " + error);
+        }
     };
 
     return (

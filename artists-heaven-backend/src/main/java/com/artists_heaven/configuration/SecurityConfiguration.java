@@ -72,6 +72,7 @@ public class SecurityConfiguration {
         "/api/users/profile/edit",
         "/api/users/profile",
         "/api/rating/new",
+        "/api/orders/myOrders",
     };
 
     @Bean

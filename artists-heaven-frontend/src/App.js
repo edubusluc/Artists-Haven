@@ -24,6 +24,7 @@ import { CartProvider } from './context/CartContext';
 import './style.css';
 import AllEvents from './components/AllEvents';
 import CreateRatingForm from './components/CreateRatingForm';
+import MyOrders from './components/MyOrders';
 
 const App = () => (
   <GoogleOAuthProvider clientId="1048927197271-g7tartu6gacs0jv8fgoa5braq8b2ck7p.apps.googleusercontent.com">
@@ -52,6 +53,7 @@ const App = () => (
           <Route path="/product/details/:id" element={<ProductDetails />} />
           <Route path="/event/all-events" element={<AllEvents />} />
           <Route path="/product/newReview/:productId" element={<CreateRatingForm />} />
+          <Route path="/orders/myOrders" element={<MyOrders/>} />
         </Routes>
       </Router>
     </CartProvider>
