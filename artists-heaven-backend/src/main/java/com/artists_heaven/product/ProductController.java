@@ -158,7 +158,7 @@ public class ProductController {
     }
 
     @PutMapping("promote/{id}")
-    public ResponseEntity<String> promoteProduct(@RequestBody PromoteDTO promoteDTO) {
+    public ResponseEntity<String> promoteProduct(@PathVariable Long id, @RequestBody PromoteDTO promoteDTO) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         
         if (authentication == null || !authentication.isAuthenticated()) {
