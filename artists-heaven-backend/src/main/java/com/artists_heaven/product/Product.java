@@ -55,4 +55,8 @@ public class Product {
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Rating> ratings;
 
+    private Boolean on_Promotion = false;
+
+    private Integer discount = 0;
+
 }

@@ -3,6 +3,8 @@ package com.artists_heaven.product;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -10,6 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -38,10 +41,17 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.artists_heaven.entities.user.User;
+import com.artists_heaven.entities.user.UserRole;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import jakarta.transaction.Transactional;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.Authentication;
 
 public class ProductControllerTest {
 
@@ -270,6 +280,181 @@ public class ProductControllerTest {
 
                 verify(productService, times(1)).saveImages(images);
                 verify(productService, times(0)).registerProduct(any(ProductDTO.class));
+        }
+
+        @Test
+        void testPromoteProduct_Success() throws Exception {
+                PromoteDTO promoteDTO = new PromoteDTO();
+                promoteDTO.setId(1L);
+                promoteDTO.setDiscount(10);
+
+                User user = new User();
+                user.setRole(UserRole.ADMIN);
+
+                Authentication authentication = mock(Authentication.class);
+                when(authentication.getPrincipal()).thenReturn(user);
+                when(authentication.isAuthenticated()).thenReturn(true);
+        
+                SecurityContext securityContext = mock(SecurityContext.class);
+                when(securityContext.getAuthentication()).thenReturn(authentication);
+                SecurityContextHolder.setContext(securityContext);
+
+                doNothing().when(productService).promoteProduct(promoteDTO.getId(), promoteDTO.getDiscount());
+
+                mockMvc.perform(put("/api/product/promote/{id}", promoteDTO.getId())
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(new ObjectMapper().writeValueAsString(promoteDTO)))
+                                .andExpect(status().isOk())
+                                .andExpect(content().string("Product promoted successfully"));
+        }
+
+        @Test
+        void testPromoteProduct_Unauthorized() throws Exception {
+                PromoteDTO promoteDTO = new PromoteDTO();
+                promoteDTO.setId(1L);
+                promoteDTO.setDiscount(10);
+
+                Authentication authentication = mock(Authentication.class);
+                when(authentication.getPrincipal()).thenReturn(null);
+                SecurityContext securityContext = mock(SecurityContext.class);
+                when(securityContext.getAuthentication()).thenReturn(authentication);
+                SecurityContextHolder.setContext(securityContext);
+
+                mockMvc.perform(put("/api/product/promote/{id}", promoteDTO.getId())
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(new ObjectMapper().writeValueAsString(promoteDTO)))
+                                .andExpect(status().isUnauthorized())
+                                .andExpect(content().string("Unauthorized"));
+        }
+
+        @Test
+        void testPromoteProduct_Forbidden() throws Exception {
+                PromoteDTO promoteDTO = new PromoteDTO();
+                promoteDTO.setId(1L);
+                promoteDTO.setDiscount(10);
+
+                User user = new User();
+                user.setRole(UserRole.USER);
+
+                Authentication authentication = mock(Authentication.class);
+                when(authentication.getPrincipal()).thenReturn(user);
+                when(authentication.isAuthenticated()).thenReturn(true);
+                SecurityContext securityContext = mock(SecurityContext.class);
+                when(securityContext.getAuthentication()).thenReturn(authentication);
+                SecurityContextHolder.setContext(securityContext);
+
+                mockMvc.perform(put("/api/product/promote/{id}", promoteDTO.getId())
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(new ObjectMapper().writeValueAsString(promoteDTO)))
+                                .andExpect(status().isForbidden())
+                                .andExpect(content().string("Only admins can promote products"));
+        }
+
+        @Test
+        void testPromoteProduct_BadRequest() throws Exception {
+                PromoteDTO promoteDTO = new PromoteDTO();
+                promoteDTO.setId(1L);
+                promoteDTO.setDiscount(10);
+
+                User user = new User();
+                user.setRole(UserRole.ADMIN);
+
+                Authentication authentication = mock(Authentication.class);
+                when(authentication.getPrincipal()).thenReturn(user);
+                when(authentication.isAuthenticated()).thenReturn(true);
+                SecurityContext securityContext = mock(SecurityContext.class);
+                when(securityContext.getAuthentication()).thenReturn(authentication);
+                SecurityContextHolder.setContext(securityContext);
+
+                doThrow(new IllegalArgumentException("Invalid discount")).when(productService)
+                                .promoteProduct(promoteDTO.getId(), promoteDTO.getDiscount());
+
+                mockMvc.perform(put("/api/product/promote/{id}", promoteDTO.getId())
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(new ObjectMapper().writeValueAsString(promoteDTO)))
+                                .andExpect(status().isBadRequest())
+                                .andExpect(content().string("Invalid discount"));
+        }
+
+        @Test
+        void testDemoteProduct_Success() throws Exception {
+                Long productId = 1L;
+
+                User user = new User();
+                user.setRole(UserRole.ADMIN);
+
+                Authentication authentication = mock(Authentication.class);
+                when(authentication.getPrincipal()).thenReturn(user);
+                when(authentication.isAuthenticated()).thenReturn(true);
+                SecurityContext securityContext = mock(SecurityContext.class);
+                when(securityContext.getAuthentication()).thenReturn(authentication);
+                SecurityContextHolder.setContext(securityContext);
+
+                doNothing().when(productService).demoteProduct(productId);
+
+                mockMvc.perform(put("/api/product/demote/{id}", productId)
+                                .contentType(MediaType.APPLICATION_JSON))
+                                .andExpect(status().isOk())
+                                .andExpect(content().string("Product demote successfully"));
+        }
+
+        @Test
+        void testDemoteProduct_Unauthorized() throws Exception {
+                Long productId = 1L;
+
+                Authentication authentication = mock(Authentication.class);
+                when(authentication.getPrincipal()).thenReturn(null);
+                SecurityContext securityContext = mock(SecurityContext.class);
+                when(securityContext.getAuthentication()).thenReturn(authentication);
+                SecurityContextHolder.setContext(securityContext);
+
+                mockMvc.perform(put("/api/product/demote/{id}", productId)
+                                .contentType(MediaType.APPLICATION_JSON))
+                                .andExpect(status().isUnauthorized())
+                                .andExpect(content().string("Unauthorized"));
+        }
+
+        @Test
+        void testDemoteProduct_Forbidden() throws Exception {
+                Long productId = 1L;
+
+                User user = new User();
+                user.setRole(UserRole.USER);
+
+                Authentication authentication = mock(Authentication.class);
+                when(authentication.getPrincipal()).thenReturn(user);
+                when(authentication.isAuthenticated()).thenReturn(true);
+                SecurityContext securityContext = mock(SecurityContext.class);
+                when(securityContext.getAuthentication()).thenReturn(authentication);
+                SecurityContextHolder.setContext(securityContext);
+
+                mockMvc.perform(put("/api/product/demote/{id}", productId)
+                                .contentType(MediaType.APPLICATION_JSON))
+                                .andExpect(status().isForbidden())
+                                .andExpect(content().string("Only admins can demote products"));
+        }
+
+        @Test
+        void testDemoteProduct_BadRequest() throws Exception {
+                Long productId = 1L;
+
+                User user = new User();
+                user.setRole(UserRole.ADMIN);
+
+                Authentication authentication = mock(Authentication.class);
+                when(authentication.getPrincipal()).thenReturn(user);
+                when(authentication.isAuthenticated()).thenReturn(true);
+                SecurityContext securityContext = mock(SecurityContext.class);
+                when(securityContext.getAuthentication()).thenReturn(authentication);
+                SecurityContextHolder.setContext(securityContext);
+
+                doThrow(new IllegalArgumentException("Invalid product ID")).when(productService)
+                                .demoteProduct(productId);
+
+                mockMvc.perform(put("/api/product/demote/{id}", productId)
+                                .contentType(MediaType.APPLICATION_JSON))
+                                .andExpect(status().isBadRequest())
+                                .andExpect(content().string("Invalid product ID"));
         }
 
 }
