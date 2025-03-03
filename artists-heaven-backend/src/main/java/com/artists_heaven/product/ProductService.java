@@ -250,4 +250,46 @@ public class ProductService {
         save(product);
     }
 
+    public void promoteProduct(Long productId, Integer discount){
+        if(discount < 0 || discount > 100){
+            throw new IllegalArgumentException("Discount must be between 0 and 100");
+        }
+        Product product = findById(productId);
+        if(!product.getAvailable()){
+            throw new IllegalArgumentException("Product is not available");
+        }
+
+        if(product.getOn_Promotion()){
+            throw new IllegalArgumentException("Product is already on promotion");
+        }
+        product.setOn_Promotion(true);
+        product.setDiscount(discount);
+        Float calculatePrice = product.getPrice() * discount / 100;
+        product.setPrice(product.getPrice() - calculatePrice);
+        save(product);
+    }
+
+    public void demoteProduct(Long productId){
+        Product product = findById(productId);
+        if(!product.getAvailable()){
+            throw new IllegalArgumentException("Product is not available");
+        }
+        if(!product.getOn_Promotion()){
+            throw new IllegalArgumentException("Product is not on promotion");
+        }
+        product.setOn_Promotion(false);
+        Integer discount = product.getDiscount();
+        Float productPrice = reCalculatePrice(discount, product.getPrice());
+        product.setDiscount(0);
+        product.setPrice(productPrice);
+        save(product);
+    }
+
+    private Float reCalculatePrice(Integer discount, Float price){
+        
+        Float reCalculatePrice = (100 - discount) / 100f;
+        return price/reCalculatePrice;
+        
+    }
+
 }

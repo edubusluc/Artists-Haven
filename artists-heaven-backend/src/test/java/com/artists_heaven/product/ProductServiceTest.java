@@ -223,7 +223,7 @@ public class ProductServiceTest {
         productDTO.setDescription("Updated Description");
         productDTO.setName("Updated Name");
         productDTO.setPrice((float) 200.0);
-            productDTO.setSizes(new HashMap<>());
+        productDTO.setSizes(new HashMap<>());
         productDTO.setImages(new ArrayList<>());
 
         MultipartFile removedImage = mock(MultipartFile.class);
@@ -373,6 +373,151 @@ public class ProductServiceTest {
             assertEquals("Error while saving images.", exception.getMessage());
             mockedFiles.verify(() -> Files.copy(any(InputStream.class), any(Path.class)), times(1));
         }
+    }
+
+    @Test
+    void testPromoteProduct_Success() {
+        Long productId = 1L;
+        Product product = new Product();
+        Integer discount = 10;
+        product.setOn_Promotion(false);
+        product.setDiscount(0);
+        product.setPrice(100f);
+
+        when(productRepository.findById(productId)).thenReturn(Optional.of(product));
+        when(productRepository.save(product)).thenReturn(product);
+
+        productService.promoteProduct(productId, discount);
+        assertTrue(product.getPrice() != 100f);
+        assertTrue(product.getDiscount() == 10);
+        assertTrue(product.getOn_Promotion());
+    }
+
+    @Test
+    void testPromoteProduct_DiscountError() {
+        Long productId = 1L;
+        Product product = new Product();
+        Integer discount = 101;
+        product.setOn_Promotion(false);
+        product.setDiscount(0);
+        product.setPrice(100f);
+
+        when(productRepository.findById(productId)).thenReturn(Optional.of(product));
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            productService.promoteProduct(productId, discount);
+        });
+
+        assertEquals("Discount must be between 0 and 100", exception.getMessage());
+
+    }
+
+    @Test
+    void testPromoteProduct_ProductNotFound() {
+        Long productId = 1L;
+        Integer discount = 10;
+
+        when(productRepository.findById(productId)).thenReturn(Optional.empty());
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            productService.promoteProduct(productId, discount);
+        });
+
+        assertEquals("Product not found", exception.getMessage());
+    }
+
+    @Test
+    void testPromoteProduct_ProductNotAvailable() {
+        Long productId = 1L;
+        Product product = new Product();
+        Integer discount = 50;
+        product.setAvailable(false);
+        product.setOn_Promotion(false);
+        product.setDiscount(0);
+        product.setPrice(100f);
+
+        when(productRepository.findById(productId)).thenReturn(Optional.of(product));
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            productService.promoteProduct(productId, discount);
+        });
+
+        assertEquals("Product is not available", exception.getMessage());
+
+    }
+
+    @Test
+    void testPromoteProduct_AlreadyOnPromotion() {
+        Long productId = 1L;
+        Product product = new Product();
+        Integer discount = 50;
+        product.setAvailable(true);
+        product.setOn_Promotion(true);
+        product.setDiscount(10);
+        product.setPrice(100f);
+
+        when(productRepository.findById(productId)).thenReturn(Optional.of(product));
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            productService.promoteProduct(productId, discount);
+        });
+
+        assertEquals("Product is already on promotion", exception.getMessage());
+
+    }
+
+    @Test
+    void testDemoteProduct_Success(){
+        Long productId = 1L;
+        Product product = new Product();
+        product.setOn_Promotion(true);
+        product.setDiscount(10);
+        product.setPrice(90f);
+
+        when(productRepository.findById(productId)).thenReturn(Optional.of(product));
+        when(productRepository.save(product)).thenReturn(product);
+
+        productService.demoteProduct(productId);
+        assertFalse(product.getOn_Promotion());
+        assertEquals(0, product.getDiscount());
+        assertEquals(100f, product.getPrice());
+    }
+
+    @Test
+    void testDemoteProduct_NotAvailabe(){
+        Long productId = 1L;
+        Product product = new Product();
+        product.setAvailable(false);
+        product.setOn_Promotion(true);
+        product.setDiscount(10);
+        product.setPrice(90f);
+
+        when(productRepository.findById(productId)).thenReturn(Optional.of(product));
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            productService.demoteProduct(productId);
+        });
+
+        assertEquals("Product is not available", exception.getMessage());
+
+    }
+
+    @Test
+    void testDemoteProduct_NotInPromotion(){
+        Long productId = 1L;
+        Product product = new Product();
+        product.setAvailable(true);
+        product.setOn_Promotion(false);
+        product.setDiscount(0);
+        product.setPrice(100f);
+
+        when(productRepository.findById(productId)).thenReturn(Optional.of(product));
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            productService.demoteProduct(productId);
+        });
+
+        assertEquals("Product is not on promotion", exception.getMessage());
     }
 
 }

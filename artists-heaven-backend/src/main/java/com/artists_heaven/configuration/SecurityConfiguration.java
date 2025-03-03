@@ -58,6 +58,8 @@ public class SecurityConfiguration {
         "/api/product/delete/{id}",
         "/api/product/edit/{id}",
         "/api/product/new",
+        "/api/product/promotion/{id}",
+        "/api/product/demote/{id}",
     };
     
     // Endpoints accessible only by ARTIST users

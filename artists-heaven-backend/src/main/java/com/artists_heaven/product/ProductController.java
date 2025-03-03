@@ -5,6 +5,8 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.artists_heaven.entities.user.User;
+
 import java.nio.file.Paths;
 import java.nio.file.Path;
 import java.util.List;
@@ -13,6 +15,8 @@ import java.util.Set;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -20,6 +24,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
+import org.springframework.web.bind.annotation.RequestBody;
 
 @RestController
 @RequestMapping("/api/product")
@@ -151,5 +156,48 @@ public class ProductController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Error updating product");
         }
     }
+
+    @PutMapping("promote/{id}")
+    public ResponseEntity<String> promoteProduct(@PathVariable Long id, @RequestBody PromoteDTO promoteDTO) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
+        }
+    
+        User user = (User) authentication.getPrincipal();
+        try {
+            if ("ADMIN".equals(user.getRole().toString())) {
+                productService.promoteProduct(promoteDTO.getId(), promoteDTO.getDiscount());
+                return ResponseEntity.ok("Product promoted successfully");
+            } else {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Only admins can promote products");
+            }
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        }
+    }
+
+    @PutMapping("demote/{id}")
+    public ResponseEntity<String> demoteProduct(@PathVariable Long id) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
+        }
+    
+        User user = (User) authentication.getPrincipal();
+        try {
+            if ("ADMIN".equals(user.getRole().toString())) {
+                productService.demoteProduct(id);
+                return ResponseEntity.ok("Product demote successfully");
+            } else {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Only admins can demote products");
+            }
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        }
+    }
+    
 
 }

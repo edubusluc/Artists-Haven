@@ -57,7 +57,7 @@ jobs:
 
       # Run tests
       - name: Run test case
-        run: mvn test -f artists-heaven-backend/pom.xml
+        run: mvn clean test -f artists-heaven-backend/pom.xml
 
       # Set up JDK for SonarQube
       - name: Set up JDK 17 for SonarQube
