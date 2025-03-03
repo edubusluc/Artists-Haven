@@ -29,6 +29,7 @@ import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.core.Authentication;
 import org.springframework.http.HttpHeaders;
+import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
@@ -37,6 +38,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.artists_heaven.entities.artist.Artist;
 import com.artists_heaven.entities.user.User;
+import com.artists_heaven.entities.user.UserRole;
 
 public class EventControllerTest {
 
@@ -55,6 +57,7 @@ public class EventControllerTest {
         void setUp() {
                 MockitoAnnotations.openMocks(this);
                 mockMvc = MockMvcBuilders.standaloneSetup(eventController).build();
+                SecurityContextHolder.clearContext();
         }
 
         @Test
@@ -129,6 +132,7 @@ public class EventControllerTest {
 
                 verify(eventService, times(0)).saveImages(image);
                 verify(eventService, times(0)).newEvent(any(EventDTO.class));
+                SecurityContextHolder.clearContext();
         }
 
         @Test
@@ -321,10 +325,21 @@ public class EventControllerTest {
                 eventDTO.setName("Updated Event");
                 eventDTO.setDescription("Updated Description");
 
+                User user = new User();
+                user.setId(1L);
+                user.setRole(UserRole.USER);
+
                 MockMultipartFile eventJson = new MockMultipartFile("event", "", "application/json",
                                 "{\"name\": \"Updated Event\", \"description\": \"Updated Description\"}".getBytes());
 
                 when(eventService.isArtist()).thenReturn(false);
+
+                Authentication authentication = mock(Authentication.class);
+                when(authentication.getPrincipal()).thenReturn(user);
+                when(authentication.isAuthenticated()).thenReturn(true);
+                SecurityContext securityContext = mock(SecurityContext.class);
+                when(securityContext.getAuthentication()).thenReturn(authentication);
+                SecurityContextHolder.setContext(securityContext);
 
                 mockMvc.perform(MockMvcRequestBuilders.multipart("/api/event/edit/1")
                                 .file(eventJson)

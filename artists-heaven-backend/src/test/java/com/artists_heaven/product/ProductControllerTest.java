@@ -67,6 +67,7 @@ public class ProductControllerTest {
         void setUp() {
                 MockitoAnnotations.openMocks(this);
                 mockMvc = MockMvcBuilders.standaloneSetup(productController).build();
+                SecurityContextHolder.clearContext();
         }
 
         @Test
@@ -294,7 +295,7 @@ public class ProductControllerTest {
                 Authentication authentication = mock(Authentication.class);
                 when(authentication.getPrincipal()).thenReturn(user);
                 when(authentication.isAuthenticated()).thenReturn(true);
-        
+
                 SecurityContext securityContext = mock(SecurityContext.class);
                 when(securityContext.getAuthentication()).thenReturn(authentication);
                 SecurityContextHolder.setContext(securityContext);
@@ -306,6 +307,8 @@ public class ProductControllerTest {
                                 .content(new ObjectMapper().writeValueAsString(promoteDTO)))
                                 .andExpect(status().isOk())
                                 .andExpect(content().string("Product promoted successfully"));
+
+                SecurityContextHolder.clearContext();
         }
 
         @Test
@@ -325,6 +328,8 @@ public class ProductControllerTest {
                                 .content(new ObjectMapper().writeValueAsString(promoteDTO)))
                                 .andExpect(status().isUnauthorized())
                                 .andExpect(content().string("Unauthorized"));
+
+                SecurityContextHolder.clearContext();
         }
 
         @Test
@@ -348,6 +353,8 @@ public class ProductControllerTest {
                                 .content(new ObjectMapper().writeValueAsString(promoteDTO)))
                                 .andExpect(status().isForbidden())
                                 .andExpect(content().string("Only admins can promote products"));
+
+                SecurityContextHolder.clearContext();
         }
 
         @Test
@@ -374,6 +381,8 @@ public class ProductControllerTest {
                                 .content(new ObjectMapper().writeValueAsString(promoteDTO)))
                                 .andExpect(status().isBadRequest())
                                 .andExpect(content().string("Invalid discount"));
+
+                SecurityContextHolder.clearContext();
         }
 
         @Test
@@ -396,6 +405,8 @@ public class ProductControllerTest {
                                 .contentType(MediaType.APPLICATION_JSON))
                                 .andExpect(status().isOk())
                                 .andExpect(content().string("Product demote successfully"));
+
+                SecurityContextHolder.clearContext();
         }
 
         @Test
@@ -412,6 +423,8 @@ public class ProductControllerTest {
                                 .contentType(MediaType.APPLICATION_JSON))
                                 .andExpect(status().isUnauthorized())
                                 .andExpect(content().string("Unauthorized"));
+
+                SecurityContextHolder.clearContext();
         }
 
         @Test
@@ -432,6 +445,8 @@ public class ProductControllerTest {
                                 .contentType(MediaType.APPLICATION_JSON))
                                 .andExpect(status().isForbidden())
                                 .andExpect(content().string("Only admins can demote products"));
+
+                SecurityContextHolder.clearContext();
         }
 
         @Test
@@ -455,6 +470,8 @@ public class ProductControllerTest {
                                 .contentType(MediaType.APPLICATION_JSON))
                                 .andExpect(status().isBadRequest())
                                 .andExpect(content().string("Invalid product ID"));
+
+                SecurityContextHolder.clearContext();
         }
 
 }
