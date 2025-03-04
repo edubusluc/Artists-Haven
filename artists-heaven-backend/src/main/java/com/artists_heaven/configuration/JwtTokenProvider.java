@@ -74,7 +74,7 @@ public class JwtTokenProvider {
 
         if (myUser == null) {
             // Throw an exception if the user is not found
-            throw new UsernameNotFoundException("User not found with email: " + email);
+            throw new UsernameNotFoundException("User not found with this email: ");
         }
 
         // Return an Authentication object with the user, token, and authorities
