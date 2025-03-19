@@ -142,12 +142,21 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
-         <!-- Payment Gateway -->
+        <!-- Payment Gateway -->
         <dependency>
             <groupId>com.stripe</groupId>
             <artifactId>stripe-java</artifactId>
             <version>28.2.0</version>
         </dependency>
+
+        <!-- Itext7-core - PDF -->
+        <dependency>
+            <groupId>com.itextpdf</groupId>
+            <artifactId>itext7-core</artifactId>
+            <version>9.1.0</version>
+            <type>pom</type>
+        </dependency>
+
     </dependencies>
 
     <build>

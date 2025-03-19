@@ -1,8 +1,17 @@
 package com.artists_heaven.order;
 
+import java.time.LocalDate;
 import java.util.List;
 
-import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import lombok.Getter;
@@ -36,10 +45,17 @@ public class Order {
 
     private String country;
 
+    private Long userId;
+
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
     private List<OrderItem> items;
 
-    private Long userId;
+    private LocalDate createdDate = LocalDate.now();
+
+    private String email;
+
+    private String phone;
 
     public Order() {
     }

@@ -3,10 +3,6 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faShoppingCart } from "@fortawesome/free-solid-svg-icons";
 import { CartContext } from "../context/CartContext";
 import { Link } from "react-router-dom";
-import { loadStripe } from "@stripe/stripe-js";
-
-// Cargar Stripe con tu clave pública
-const stripePromise = loadStripe("tu_clave_publica_de_stripe");
 
 const Header = () => {
     const { shoppingCart: contextShoppingCart, handleDeleteProduct } = useContext(CartContext);
@@ -45,10 +41,7 @@ const Header = () => {
         return total;
     };
 
-    const handleRedirectToPayment = async () => {
-        // Obtén la instancia de Stripe
-        const stripe = await stripePromise;
-    
+    const handleRedirectToPayment = async () => {    
         try {
             // Enviar el carrito al backend para generar la sesión de pago
             const response = await fetch("/api/payment_process/checkout", {
@@ -70,6 +63,7 @@ const Header = () => {
             window.location.href = data;
             setShoppingCart({ items: [] }); // Vaciar carrito   
             localStorage.removeItem("shoppingCart"); // Eliminar carrito de localStorage
+            
         } catch (error) {
             // Maneja el error en caso de fallo
             alert("Ocurrió un error: " + error);

@@ -82,11 +82,10 @@ public class RatingServiceTest {
         user.setId(1L);
         OrderItem item = new OrderItem();
         item.setProductId(product.getId());
-        List<OrderItem> items = List.of(item);
 
         Order order = new Order();
         order.setUserId(user.getId());
-        order.setItems(items);
+        order.setItems(new ArrayList<>(List.of(item)));
 
         when(productRepository.findById(1L)).thenReturn(Optional.of(product));
         when(userService.getUserById(1L)).thenReturn(user);

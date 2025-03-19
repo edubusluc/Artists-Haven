@@ -5,7 +5,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.artists_heaven.entities.user.User;
 
+
 import java.util.List;
+
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -27,6 +29,7 @@ public class OrderController {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             User user = (User) authentication.getPrincipal();
+            List<Order> orders = orderService.getMyOrders(user.getId());
             return ResponseEntity.ok(orderService.getMyOrders(user.getId()));
         } catch (Exception e) {
             return ResponseEntity.badRequest().build();
