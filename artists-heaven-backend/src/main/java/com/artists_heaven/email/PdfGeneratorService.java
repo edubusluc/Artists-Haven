@@ -51,8 +51,7 @@ public class PdfGeneratorService {
             return out.toByteArray();
 
         } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+           throw new RuntimeException("No se ha podido generar la factura", e);
         }
     }
 
