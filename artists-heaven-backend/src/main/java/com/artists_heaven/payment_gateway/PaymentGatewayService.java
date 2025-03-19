@@ -577,7 +577,7 @@ public class PaymentGatewayService {
         order.setPhone(phone);
         order.setEmail(email);
         order.setItems(items);
-        if (country != "") {
+        if (country.isEmpty()) {
             order.setCountry(country);
         }
         // Save the order to the repository.

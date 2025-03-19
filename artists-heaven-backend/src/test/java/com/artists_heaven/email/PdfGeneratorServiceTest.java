@@ -16,12 +16,11 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-
 
 public class PdfGeneratorServiceTest {
 
@@ -40,7 +39,7 @@ public class PdfGeneratorServiceTest {
     }
 
     @BeforeEach
-    void testSetUp(){
+    void testSetUp() {
         order = new Order();
         order.setId(1L);
         order.setCreatedDate(LocalDate.now());
@@ -108,5 +107,23 @@ public class PdfGeneratorServiceTest {
 
         // Verificar que el repositorio fue llamado
         verify(orderItemRepository, times(1)).findByOrderId(order.getId());
+    }
+
+    @Test
+    void testGenerateInvoiceException() throws Exception {
+        // Simular que el archivo de plantilla no está disponible o genera un error al
+        // cargar
+        when(orderItemRepository.findByOrderId(order.getId())).thenReturn(orderItems);
+        pdfGeneratorService = new PdfGeneratorService(orderItemRepository) {
+            @Override
+            public byte[] generateInvoice(Long orderReference, Order order, Float total) {
+                throw new RuntimeException("Error al generar el PDF");
+            }
+        };
+
+        // Verificar que se lanza una excepción al intentar generar la factura
+        assertThrows(RuntimeException.class, () -> {
+            pdfGeneratorService.generateInvoice(12345L, order, 69.97f);
+        });
     }
 }
