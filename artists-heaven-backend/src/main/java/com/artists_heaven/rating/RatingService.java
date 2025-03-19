@@ -3,10 +3,10 @@ package com.artists_heaven.rating;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
-
+import com.artists_heaven.admin.AdminController;
 import com.artists_heaven.entities.user.User;
 import com.artists_heaven.entities.user.UserService;
-import com.artists_heaven.order.Order;
+
 import com.artists_heaven.order.OrderRepository;
 import com.artists_heaven.product.Product;
 import com.artists_heaven.product.ProductRepository;
@@ -22,8 +22,9 @@ public class RatingService {
 
     private final UserService userService;
 
+
     public RatingService(RatingRepository ratingRepository, OrderRepository orderRepository,
-            ProductRepository productRepository, UserService userService) {
+            ProductRepository productRepository, UserService userService, AdminController adminController) {
         this.ratingRepository = ratingRepository;
         this.orderRepository = orderRepository;
         this.productRepository = productRepository;
@@ -54,12 +55,9 @@ public class RatingService {
     }
 
     private Boolean checkUserPurchaseItem(Long userId, Long productId) {
-        List<Order> orders = orderRepository.getOrdersByUserId(userId);
-    
-        return orders.stream()
-            .flatMap(order -> order.getItems().stream()) // Desempaquetamos los items de cada orden
-            .anyMatch(item -> item.getProductId().equals(productId)); // Comprobamos si algún item coincide con el producto
+        return orderRepository.getOrdersByUserId(userId).stream()
+            .flatMap(order -> order.getItems().stream()) 
+            .anyMatch(orderItem -> orderItem.getProductId().equals(productId));
     }
     
-
 }
