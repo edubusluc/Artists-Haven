@@ -21,7 +21,10 @@ public class OrderItemTest {
         String name = "Product Name";
         Float price = 10.0f;
 
-        OrderItem orderItem = new OrderItem(productId, quantity, size, name, price);
+        Order order = new Order();
+        order.setId(1L);
+
+        OrderItem orderItem = new OrderItem(productId, quantity, size, name, price, order);
 
         assertNotNull(orderItem);
         assertEquals(productId, orderItem.getProductId());
