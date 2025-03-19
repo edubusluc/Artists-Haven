@@ -1,10 +1,16 @@
 package com.artists_heaven.email;
 
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.InputStreamSource;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
 import com.artists_heaven.entities.artist.Artist;
+import com.artists_heaven.order.Order;
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
 
 @Service
 public class EmailSenderService {
@@ -13,12 +19,16 @@ public class EmailSenderService {
 
     private final EmailSenderRepository emailSenderRepository;
 
-    public EmailSenderService(JavaMailSender mailSender, EmailSenderRepository emailSenderRepository) {
+    private final PdfGeneratorService pdfGeneratorService;
+
+    public EmailSenderService(JavaMailSender mailSender, EmailSenderRepository emailSenderRepository,
+            PdfGeneratorService pdfGeneratorService) {
         this.mailSender = mailSender;
         this.emailSenderRepository = emailSenderRepository;
+        this.pdfGeneratorService = pdfGeneratorService;
     }
 
-     // Constant email address used as the sender for reports and verification emails
+    // Constant email address used as the sender for reports and verification emails
     private static final String MODERATOR_EMAIL = "mod.artistheaven@gmail.com";
 
     /**
@@ -40,7 +50,8 @@ public class EmailSenderService {
     }
 
     /**
-     * Sends a verification email to the moderator for a new artist verification request.
+     * Sends a verification email to the moderator for a new artist verification
+     * request.
      *
      * @param artist the artist object containing artist details
      */
@@ -50,17 +61,29 @@ public class EmailSenderService {
         String body = "Username: " + artist.getArtistName()
                 + "\n\nDescription:\n" + "Ha solicitado un proceso para revisar el estado de su cuenta";
 
-         // Send the email to the moderator
+        // Send the email to the moderator
         sendEmail(MODERATOR_EMAIL, subject, body);
     }
 
-    public void sendPurchaseConfirmationEmail(String userEmail){
-        // Create the subject line and body content for the report email
-        String subject = "Compra realizada con éxito";
-        String body = "Gracias por su compra en Artists Heaven. Su pedido ha sido confirmado y se encuentra en proceso de envío.";
+    public void sendPurchaseConfirmationEmail(String userEmail, Order order) throws MessagingException {
+        MimeMessage message = mailSender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(message, true);
 
-        // Send the email to the user
-        sendEmail(userEmail, subject, body);
+        Long orderReference = order.getIdentifier();
+        Float total = order.getTotalPrice();
+
+        helper.setTo(userEmail);
+        helper.setSubject("Confirmación de compra - " + orderReference);
+        helper.setText("Gracias por tu compra. Adjuntamos tu factura.");
+
+        // Generar PDF
+        byte[] pdfBytes = pdfGeneratorService.generateInvoice(orderReference, order, total);
+        InputStreamSource pdfSource = new ByteArrayResource(pdfBytes);
+
+        // Adjuntar PDF al correo
+        helper.addAttachment("Factura_" + orderReference + ".pdf", pdfSource);
+
+        mailSender.send(message);
     }
 
     /**

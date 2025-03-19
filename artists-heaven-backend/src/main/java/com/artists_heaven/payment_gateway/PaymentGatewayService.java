@@ -29,8 +29,8 @@ import com.stripe.model.Event;
 import com.stripe.model.checkout.Session;
 import com.stripe.net.Webhook;
 import com.stripe.param.checkout.SessionCreateParams;
-
 import io.github.cdimascio.dotenv.Dotenv;
+import jakarta.mail.MessagingException;
 
 @Service
 public class PaymentGatewayService {
@@ -245,6 +245,9 @@ public class PaymentGatewayService {
         // Retrieve the current authentication information.
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
+        // Add phone number form
+        params.setPhoneNumberCollection(SessionCreateParams.PhoneNumberCollection.builder().setEnabled(true).build());
+
         // If the user is authenticated and is an instance of User, add their details to
         // the session.
         if (authentication != null && authentication.getPrincipal() instanceof User user) {
@@ -339,8 +342,9 @@ public class PaymentGatewayService {
      * @param payload   the payload of the Stripe event.
      * @param sigHeader the signature header of the Stripe event, used to verify the
      *                  event's authenticity.
+     * @throws MessagingException
      */
-    public void processStripeEvent(String payload, String sigHeader) {
+    public void processStripeEvent(String payload, String sigHeader) throws MessagingException {
         // Verify the event signature to ensure its authenticity.
         Event event = verifySignature(payload, sigHeader);
 
@@ -364,7 +368,7 @@ public class PaymentGatewayService {
 
             // Handle any post-order actions, such as sending confirmation emails or
             // updating inventory.
-            handlePostOrderActions(userId, email);
+            handlePostOrderActions(userId, email, order);
         }
     }
 
@@ -464,18 +468,26 @@ public class PaymentGatewayService {
     private void createOrderItems(Session session, Order order, Long userId) {
         // Create a list to hold the order items.
         List<OrderItem> items = new ArrayList<>();
-        // Retrieve the custom fields from the session, which contain additional
-        // customer details.
+        String country = "";
+
         List<String> fields = session.getCustomFields().stream()
-                .map(field -> field.getText().getDefaultValue())
+                .map(field -> field.getText().getValue())
                 .toList();
 
-        // Determine the customer's shipping details based on whether the user is logged
-        // in.
+        // Retrieve the customer's shipping details from the session.
         String city = userId != null ? fields.get(0) : session.getCustomerDetails().getAddress().getCity();
         String addressLine1 = userId != null ? fields.get(1) : session.getCustomerDetails().getAddress().getLine1();
         String addressLine2 = userId != null ? null : session.getCustomerDetails().getAddress().getLine2();
         String postalCode = userId != null ? fields.get(2) : session.getCustomerDetails().getAddress().getPostalCode();
+        String phone = session.getCustomerDetails().getPhone();
+        String email = session.getCustomerDetails().getEmail();
+
+        if (userId == null) {
+            country = session.getCustomerDetails().getAddress().getCountry();
+            country = getCountryName(country);
+        }
+
+        // Set the country name based on the country code.
 
         // Loop through the session's metadata and process product entries.
         for (Map.Entry<String, String> entry : session.getMetadata().entrySet()) {
@@ -486,7 +498,16 @@ public class PaymentGatewayService {
         }
 
         // Finalize the order by associating the items and the shipping details.
-        finalizeOrder(order, items, city, addressLine1, addressLine2, postalCode);
+        finalizeOrder(order, items, city, addressLine1, addressLine2, postalCode, country, phone, email);
+    }
+
+    private String getCountryName(String countryCode) {
+        return switch (countryCode) {
+            case "US" -> "Estados Unidos";
+            case "ES" -> "España";
+            case "FR" -> "Francia";
+            default -> null;
+        };
     }
 
     /**
@@ -523,7 +544,7 @@ public class PaymentGatewayService {
 
             // Create an OrderItem for this product entry and add it to the repository and
             // items list.
-            OrderItem item = new OrderItem(productId, quantity, size, product.getName(), product.getPrice());
+            OrderItem item = new OrderItem(productId, quantity, size, product.getName(), product.getPrice(), order);
             orderItemRepository.save(item);
             items.add(item);
         }
@@ -542,18 +563,23 @@ public class PaymentGatewayService {
      * @param postalCode   the postal code for the shipping address.
      */
     private void finalizeOrder(Order order, List<OrderItem> items, String city, String addressLine1,
-            String addressLine2, String postalCode) {
+            String addressLine2, String postalCode, String country, String phone, String email) {
+
         // Set a unique identifier for the order using a UUID.
         order.setIdentifier(UUID.randomUUID().getMostSignificantBits());
         // Set the order status to 'PAID'.
         order.setStatus(OrderStatus.PAID);
-        // Set the list of items in the order.
-        order.setItems(items);
         // Set the shipping address details.
         order.setCity(city);
         order.setAddressLine1(addressLine1);
         order.setAddressLine2(addressLine2);
         order.setPostalCode(postalCode);
+        order.setPhone(phone);
+        order.setEmail(email);
+        order.setItems(items);
+        if (country != "") {
+            order.setCountry(country);
+        }
         // Save the order to the repository.
         orderRepository.save(order);
     }
@@ -564,14 +590,15 @@ public class PaymentGatewayService {
      *
      * @param userId the ID of the user who made the purchase.
      * @param email  the email address of the user to send the confirmation.
+     * @throws MessagingException
      */
-    private void handlePostOrderActions(Long userId, String email) {
+    private void handlePostOrderActions(Long userId, String email, Order order) throws MessagingException {
         // If the user is registered, delete the items from their shopping cart.
         if (userId != null) {
             shoppingCartService.deleteShoppingCartUserItems(userId);
         }
         // Send a confirmation email to the user regarding their purchase.
-        emailSenderService.sendPurchaseConfirmationEmail(email);
+        emailSenderService.sendPurchaseConfirmationEmail(email, order);
     }
 
     /**

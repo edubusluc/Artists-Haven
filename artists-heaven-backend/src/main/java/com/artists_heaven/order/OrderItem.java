@@ -1,5 +1,7 @@
 package com.artists_heaven.order;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -22,11 +24,17 @@ public class OrderItem {
     public OrderItem() {
     }
 
-    public OrderItem(Long productId, int quantity, String size, String name, Float price) {
+    @ManyToOne
+    @JoinColumn(name = "order_id", nullable = false)
+    @JsonBackReference
+    private Order order;
+
+    public OrderItem(Long productId, int quantity, String size, String name, Float price, Order order) {
         this.productId = productId;
         this.quantity = quantity;
         this.size = size;
         this.name = name;
         this.price = price;
+        this.order = order;
     }
 }
