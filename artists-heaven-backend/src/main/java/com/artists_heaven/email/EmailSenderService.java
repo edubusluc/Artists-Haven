@@ -118,8 +118,8 @@ public class EmailSenderService {
         Map<EmailType, Integer> emailCountMap = new HashMap<>();
 
         for (Object[] row : result) {
-            EmailType type = (EmailType) row[0]; // El primer valor es el tipo de correo
-            Long count = (Long) row[1]; // El segundo valor es la cuenta (LONG en lugar de Integer)
+            EmailType type = (EmailType) row[0]; 
+            Long count = (Long) row[1]; 
             emailCountMap.put(type, count.intValue());
         }
 

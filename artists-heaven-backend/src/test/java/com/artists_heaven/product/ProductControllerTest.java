@@ -472,4 +472,27 @@ public class ProductControllerTest {
                 SecurityContextHolder.clearContext();
         }
 
+        @Test
+        void testGetAllPromotedProduct() throws Exception {
+                Product product = new Product();
+                product.setName("PRODUCT TEST");
+                product.setOn_Promotion(true);
+                product.setDiscount(10);
+                product.setPrice(90f);
+
+                List<Product> productsPromoted = new ArrayList<>();
+                productsPromoted.add(product);
+
+                when(productService.getAllPromotedProducts()).thenReturn(productsPromoted);
+
+                mockMvc.perform(get("/api/product/allPromotedProducts"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.size()").value(1))
+                                .andExpect(jsonPath("$[0].name").value("PRODUCT TEST"))
+                                .andExpect(jsonPath("$[0].on_Promotion").value(true))
+                                .andExpect(jsonPath("$[0].discount").value(10))
+                                .andExpect(jsonPath("$[0].price").value(90.0));
+
+        }
+
 }

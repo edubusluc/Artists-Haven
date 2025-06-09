@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { Suspense, useState, useEffect } from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import Header from './components/Header';
+import AdminHeader from './components/admin/AdminHeader';
 import HomePage from './components/HomePage';
 import UserList from './components/UserList';
 import UserRegister from './components/UserRegister';
@@ -20,48 +21,75 @@ import AllMyEvents from './components/AllMyEvents';
 import FAQ from './components/FAQ';
 import EditMyEvent from './components/EditMyEvent';
 import ProductDetails from './components/ProductDetails';
-import { CartProvider } from './context/CartContext';
-import './style.css';
 import AllEvents from './components/AllEvents';
 import CreateRatingForm from './components/CreateRatingForm';
 import MyOrders from './components/MyOrders';
 import PromoteProductForm from './components/PromoteProductForm';
 import Success from './components/Success';
+import AdminProductList from './components/admin/AdminProductList';
+import AdminDashboard from './components/admin/AdminDashboard';
+import { CartProvider } from './context/CartContext';
+import './style.css';
+import './i18n/i18n';
 
-const App = () => (
-  <GoogleOAuthProvider clientId="1048927197271-g7tartu6gacs0jv8fgoa5braq8b2ck7p.apps.googleusercontent.com">
-    <CartProvider>
-      <Router>
-        <Header />
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/users" element={<UserList />} />
-          <Route path="/user/register" element={<UserRegister />} />
-          <Route path="/artists/register" element={<ArtistsRegister />} />
-          <Route path="/auth/login" element={<UserLogin />} />
-          <Route path="/users/profile" element={<UserProfile />} />
-          <Route path="/profile/edit" element={<EditProfile />} />
-          <Route path="/email" element={<EmailForm />} />
-          <Route path="/verification" element={<VerificationForm />} />
-          <Route path="/admin/verification/pending" element={<VerificationList />} />
-          <Route path="/product/new" element={<CreateProductForm />} />
-          <Route path="/product/all" element={<ProductsList />} />
-          <Route path="/product/edit/:id" element={<EditProduct />} />
-          <Route path="/event/new" element={<CreateEventForm />} />
-          <Route path="/event/all-my-events" element={<AllMyEvents />} />
-          <Route path="/event/allEvents" element={<AllEvents />} />
-          <Route path="/FAQ" element={<FAQ />} />
-          <Route path="/event/edit/:id" element={<EditMyEvent />} />
-          <Route path="/product/details/:id" element={<ProductDetails />} />
-          <Route path="/event/all-events" element={<AllEvents />} />
-          <Route path="/product/newReview/:productId" element={<CreateRatingForm />} />
-          <Route path="/orders/myOrders" element={<MyOrders/>} />
-          <Route path="/product/promote/:id" element={<PromoteProductForm/>} />
-          <Route path="/success" element={<Success/>} />
-        </Routes>
-      </Router>
-    </CartProvider>
-  </GoogleOAuthProvider>
-);
+const App = () => {
+  const [role, setRole] = useState(localStorage.getItem("role"));
+  const [token, setToken] = useState(localStorage.getItem("authToken"));
+
+  console.log(role)
+  console.log(token)
+
+  // Optional: keep role updated if localStorage changes from another tab
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setRole(localStorage.getItem("role"));
+    };
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, []);
+
+  return (
+    <GoogleOAuthProvider clientId="1048927197271-g7tartu6gacs0jv8fgoa5braq8b2ck7p.apps.googleusercontent.com">
+      <CartProvider>
+        <Suspense fallback={<div className="text-white">Cargando traducciones...</div>}>
+          <Router>
+            {role === "ADMIN" ? <AdminHeader /> : <Header />}
+            <Routes>
+              <Route 
+        path="/" 
+        element={role === 'ADMIN' ? <AdminDashboard /> : <HomePage />} 
+      />
+              <Route path="/users" element={<UserList />} />
+              <Route path="/user/register" element={<UserRegister />} />
+              <Route path="/artists/register" element={<ArtistsRegister />} />
+              <Route path="/auth/login" element={<UserLogin />} />
+              <Route path="/users/profile" element={<UserProfile />} />
+              <Route path="/profile/edit" element={<EditProfile />} />
+              <Route path="/email" element={<EmailForm />} />
+              <Route path="/verification" element={<VerificationForm />} />
+              <Route path="/admin/verification/pending" element={<VerificationList />} />
+              <Route path="/product/new" element={<CreateProductForm />} />
+              <Route path="/product/all" element={<ProductsList />} />
+              <Route path="/product/edit/:id" element={<EditProduct />} />
+              <Route path="/event/new" element={<CreateEventForm />} />
+              <Route path="/event/all-my-events" element={<AllMyEvents />} />
+              <Route path="/event/allEvents" element={<AllEvents />} />
+              <Route path="/FAQ" element={<FAQ />} />
+              <Route path="/event/edit/:id" element={<EditMyEvent />} />
+              <Route path="/product/details/:id" element={<ProductDetails />} />
+              <Route path="/event/all-events" element={<AllEvents />} />
+              <Route path="/product/newReview/:productId" element={<CreateRatingForm />} />
+              <Route path="/orders/myOrders" element={<MyOrders />} />
+              <Route path="/product/promote/:id" element={<PromoteProductForm />} />
+              <Route path="/success" element={<Success />} />
+              <Route path="/admin/products/store" element={<AdminProductList />} />
+              <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            </Routes>
+          </Router>
+        </Suspense>
+      </CartProvider>
+    </GoogleOAuthProvider>
+  );
+};
 
 export default App;
