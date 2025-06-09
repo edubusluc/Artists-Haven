@@ -1,24 +1,37 @@
 import React, { useContext, useState, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faShoppingCart } from "@fortawesome/free-solid-svg-icons";
+import { faShoppingCart, faBasketball } from "@fortawesome/free-solid-svg-icons";
+import { faTachometerAlt, faBoxOpen, faUsers, faChartLine } from '@fortawesome/free-solid-svg-icons';
+
+import { faUser } from "@fortawesome/free-solid-svg-icons";
 import { CartContext } from "../context/CartContext";
 import { Link } from "react-router-dom";
+import { useTranslation } from 'react-i18next';
+
+
+
 
 const Header = () => {
     const { shoppingCart: contextShoppingCart, handleDeleteProduct } = useContext(CartContext);
     const [shoppingCart, setShoppingCart] = useState({ items: [] });
     const [isDropdownVisible, setDropdownVisible] = useState(false);
     const [authToken] = useState(localStorage.getItem("authToken"));
+    const [isSidebarVisible, setSidebarVisible] = useState(false);
+    const [isSidebarVisibleLeft, setSidebarVisibleLeft] = useState(false);
+    const { t, i18n } = useTranslation();
 
-    // Cargar carrito desde localStorage si el usuario no está autenticado
+    const changeLanguage = (lng) => {
+        i18n.changeLanguage(lng);
+    };
+
+
     useEffect(() => {
         if (!authToken) {
             const storedCart = localStorage.getItem("shoppingCart");
             if (storedCart) {
-                setShoppingCart(JSON.parse(storedCart)); // Establecer carrito desde localStorage
+                setShoppingCart(JSON.parse(storedCart));
             }
         } else {
-            // Si el usuario está autenticado, usar el carrito desde el contexto
             setShoppingCart(contextShoppingCart);
         }
     }, [authToken, contextShoppingCart]);
@@ -41,9 +54,16 @@ const Header = () => {
         return total;
     };
 
-    const handleRedirectToPayment = async () => {    
+    const links = [
+        { to: "admin/dashboard", icon: faTachometerAlt, label: "Dashboard" },
+        { to: "admin/products/store", icon: faBoxOpen, label: "Gestión de Productos" },
+        { to: "admin/orders", icon: faShoppingCart, label: "Órdenes" },
+        { to: "admin/clients", icon: faUsers, label: "Clientes" },
+        { to: "admin/reports", icon: faChartLine, label: "Análisis y Reportes" },
+    ];
+
+    const handleRedirectToPayment = async () => {
         try {
-            // Enviar el carrito al backend para generar la sesión de pago
             const response = await fetch("/api/payment_process/checkout", {
                 method: "POST",
                 headers: {
@@ -52,82 +72,255 @@ const Header = () => {
                 },
                 body: JSON.stringify(shoppingCart.items),
             });
-    
-            // Comprobar si la respuesta fue exitosa
+
             if (!response.ok) {
-                // Si la respuesta no es 2xx (error 400 o 500), lanzamos el error para el catch
                 throw new Error(`Error ${response.status}: ${await response.text()}`);
             }
-    
+
             const data = await response.text();
             window.location.href = data;
-            setShoppingCart({ items: [] }); // Vaciar carrito   
-            localStorage.removeItem("shoppingCart"); // Eliminar carrito de localStorage
-            
+            setShoppingCart({ items: [] });
+            localStorage.removeItem("shoppingCart");
+
         } catch (error) {
-            // Maneja el error en caso de fallo
             alert("Ocurrió un error: " + error);
         }
     };
+
+    const toggleSidebar = () => {
+        setSidebarVisible(!isSidebarVisible);
+    };
+    const closeSidebar = () => {
+        setSidebarVisible(false);
+    };
+
+    const toggleSidebarLeft = () => {
+        setSidebarVisibleLeft(!isSidebarVisibleLeft);
+    };
+
+    const closeSidebarLeft = () => {
+        setSidebarVisibleLeft(false);
+    };
+
+
 
     return (
         <div
             style={{
                 display: "flex",
-                justifyContent: "space-between",
                 alignItems: "center",
                 padding: "10px 20px",
-                backgroundColor: "#f8f9fa",
-                borderBottom: "1px solid #ccc",
+                backgroundColor: "#002f4c",
+                boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                justifyContent: "space-around",
             }}
         >
             <Link to="/" style={{ fontSize: "20px", fontWeight: "bold" }}>
                 Home
             </Link>
-
+            <div>
+                <Link to="/auth/login">
+                    <FontAwesomeIcon icon={faUser} />
+                </Link>
+            </div>
             <div
-                onMouseEnter={handleMouseEnter}
-                onMouseLeave={handleMouseLeave}
-                style={{ position: "relative", display: "inline-block" }}
+                onClick={toggleSidebar}
+                style={{
+                    cursor: "pointer",
+                    position: "relative",
+                    display: "inline-block",
+                }}
             >
                 <FontAwesomeIcon icon={faShoppingCart} size="2x" />
-                {isDropdownVisible && (
-                    <div
+            </div>
+            <button onClick={() => changeLanguage('es')}>ES</button>
+            <button onClick={() => changeLanguage('en')}>EN</button>
+
+            {/* Overlay oscuro detrás del panel */}
+            {isSidebarVisible && (
+                <div
+                    onClick={closeSidebar}
+                    style={{
+                        position: "fixed",
+                        top: 0,
+                        left: 0,
+                        width: "100%",
+                        height: "100%",
+                        backgroundColor: "rgba(0, 0, 0, 0.5)", // Fondo oscuro
+                        zIndex: 998, // Asegura que esté debajo del sidebar
+                    }}
+                />
+            )}
+
+            {/* Barra lateral (sidebar) */}
+            <div
+                style={{
+                    position: "fixed",
+                    top: 0,
+                    right: isSidebarVisible ? 0 : "-400px", // Controla la visibilidad
+                    width: "400px", // El ancho estándar
+                    height: "100vh",
+                    backgroundColor: "white",
+                    boxShadow: "-2px 0 5px rgba(0,0,0,0.1)",
+                    transition: "right 0.3s ease",
+                    zIndex: 999,
+                    padding: "20px",
+                    overflowY: "auto",
+                }}
+            >
+                <div>
+                    <button
+                        onClick={closeSidebar}
                         style={{
                             position: "absolute",
-                            top: "100%",
-                            right: 0,
-                            backgroundColor: "white",
-                            border: "1px solid #ccc",
-                            boxShadow: "0 8px 16px rgba(0,0,0,0.2)",
-                            zIndex: 1,
-                            width: "200px",
+                            top: "20px",
+                            right: "20px",
+                            color: "black",
+                            border: "none",
                             padding: "10px",
+                            cursor: "pointer",
                         }}
                     >
-                        {shoppingCart && shoppingCart.items && shoppingCart.items.length > 0 ? (
-                            <ul>
-                                {shoppingCart.items.map((item, index) => (
-                                    <li key={`${item.product.id}-${item.size}`}>
-                                        {item.product.name} - Talla: {item.size} - Cantidad: {item.quantity} - Precio: {item.product.price * item.quantity}€
-                                        <button
-                                            onClick={() => handleDeleteProduct(index)}
-                                            className="btn btn-primary"
-                                        >
-                                            -
-                                        </button>
-                                    </li>
-                                ))}
-                            </ul>
-                        ) : (
-                            <p>¡Añada algún producto a su carrito!</p>
-                        )}
-                        <p>Total: {calculateTotalPrice()}€</p>
-                        {shoppingCart && shoppingCart.items && shoppingCart.items.length > 0 && (
-                            <button onClick={handleRedirectToPayment}>Ir a la Pasarela de Pago</button>
-                        )}
-                    </div>
-                )}
+                        X
+                    </button>
+                    <h3 className="p-4 custom-font-shop custom-font-shop-black">{t('ShoppingCart')}</h3>
+                    {shoppingCart && shoppingCart.items && shoppingCart.items.length > 0 ? (
+                        shoppingCart.items.map((item, index) => (
+                            <div key={index} className="mb-4 border-b p-4">
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    {/* Contenedor imagen y texto lado a lado */}
+                                    <div style={{ display: 'flex', alignItems: 'self-start' }}>
+                                        <img
+                                            src={`/api/product${item.product.imageUrl}`}
+                                            alt={item.product.name}
+                                            style={{
+                                                height: '90px',  // Ajusta este valor según te guste
+                                                width: 'auto',
+                                                objectFit: 'contain',
+                                                marginRight: '16px',
+
+                                            }}
+                                            loading="lazy"
+                                        />
+                                        <div>
+                                            <p className="custom-font-shop-regular custom-font-shop-black">{item.product.name}</p>
+                                            <p className="custom-font-shop-regular custom-font-shop-black">{item.product.price}€</p>
+                                            <p className="custom-font-shop-regular custom-font-shop-black">Talla: {item.size}</p>
+                                        </div>
+                                    </div>
+
+                                    {/* Cantidad */}
+                                    <div
+                                        style={{
+                                            border: '1px solid black',
+                                            padding: '4px 8px',
+                                            borderRadius: '4px',
+                                            minWidth: '40px',
+                                            textAlign: 'center',
+                                            fontWeight: 'bold',
+                                        }}
+                                    >
+                                        {item.quantity}
+                                    </div>
+                                </div>
+
+                                <button onClick={() => handleDeleteProduct(index)} style={{ marginTop: '12px' }}>
+                                    <p className="custom-font-shop-regular custom-font-shop-black">Eliminar producto</p>
+                                </button>
+                            </div>
+                        ))
+                    ) : (
+                        <p className="p-4 custom-font-shop-regular custom-font-shop-regular-black">{t('AddAProductToShopping')}</p>
+                    )}
+
+
+
+                    {shoppingCart && shoppingCart.items && shoppingCart.items.length > 0 && (
+                        <><div className="p-4 flex justify-between">
+                            <p className="custom-font-shop custom-font-shop-black">Total</p>
+                            <p className="custom-font-shop custom-font-shop-black">{calculateTotalPrice()}€</p>
+                        </div><div
+                            className="p-4 border border-black flex justify-center cursor-pointer"
+                            onClick={handleRedirectToPayment}
+                        >
+                                <p className="custom-font-shop custom-font-shop-black">Finalizar Compra</p>
+                            </div></>)}
+
+
+
+                </div>
+            </div>
+            <div
+                onClick={toggleSidebarLeft}
+                style={{
+                    cursor: "pointer",
+                    position: "relative",
+                    display: "inline-block",
+                }}
+            >
+                <FontAwesomeIcon icon={faBasketball} size="2x" />
+            </div>
+            {/* Overlay oscuro detrás del panel */}
+            {isSidebarVisibleLeft && (
+                <div
+                    onClick={closeSidebarLeft}
+                    style={{
+                        position: "fixed",
+                        top: 0,
+                        left: 0,
+                        width: "100%",
+                        height: "100%",
+                        backgroundColor: "rgba(0, 0, 0, 0.5)", // Fondo oscuro
+                        zIndex: 998, // Asegura que esté debajo del sidebar
+                    }}
+                />
+            )}
+
+            {/* Barra lateral (sidebar) */}
+            <div
+                style={{
+                    position: "fixed",
+                    top: 0,
+                    left: isSidebarVisibleLeft ? 0 : "-400px", // Controla la visibilidad
+                    width: "400px", // El ancho estándar
+                    height: "100vh",
+                    backgroundColor: "white",
+                    boxShadow: "-2px 0 5px rgba(0,0,0,0.1)",
+                    transition: "left 0.3s ease",
+                    zIndex: 999,
+                    padding: "20px",
+                    overflowY: "auto",
+                }}
+            >
+                {/* Contenido de la barra lateral izquierda */}
+                <button
+                    onClick={closeSidebarLeft}
+                    style={{
+                        position: "absolute",
+                        top: "20px",
+                        right: "20px",
+                        color: "black",
+                        border: "none",
+                        padding: "10px",
+                        cursor: "pointer",
+                    }}
+                >
+                    X
+                </button>
+                <h3 className="p-4 custom-font-shop custom-font-shop-black" style={{ borderBottom: "1px solid #e5e7eb" }}>
+                    Admin Panel
+                </h3>
+                <div className="p-4 custom-font-shop-regular custom-font-shop-black">
+                    {links.map((link, index) => (
+                        <Link to={link.to} key={index} onClick={closeSidebarLeft}>
+                            <p className={'mt-4'}>
+                                <FontAwesomeIcon icon={link.icon} style={{ marginRight: '8px' }} />
+                                {link.label}
+                            </p>
+                        </Link>
+                    ))}
+                </div>
+
             </div>
         </div>
     );
