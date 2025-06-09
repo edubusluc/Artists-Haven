@@ -93,7 +93,7 @@ public class JwtTokenProvider {
     // Method to generate a new JWT token
     public String generateToken(Authentication authentication) {
         Date now = new Date();
-        Date expiryDate = new Date(now.getTime() + (900 * 1000));
+        Date expiryDate = new Date(now.getTime() + (3600 * 1000));
         String email = "";
 
         // Retrieve the email from the authenticated user

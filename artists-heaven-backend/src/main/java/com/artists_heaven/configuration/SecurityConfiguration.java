@@ -48,6 +48,7 @@ public class SecurityConfiguration {
             "/api/payment_process/checkout",
             "/api/payment_process/stripeWebhook",
             "/api/rating/productReview/**",
+            "/api/product/allPromotedProducts",
     };
 
     // Endpoints accessible only by ADMIN users
@@ -60,6 +61,8 @@ public class SecurityConfiguration {
             "/api/product/new",
             "/api/product/promotion/{id}",
             "/api/product/demote/{id}",
+            "/api/admin/staticsPerYear",
+            "/api/admin/sales/monthly"
     };
 
     // Endpoints accessible only by ARTIST users
