@@ -16,4 +16,7 @@ public interface ProductRepository extends JpaRepository<Product,Long>{
 
     List<Product> findAll();
 
+    @Query("SELECT p FROM Product p WHERE p.on_Promotion = true")
+    List<Product> findAllByOn_Promotion();
+
 }

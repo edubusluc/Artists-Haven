@@ -292,4 +292,8 @@ public class ProductService {
         
     }
 
+    public List<Product> getAllPromotedProducts() {
+        return productRepository.findAllByOn_Promotion();
+    }
+
 }
