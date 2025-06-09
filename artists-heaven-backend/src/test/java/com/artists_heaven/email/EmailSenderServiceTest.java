@@ -1,7 +1,11 @@
 package com.artists_heaven.email;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+
+import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -14,6 +18,7 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 
 import com.artists_heaven.entities.artist.Artist;
 import com.artists_heaven.order.Order;
+import com.artists_heaven.verification.VerificationStatus;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
@@ -88,6 +93,24 @@ public class EmailSenderServiceTest {
 
 
         emailSenderService.sendPurchaseConfirmationEmail(userEmail, order);
+    }
+
+    @Test
+    void testgetEmailCount(){
+        int year = 2024;
+        List<Object[]> mockResults = List.of(
+            new Object[]{EmailType.BUG_REPORT, 5L},
+            new Object[]{EmailType.FEATURE_REQUEST, 2L}
+        );
+
+        when(emailSenderRepository.countEmailsByType(year)).thenReturn(mockResults);
+
+        Map<EmailType, Integer> result = emailSenderService.getEmailCounts(year);
+
+        assertEquals(2, result.size());
+        assertEquals(5, result.get(EmailType.BUG_REPORT));
+        assertEquals(2, result.get(EmailType.FEATURE_REQUEST));
+
     }
 
 }

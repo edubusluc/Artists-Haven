@@ -19,6 +19,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -27,8 +28,12 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpHeaders;
 
+import com.artists_heaven.email.EmailSenderService;
+import com.artists_heaven.email.EmailType;
 import com.artists_heaven.entities.artist.Artist;
 import com.artists_heaven.entities.artist.ArtistRepository;
+import com.artists_heaven.order.OrderService;
+import com.artists_heaven.order.OrderStatus;
 import com.artists_heaven.verification.Verification;
 import com.artists_heaven.verification.VerificationRepository;
 import com.artists_heaven.verification.VerificationStatus;
@@ -36,7 +41,8 @@ import com.artists_heaven.verification.VerificationStatus;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
 public class AdminControllerTest {
 
@@ -45,6 +51,15 @@ public class AdminControllerTest {
 
     @Mock
     private ArtistRepository artistRepository;
+
+    @Mock
+    private OrderService orderService;
+
+    @Mock
+    private EmailSenderService emailSenderService;
+
+    @Mock
+    private AdminService adminService;
 
     @Mock
     private VerificationRepository verificationRepository;
@@ -171,7 +186,8 @@ public class AdminControllerTest {
     @Test
     public void testGetVerificationVideoSuccess() throws Exception {
         String fileName = "sample.mp4";
-        String basePath = System.getProperty("user.dir") + "/artists-heaven-backend/src/main/resources/verification_media/";
+        String basePath = System.getProperty("user.dir")
+                + "/artists-heaven-backend/src/main/resources/verification_media/";
         Path filePath = Paths.get(basePath, fileName);
 
         // Crea un archivo de muestra para la prueba
@@ -189,7 +205,6 @@ public class AdminControllerTest {
         Files.deleteIfExists(filePath);
     }
 
-
     @Test
     public void testGetVerificationVideoNotFound() throws Exception {
         // Arrange
@@ -199,6 +214,68 @@ public class AdminControllerTest {
         // Act & Assert
         mockMvc.perform(get("/api/admin/verification_media/{fileName}", fileName))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void testGetStaticsPerYear_Success() throws Exception {
+        int year = 2024;
+
+        when(orderService.getNumOrdersPerYear(year)).thenReturn(100);
+        when(orderService.getIncomePerYear(year)).thenReturn(50000.0);
+        when(emailSenderService.getEmailCounts(year)).thenReturn(Map.of(EmailType.ABUSE_REPORT, 20));
+        when(adminService.countUsers()).thenReturn(80);
+        when(adminService.countArtists()).thenReturn(10);
+        when(adminService.getOrderStatusCounts(year)).thenReturn(Map.of(OrderStatus.DELIVERED, 60));
+        when(adminService.getVerificationStatusCount(year)).thenReturn(Map.of(VerificationStatus.ACCEPTED, 5));
+
+        mockMvc.perform(get("/api/admin/staticsPerYear")
+                .param("year", String.valueOf(year)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.numOrders").value(100))
+                .andExpect(jsonPath("$.incomePerYear").value(50000.0))
+                .andExpect(jsonPath("$.emailCounts.ABUSE_REPORT").value(20))
+                .andExpect(jsonPath("$.numUsers").value(80))
+                .andExpect(jsonPath("$.numArtists").value(10))
+                .andExpect(jsonPath("$.orderStatusCounts.DELIVERED").value(60))
+                .andExpect(jsonPath("$.verificationStatusCounts.ACCEPTED").value(5));
+    }
+
+    @Test
+    void testGetStaticsPerYear_Exception() throws Exception {
+        when(orderService.getNumOrdersPerYear(Mockito.anyInt()))
+                .thenThrow(new RuntimeException("Error"));
+
+        mockMvc.perform(get("/api/admin/staticsPerYear").param("year", "2024"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void testGetMonthlySalesData_Success() throws Exception {
+        int year = 2024;
+
+        List<MonthlySalesDTO> mockData = List.of(
+                new MonthlySalesDTO(1, 10L, 1000.0),
+                new MonthlySalesDTO(2, 15L, 2000.0));
+
+        when(adminService.getMonthlySalesData(year)).thenReturn(mockData);
+
+        mockMvc.perform(get("/api/admin/sales/monthly").param("year", String.valueOf(year)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].month").value(1))
+                .andExpect(jsonPath("$[0].totalOrders").value(10))
+                .andExpect(jsonPath("$[0].totalRevenue").value(1000.0))
+                .andExpect(jsonPath("$[1].month").value(2))
+                .andExpect(jsonPath("$[1].totalOrders").value(15))
+                .andExpect(jsonPath("$[1].totalRevenue").value(2000.0));
+    }
+
+    @Test
+    void testGetMonthlySalesData_Exception() throws Exception {
+        when(adminService.getMonthlySalesData(Mockito.anyInt()))
+                .thenThrow(new RuntimeException("DB Error"));
+
+        mockMvc.perform(get("/api/admin/sales/monthly").param("year", "2024"))
+                .andExpect(status().isBadRequest());
     }
 
 }

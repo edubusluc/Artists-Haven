@@ -1,5 +1,9 @@
 package com.artists_heaven.email;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.InputStreamSource;
 import org.springframework.mail.SimpleMailMessage;
@@ -106,5 +110,19 @@ public class EmailSenderService {
         message.setFrom(MODERATOR_EMAIL);
         // Send the constructed email message
         mailSender.send(message);
+    }
+
+    public Map<EmailType, Integer> getEmailCounts(int year) {
+
+        List<Object[]> result = emailSenderRepository.countEmailsByType(year);
+        Map<EmailType, Integer> emailCountMap = new HashMap<>();
+
+        for (Object[] row : result) {
+            EmailType type = (EmailType) row[0]; 
+            Long count = (Long) row[1]; 
+            emailCountMap.put(type, count.intValue());
+        }
+
+        return emailCountMap;
     }
 }

@@ -520,4 +520,24 @@ public class ProductServiceTest {
         assertEquals("Product is not on promotion", exception.getMessage());
     }
 
+    @Test
+    void testGetAllPromotedProduct(){
+        Product product = new Product();
+        product.setName("PRODUCT TEST");
+        product.setOn_Promotion(true);
+        product.setDiscount(10);
+        product.setPrice(90f);
+
+        List<Product> productsPromoted = new ArrayList<>();
+        productsPromoted.add(product);
+
+        when(productRepository.findAllByOn_Promotion()).thenReturn(productsPromoted);
+
+        List<Product> finalProductsPromoted = productService.getAllPromotedProducts();
+        
+        assertEquals("PRODUCT TEST", finalProductsPromoted.get(0).getName());
+
+
+    }
+
 }

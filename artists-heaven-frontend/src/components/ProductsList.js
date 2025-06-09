@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-
+import Footer from './Footer';
+import cardBg from '../util-image/bgImg.png';
+import { Link } from 'react-router-dom';
+import bg from '../util-image/bg.png';
 const ProductList = () => {
     const [products, setProducts] = useState([]);
     const navigate = useNavigate();
@@ -63,71 +66,54 @@ const ProductList = () => {
 
 
     return (
-        <div className="product-list">
-            {products.length > 0 ? (
-                products.map((product) => (
-                    <div key={product.id} className="product-item">
-                        <h2>
-                            {product.name}{" "}
-                            <span style={{ color: product.available ? "green" : "red" }}>
-                                {product.available ? "Available" : "Out of Stock"}
-                            </span>
-                        </h2>
-                        <p>{product.description}</p>
-                        <p>Precio: ${product.price}</p>
-                        <div className="product-images">
-                            {product.images.map((image, index) => (
-                                <img
-                                    key={index}
-                                    src={`/api/product${image}`}
-                                    alt={image}
-                                    className="product-image"
-                                    style={{ width: '150px', height: 'auto' }}
-                                />
-                            ))}
-                        </div>
-                        {product.available && (
-                            <div className="product-sizes">
-                                <h3>Tamaños disponibles:</h3>
-                                <ul>
-                                    {Object.entries(product.size).map(([size, quantity]) => (
-                                        <li key={size}>
-                                            {size}: {quantity} unidades
-                                        </li>
-                                    ))}
-                                </ul>
-                                {/* Botón para ver los detalles del producto */}
-                                <button onClick={() => navigate(`/product/details/${product.id}`)} className="btn btn-primary">
-                                    Ver Detalles
-                                </button>
+        <>
+            <div
+                style={{
+                    backgroundImage: `url(${bg})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    backgroundRepeat: 'no-repeat',
+                    padding: '20px',
+                    color: 'white',
+                    minHeight: '90vh',
+                }}
+            >
+                <div className='flex justify-center'>
+                    ALL BEST SELLERS NEW ACCESORIES
+
+                </div>
+                <div className='grid grid-cols-3 gap-4 p-4 max-w-6xl mx-auto'>
+                    {products.map((product) => (
+                        <div key={product.id}>
+                            <Link to={`/product/details/${product.id}`}>
+                            <div
+                                className=" bg-cover bg-center shadow-lg w-full max-h-2xl"
+                                style={{
+                                    backgroundImage: `url(${cardBg})`,
+                                    padding: '2rem',
+                                    minHeight: '29rem',
+                                    boxShadow: '0 4px 15px rgba(0,0,0,1)',
+                                }}
+                            >
+                                {product.images?.[0] && (
+                                    <img
+                                        src={`/api/product${product.images[0]}`}
+                                        alt={product.name}
+                                        className="w-full h-full object-contain mt-4 p-4"
+                                    />
+                                )}
                             </div>
-                        )}
-
-
-
-
-                        {role === 'ADMIN' && (
-                            <>
-                                <button onClick={() => handleDelete(product.id)} className="delete-button">
-                                    Eliminar
-                                </button>
-                                <button onClick={() => navigate(`/product/edit/${product.id}`)} className="btn btn-primary">
-                                    Editar Producto
-                                </button>
-                                <button onClick={() => navigate(`/product/promote/${product.id}`)} className="btn btn-primary">
-                                    Promocionar
-                                </button>
-                                <button onClick={() => handleDemoteProduct(product.id)} className="btn btn-primary">
-                                    Eliminar Promoción
-                                </button>
-                            </>
-                        )}
-                    </div>
-                ))
-            ) : (
-                <p>No hay productos disponibles.</p>
-            )}
-        </div>
+                            </Link>
+                            <div className="flex justify-between mt-2">
+                                <p className="mt-2 text-left custom-font-shop">{product.name}</p>
+                                <p className="mt-2 text-right font-semibold">{product.price}€</p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+            <Footer />
+        </>
     );
 };
 

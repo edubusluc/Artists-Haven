@@ -1,0 +1,43 @@
+package com.artists_heaven.admin;
+
+import java.util.List;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
+import com.artists_heaven.entities.user.User;
+import com.artists_heaven.order.OrderStatus;
+
+@Repository
+public interface AdminRepository extends JpaRepository<User, Long> {
+
+    @Query("SELECT COUNT(*) FROM User WHERE role != 'ADMIN'")
+    int countUsers();
+
+    @Query("SELECT COUNT(*) FROM User WHERE role = 'ARTIST'")
+    Integer countArtist();
+
+    @Query("SELECT " +
+            " EXTRACT(MONTH FROM o.createdDate), COUNT(o), SUM(o.totalPrice) " +
+            "FROM Order o " +
+            "WHERE o.status = :status " +
+            "AND EXTRACT(YEAR FROM o.createdDate) = :year " +
+            "GROUP BY EXTRACT(MONTH FROM o.createdDate) " +
+            "ORDER BY EXTRACT(MONTH FROM o.createdDate)")
+    List<Object[]> findMonthlySalesData(@Param("year") int year, @Param("status") OrderStatus status);
+
+    @Query("SELECT o.status, COUNT(o) " +
+            "FROM Order o " +
+            "WHERE EXTRACT(YEAR FROM o.createdDate) = :year " +
+            "GROUP BY o.status")
+    List<Object[]> findOrderStatusCounts(int year);
+
+    @Query("SELECT v.status, COUNT(v) " +
+            "FROM Verification v " +
+            "WHERE EXTRACT(YEAR FROM v.date) = :year " +
+            "GROUP BY v.status")
+    List<Object[]> findVerificationStatusCounts(int year);
+
+}

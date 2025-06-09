@@ -198,6 +198,13 @@ public class ProductController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         }
     }
+
+    @GetMapping("allPromotedProducts")
+    public ResponseEntity<List<Product>> getAllPromotedProducts() {
+        // Fetching and returning the list of all promoted products from the product service
+        List<Product> promotedProducts = productService.getAllPromotedProducts();
+        return ResponseEntity.ok(promotedProducts);
+    }
     
 
 }

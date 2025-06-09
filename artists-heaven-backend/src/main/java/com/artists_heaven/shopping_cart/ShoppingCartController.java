@@ -50,6 +50,7 @@ public class ShoppingCartController {
         productDTO.setId(cartItem.getProduct().getId());
         productDTO.setName(cartItem.getProduct().getName());
         productDTO.setPrice(cartItem.getProduct().getPrice());
+        productDTO.setImageUrl(cartItem.getProduct().getImages().get(0));
 
         // Completa el DTO
         dto.setProduct(productDTO);

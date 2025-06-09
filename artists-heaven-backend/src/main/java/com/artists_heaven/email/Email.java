@@ -1,5 +1,7 @@
 package com.artists_heaven.email;
 
+import java.util.Date;
+
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -21,5 +23,6 @@ public class Email {
     private String description;
     private String username;
     private EmailType type;
+    private Date createdAt;
     
 }

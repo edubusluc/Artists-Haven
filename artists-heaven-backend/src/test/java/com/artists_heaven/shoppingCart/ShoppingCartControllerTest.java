@@ -89,10 +89,14 @@ public class ShoppingCartControllerTest {
         User user = new User();
         user.setId(1L);
 
+        List<String> images = new ArrayList<>();
+        images.add("example/image.jpg");
+
         Product product = new Product();
         product.setId(1L);
         product.setName("Test Product");
         product.setPrice((float) 100.00);
+        product.setImages(images);
 
         CartItem cartItem = new CartItem();
         cartItem.setProduct(product);
@@ -158,10 +162,13 @@ public class ShoppingCartControllerTest {
         request.setProductId(1L);
         request.setSize("M");
 
+        List<String> images = new ArrayList<>();
+        images.add("example/image.jpg");
         Product product = new Product();
         product.setId(1L);
         product.setName("Test Product");
         product.setPrice(10.0f);
+        product.setImages(images);
 
         User user = new User();
         user.setId(1L); // Asignar ID al usuario
@@ -299,10 +306,14 @@ public class ShoppingCartControllerTest {
         request.setProductId(1L);
         request.setSize("M");
 
+        List<String> images = new ArrayList<>();
+        images.add("example/image.jpg");
+
         Product product = new Product();
         product.setId(1L);
         product.setName("Test Product");
         product.setPrice(10.0f);
+        product.setImages(images);
 
         ShoppingCart shoppingCart = new ShoppingCart();
         CartItem cartItem = new CartItem();

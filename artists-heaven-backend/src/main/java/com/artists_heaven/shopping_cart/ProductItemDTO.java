@@ -9,5 +9,6 @@ public class ProductItemDTO {
     private Long id;
     private String name;
     private Float price;
+    private String imageUrl;
     
 }
