@@ -1,13 +1,16 @@
 package com.artists_heaven.order;
 
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.artists_heaven.email.EmailSenderService;
+import com.artists_heaven.email.EmailType;
 import com.artists_heaven.entities.user.User;
 
 
 import java.util.List;
-
+import java.util.Map;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -30,7 +33,7 @@ public class OrderController {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             User user = (User) authentication.getPrincipal();
             List<Order> orders = orderService.getMyOrders(user.getId());
-            return ResponseEntity.ok(orderService.getMyOrders(user.getId()));
+            return ResponseEntity.ok(orders);
         } catch (Exception e) {
             return ResponseEntity.badRequest().build();
         }

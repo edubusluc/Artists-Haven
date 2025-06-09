@@ -5,6 +5,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Date;
+
 import org.springframework.http.HttpStatus;
 
 @RestController
@@ -22,6 +25,7 @@ public class EmailSenderController {
     public ResponseEntity<String> sendEmail(@RequestBody Email email) {
         try {
             // Call the email service to send the report email
+            email.setCreatedAt(new Date());
             emailService.sendReportEmail(email);
 
             // Return a success response if the email was sent successfully

@@ -17,4 +17,12 @@ public class OrderService {
         return orderRepository.getOrdersByUserId(userId);
     }
 
+    public Integer getNumOrdersPerYear(int year) {
+        return orderRepository.getNumOrdersPerYear(year);
+    }
+
+    public Double getIncomePerYear(int year) {
+        return orderRepository.getIncomePerYear(year);
+    }
+
 }
