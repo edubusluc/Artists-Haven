@@ -45,12 +45,17 @@ public class ShoppingCartController {
     private CartItemDTO mapToCartItemDTO(CartItem cartItem) {
         CartItemDTO dto = new CartItemDTO();
 
+        Long productCartItem = cartItem.getProduct().getId();
+        Product product = productService.findById(productCartItem);
+
+
+
         // Mapea Product a ProductDTO
         ProductItemDTO productDTO = new ProductItemDTO();
         productDTO.setId(cartItem.getProduct().getId());
         productDTO.setName(cartItem.getProduct().getName());
         productDTO.setPrice(cartItem.getProduct().getPrice());
-        productDTO.setImageUrl(cartItem.getProduct().getImages().get(0));
+        productDTO.setImageUrl(product.getImages().get(0));
 
         // Completa el DTO
         dto.setProduct(productDTO);

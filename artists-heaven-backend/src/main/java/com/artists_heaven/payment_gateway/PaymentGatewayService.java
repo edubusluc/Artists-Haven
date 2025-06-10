@@ -347,6 +347,7 @@ public class PaymentGatewayService {
     public void processStripeEvent(String payload, String sigHeader) throws MessagingException {
         // Verify the event signature to ensure its authenticity.
         Event event = verifySignature(payload, sigHeader);
+        Order order = new Order();
 
         // If the event type matches the expected type, process the event.
         if (EVENT_TYPE.equals(event.getType())) {
@@ -362,7 +363,7 @@ public class PaymentGatewayService {
             String email = (user != null) ? user.getEmail() : session.getCustomerDetails().getEmail();
 
             // Create an order based on the session and user details.
-            Order order = createOrder(session, userId, user);
+            order = createOrder(session, userId, user);
             // Create the order items based on the session and user ID.
             createOrderItems(session, order, userId);
 
@@ -444,6 +445,7 @@ public class PaymentGatewayService {
 
         // Set the total price for the order.
         order.setTotalPrice(amount.floatValue());
+        order.setPaymentIntent(session.getPaymentIntent());
         // Set the user ID associated with the order.
         order.setUserId(userId);
         // If a user is provided, set the user's country in the order.
@@ -577,11 +579,11 @@ public class PaymentGatewayService {
         order.setPhone(phone);
         order.setEmail(email);
         order.setItems(items);
-        if (country.isEmpty()) {
+        if (!country.isEmpty()) {
             order.setCountry(country);
-        }
-        // Save the order to the repository.
-        orderRepository.save(order);
+        } else
+            // Save the order to the repository.
+            orderRepository.save(order);
     }
 
     /**
