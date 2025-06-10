@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
-const SalesChart = () => {
+const SalesChart = ({ year }) => {
     const [salesData, setSalesData] = useState([]);
-    const currentYear = new Date().getFullYear();
     const [authToken] = useState(localStorage.getItem("authToken"));
 
     const months = [
@@ -12,7 +11,7 @@ const SalesChart = () => {
     ];
 
     useEffect(() => {
-        fetch(`/api/admin/sales/monthly?year=${currentYear}`, {
+        fetch(`/api/admin/sales/monthly?year=${year}`, {
             method: "GET",
             headers: {
                 'Authorization': `Bearer ${authToken}`,
@@ -29,7 +28,7 @@ const SalesChart = () => {
             .catch(error => {
                 console.error("Hubo un error al obtener los datos", error);
             });
-    }, [currentYear, authToken]);
+    }, [year, authToken]);
 
     return (
         <ResponsiveContainer width="100%" height={400}>

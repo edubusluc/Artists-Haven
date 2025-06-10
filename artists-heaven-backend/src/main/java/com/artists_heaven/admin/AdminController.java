@@ -8,7 +8,6 @@ import com.artists_heaven.email.EmailType;
 import com.artists_heaven.entities.artist.Artist;
 import com.artists_heaven.entities.artist.ArtistRepository;
 import com.artists_heaven.order.OrderService;
-import com.artists_heaven.order.OrderStatisticsDTO;
 import com.artists_heaven.order.OrderStatus;
 import com.artists_heaven.verification.VerificationStatus;
 import com.artists_heaven.verification.Verification;
@@ -113,6 +112,9 @@ public class AdminController {
             Integer numArtists = adminService.countArtists();
             Map<OrderStatus, Integer> orderStatusCounts = adminService.getOrderStatusCounts(year);
             Map<VerificationStatus, Integer> vericationStatusCount = adminService.getVerificationStatusCount(year);
+            Map<String, Integer> orderItemCount = adminService.getMostSoldItems(year);
+            Map<String,Integer> categoryItemCount = adminService.getMostCategory(year);
+            Map<String,Integer> mostCountrySold = adminService.getCountrySold(year);
 
             // Create the DTO and set the values
             OrderStatisticsDTO orderStatistics = new OrderStatisticsDTO();
@@ -123,6 +125,9 @@ public class AdminController {
             orderStatistics.setNumArtists(numArtists);
             orderStatistics.setOrderStatusCounts(orderStatusCounts);
             orderStatistics.setVerificationStatusCounts(vericationStatusCount);
+            orderStatistics.setOrderItemCount(orderItemCount);
+            orderStatistics.setCategoryItemCount(categoryItemCount);
+            orderStatistics.setMostCountrySold(mostCountrySold);
             return ResponseEntity.ok(orderStatistics);
         } catch (Exception e) {
             return ResponseEntity.badRequest().build();
