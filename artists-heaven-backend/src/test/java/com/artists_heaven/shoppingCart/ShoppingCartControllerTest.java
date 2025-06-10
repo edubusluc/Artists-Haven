@@ -111,6 +111,9 @@ public class ShoppingCartControllerTest {
         Authentication authentication = mock(Authentication.class);
         when(authentication.getPrincipal()).thenReturn(user);
 
+        //Manejo para evitar el error de imagenes
+        when(productService.findById(cartItem.getProduct().getId())).thenReturn(product);
+
         SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);

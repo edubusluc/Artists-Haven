@@ -57,6 +57,8 @@ public class Order {
 
     private String phone;
 
+    private String paymentIntent;
+
     public Order() {
     }
 

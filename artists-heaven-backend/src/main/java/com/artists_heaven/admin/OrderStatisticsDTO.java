@@ -1,8 +1,9 @@
-package com.artists_heaven.order;
+package com.artists_heaven.admin;
 
 import java.util.Map;
 
 import com.artists_heaven.email.EmailType;
+import com.artists_heaven.order.OrderStatus;
 import com.artists_heaven.verification.VerificationStatus;
 
 import lombok.Getter;
@@ -18,4 +19,7 @@ public class OrderStatisticsDTO {
     private Integer numArtists;
     private Map<OrderStatus, Integer> orderStatusCounts;
     private Map<VerificationStatus, Integer> verificationStatusCounts;
+    private Map<String, Integer> orderItemCount;
+    private Map<String, Integer> categoryItemCount;
+    private Map<String, Integer> mostCountrySold;
 }

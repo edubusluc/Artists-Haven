@@ -7,9 +7,7 @@ import { faUser } from "@fortawesome/free-solid-svg-icons";
 import { CartContext } from "../context/CartContext";
 import { Link } from "react-router-dom";
 import { useTranslation } from 'react-i18next';
-
-
-
+import Logout from "./Logout";
 
 const Header = () => {
     const { shoppingCart: contextShoppingCart, handleDeleteProduct } = useContext(CartContext);
@@ -250,78 +248,7 @@ const Header = () => {
 
                 </div>
             </div>
-            <div
-                onClick={toggleSidebarLeft}
-                style={{
-                    cursor: "pointer",
-                    position: "relative",
-                    display: "inline-block",
-                }}
-            >
-                <FontAwesomeIcon icon={faBasketball} size="2x" />
-            </div>
-            {/* Overlay oscuro detrás del panel */}
-            {isSidebarVisibleLeft && (
-                <div
-                    onClick={closeSidebarLeft}
-                    style={{
-                        position: "fixed",
-                        top: 0,
-                        left: 0,
-                        width: "100%",
-                        height: "100%",
-                        backgroundColor: "rgba(0, 0, 0, 0.5)", // Fondo oscuro
-                        zIndex: 998, // Asegura que esté debajo del sidebar
-                    }}
-                />
-            )}
-
-            {/* Barra lateral (sidebar) */}
-            <div
-                style={{
-                    position: "fixed",
-                    top: 0,
-                    left: isSidebarVisibleLeft ? 0 : "-400px", // Controla la visibilidad
-                    width: "400px", // El ancho estándar
-                    height: "100vh",
-                    backgroundColor: "white",
-                    boxShadow: "-2px 0 5px rgba(0,0,0,0.1)",
-                    transition: "left 0.3s ease",
-                    zIndex: 999,
-                    padding: "20px",
-                    overflowY: "auto",
-                }}
-            >
-                {/* Contenido de la barra lateral izquierda */}
-                <button
-                    onClick={closeSidebarLeft}
-                    style={{
-                        position: "absolute",
-                        top: "20px",
-                        right: "20px",
-                        color: "black",
-                        border: "none",
-                        padding: "10px",
-                        cursor: "pointer",
-                    }}
-                >
-                    X
-                </button>
-                <h3 className="p-4 custom-font-shop custom-font-shop-black" style={{ borderBottom: "1px solid #e5e7eb" }}>
-                    Admin Panel
-                </h3>
-                <div className="p-4 custom-font-shop-regular custom-font-shop-black">
-                    {links.map((link, index) => (
-                        <Link to={link.to} key={index} onClick={closeSidebarLeft}>
-                            <p className={'mt-4'}>
-                                <FontAwesomeIcon icon={link.icon} style={{ marginRight: '8px' }} />
-                                {link.label}
-                            </p>
-                        </Link>
-                    ))}
-                </div>
-
-            </div>
+            <Logout/>
         </div>
     );
 };
