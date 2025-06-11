@@ -183,7 +183,7 @@ public class AdminServiceTest {
     @Test
     void testGetAvailableProducts() {
         when(adminRepository.findAvailableProducts()).thenReturn(1);
-        Integer result = adminService.getNotAvailableProducts();
+        Integer result = adminService.getAvailableProducts();
 
         assertNotNull(result);
     }
@@ -191,7 +191,7 @@ public class AdminServiceTest {
     @Test
     void testGetPromotedProducts() {
         when(adminRepository.findPromotedProducts()).thenReturn(1);
-        Integer result = adminService.getNotAvailableProducts();
+        Integer result = adminService.getPromotedProducts();
 
         assertNotNull(result);
     }
@@ -199,7 +199,7 @@ public class AdminServiceTest {
     @Test
     void testGetTotalProducts() {
         when(adminRepository.findTotalProductsCount()).thenReturn(1);
-        Integer result = adminService.getNotAvailableProducts();
+        Integer result = adminService.getTotalProducts();
 
         assertNotNull(result);
     }
