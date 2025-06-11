@@ -44,4 +44,16 @@ public interface AdminRepository extends JpaRepository<User, Long> {
     @Query("SELECT o FROM Order o WHERE EXTRACT(YEAR FROM o.createdDate) = :year")
     List<Order> getOrdersPerYear(@Param("year") int year);
 
+    @Query("SELECT COUNT(p) FROM Product p WHERE p.available = false")
+    Integer findNotAvailableProducts();
+
+    @Query("SELECT COUNT(p) FROM Product p WHERE p.available = true")
+    Integer findAvailableProducts();
+
+    @Query("SELECT COUNT(p) FROM Product p WHERE p.on_Promotion = true")
+    Integer findPromotedProducts();
+
+    @Query("SELECT COUNT(p) FROM Product p")
+    Integer findTotalProductsCount();
+
 }

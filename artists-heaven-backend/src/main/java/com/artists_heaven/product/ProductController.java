@@ -1,6 +1,7 @@
 package com.artists_heaven.product;
 
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
@@ -12,6 +13,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
 
+import org.springframework.data.domain.Page;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,6 +25,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.core.io.Resource;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.RequestBody;
 
@@ -36,11 +39,20 @@ public class ProductController {
         this.productService = productService;
     }
 
-    // Endpoint to retrieve all products
     @GetMapping("/allProducts")
-    public List<Product> getAllProducts() {
-        // Fetching and returning the list of all products from the product service
-        return productService.getAllProducts();
+    public Page<Product> getAllProducts(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "6") int size,
+            @RequestParam(required = false) String search) {
+
+        PageRequest pageRequest = PageRequest.of(page, size);
+
+
+        if (search != null && !search.isEmpty()) {
+            return productService.searchProducts(search, pageRequest);
+        }
+
+        return productService.getAllProducts(pageRequest);
     }
 
     // Endpoint to retrieve a product media (image) by its file name
@@ -160,11 +172,11 @@ public class ProductController {
     @PutMapping("promote/{id}")
     public ResponseEntity<String> promoteProduct(@PathVariable Long id, @RequestBody PromoteDTO promoteDTO) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        
+
         if (authentication == null || !authentication.isAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
         }
-    
+
         User user = (User) authentication.getPrincipal();
         try {
             if ("ADMIN".equals(user.getRole().toString())) {
@@ -181,11 +193,11 @@ public class ProductController {
     @PutMapping("demote/{id}")
     public ResponseEntity<String> demoteProduct(@PathVariable Long id) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        
+
         if (authentication == null || !authentication.isAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
         }
-    
+
         User user = (User) authentication.getPrincipal();
         try {
             if ("ADMIN".equals(user.getRole().toString())) {
@@ -201,10 +213,10 @@ public class ProductController {
 
     @GetMapping("allPromotedProducts")
     public ResponseEntity<List<Product>> getAllPromotedProducts() {
-        // Fetching and returning the list of all promoted products from the product service
+        // Fetching and returning the list of all promoted products from the product
+        // service
         List<Product> promotedProducts = productService.getAllPromotedProducts();
         return ResponseEntity.ok(promotedProducts);
     }
-    
 
 }

@@ -2,9 +2,11 @@ package com.artists_heaven.product;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -17,10 +19,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.hamcrest.Matchers.is;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -46,11 +49,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import jakarta.transaction.Transactional;
 
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.Authentication;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 public class ProductControllerTest {
 
@@ -69,36 +76,36 @@ public class ProductControllerTest {
                 SecurityContextHolder.clearContext();
         }
 
-        @Test
-        @Transactional
-        void testGetAllProducts() throws Exception {
-                List<Product> products = new ArrayList<>();
-                Product product1 = new Product();
-                product1.setCategories(new HashSet<>());
-                product1.setDescription("Description");
-                product1.setName("Product1");
-                product1.setPrice(100.0f);
-                product1.setSize(new HashMap<>());
-                product1.setImages(new ArrayList<>());
-                product1.setAvailable(true);
-                products.add(product1);
+        // @Test
+        // @Transactional
+        // void testGetAllProducts() throws Exception {
+        // List<Product> products = new ArrayList<>();
+        // Product product1 = new Product();
+        // product1.setCategories(new HashSet<>());
+        // product1.setDescription("Description");
+        // product1.setName("Product1");
+        // product1.setPrice(100.0f);
+        // product1.setSize(new HashMap<>());
+        // product1.setImages(new ArrayList<>());
+        // product1.setAvailable(true);
+        // products.add(product1);
 
-                Product product2 = new Product();
-                product2.setCategories(new HashSet<>());
-                product2.setDescription("Description");
-                product2.setName("Product2");
-                product2.setPrice(100.0f);
-                product2.setSize(new HashMap<>());
-                product2.setImages(new ArrayList<>());
-                product2.setAvailable(true);
+        // Product product2 = new Product();
+        // product2.setCategories(new HashSet<>());
+        // product2.setDescription("Description");
+        // product2.setName("Product2");
+        // product2.setPrice(100.0f);
+        // product2.setSize(new HashMap<>());
+        // product2.setImages(new ArrayList<>());
+        // product2.setAvailable(true);
 
-                when(productService.getAllProducts()).thenReturn(products);
+        // when(productService.getAllProducts()).thenReturn(products);
 
-                mockMvc.perform(get("/api/product/allProducts"))
-                                .andExpect(status().isOk())
-                                .andExpect(jsonPath("$.length()").value(1))
-                                .andExpect(jsonPath("$[0].name").value("Product1"));
-        }
+        // mockMvc.perform(get("/api/product/allProducts"))
+        // .andExpect(status().isOk())
+        // .andExpect(jsonPath("$.length()").value(1))
+        // .andExpect(jsonPath("$[0].name").value("Product1"));
+        // }
 
         @Test
         @Transactional
@@ -493,6 +500,59 @@ public class ProductControllerTest {
                                 .andExpect(jsonPath("$[0].discount").value(10))
                                 .andExpect(jsonPath("$[0].price").value(90.0));
 
+        }
+
+        @Test
+        void testGetAllProducts_WithSearch() {
+                // Arrange
+                String search = "Product";
+                int page = 0;
+                int size = 6;
+                Pageable pageable = PageRequest.of(page, size);
+
+                Product product = new Product();
+                product.setName("Product 1");
+
+                List<Product> products = List.of(product);
+                Page<Product> productPage = new PageImpl<>(products, pageable, products.size());
+
+                when(productService.searchProducts(search, pageable)).thenReturn(productPage);
+
+                // Act
+                Page<Product> result = productController.getAllProducts(page, size, search);
+
+                // Assert
+                assertNotNull(result);
+                assertEquals(1, result.getTotalElements());
+                assertEquals("Product 1", result.getContent().get(0).getName());
+                verify(productService, times(1)).searchProducts(search, pageable);
+                verify(productService, never()).getAllProducts(any(Pageable.class));
+        }
+
+        @Test
+        void testGetAllProducts_WithoutSearch() {
+                // Arrange
+                int page = 0;
+                int size = 6;
+                Pageable pageable = PageRequest.of(page, size);
+
+                Product product = new Product();
+                product.setName("Product 1");
+
+                List<Product> products = List.of(product);
+                Page<Product> productPage = new PageImpl<>(products, pageable, products.size());
+
+                when(productService.getAllProducts(pageable)).thenReturn(productPage);
+
+                // Act
+                Page<Product> result = productController.getAllProducts(page, size, null);
+
+                // Assert
+                assertNotNull(result);
+                assertEquals(1, result.getTotalElements());
+                assertEquals("Product 1", result.getContent().get(0).getName());
+                verify(productService, times(1)).getAllProducts(pageable);
+                verify(productService, never()).searchProducts(anyString(), any(Pageable.class));
         }
 
 }

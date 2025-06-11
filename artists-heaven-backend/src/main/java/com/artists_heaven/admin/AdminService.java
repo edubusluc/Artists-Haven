@@ -90,11 +90,10 @@ public class AdminService {
         Map<String, Integer> itemsCount = new HashMap<>();
 
         for (Order order : ordersByYear) {
-                itemsCount.merge(order.getCountry(), 1, Integer::sum);
-            }
-            return itemsCount;
+            itemsCount.merge(order.getCountry(), 1, Integer::sum);
         }
-        
+        return itemsCount;
+    }
 
     public Map<String, Integer> getMostCategory(int year) {
         List<Order> ordersByYear = adminRepository.getOrdersPerYear(year);
@@ -114,6 +113,22 @@ public class AdminService {
         for (Category category : product.getCategories()) {
             categoryCount.merge(category.getName(), 1, Integer::sum);
         }
+    }
+
+    public Integer getNotAvailableProducts() {
+        return adminRepository.findNotAvailableProducts();
+    }
+
+    public Integer getAvailableProducts() {
+        return adminRepository.findAvailableProducts();
+    }
+
+    public Integer getPromotedProducts() {
+        return adminRepository.findPromotedProducts();
+    }
+
+    public Integer getTotalProducts() {
+        return adminRepository.findTotalProductsCount();
     }
 
 }

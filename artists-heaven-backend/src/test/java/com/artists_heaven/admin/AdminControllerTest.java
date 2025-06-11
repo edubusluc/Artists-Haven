@@ -286,4 +286,20 @@ public class AdminControllerTest {
                                 .andExpect(status().isBadRequest());
         }
 
+        @Test
+        void testProductManagement() throws Exception {
+                when(adminService.getNotAvailableProducts()).thenReturn(100);
+                when(adminService.getAvailableProducts()).thenReturn(100);
+                when(adminService.getPromotedProducts()).thenReturn(100);
+                when(adminService.getTotalProducts()).thenReturn(100);
+
+                mockMvc.perform(get("/api/admin/product-management"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.notAvailableProducts").value(100))
+                                .andExpect(jsonPath("$.availableProducts").value(100))
+                                .andExpect(jsonPath("$.promotedProducts").value(100))
+                                .andExpect(jsonPath("$.totalProducts").value(100));
+
+        }
+
 }

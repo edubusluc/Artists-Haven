@@ -64,7 +64,7 @@ const ReviewForm = () => {
             alert("Ocurrió un error al enviar la reseña.");
         }
     };
-
+console.log(product)
     return (
   <>
     <div
@@ -86,7 +86,7 @@ const ReviewForm = () => {
           {/* Contenedor de imagen */}
           <div className="shadow-lg rounded-lg p-4 flex justify-center items-center md:w-1/3">
             <img
-              src={`/api/product${product.images}`}
+              src={`/api/product${product.images[0]}`}
               alt={product.name}
               className="object-contain max-w-full max-h-[200px]"
               loading="lazy"

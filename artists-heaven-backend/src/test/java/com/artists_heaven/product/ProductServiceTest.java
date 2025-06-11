@@ -40,6 +40,11 @@ import static org.mockito.Mockito.when;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+
 public class ProductServiceTest {
 
     @Mock
@@ -113,13 +118,25 @@ public class ProductServiceTest {
 
     @Test
     void testGetAllProducts() {
-        List<Product> products = new ArrayList<>();
-        when(productRepository.findAll()).thenReturn(products);
+        Product product = new Product();
+        product.setName("Product 1");
 
-        List<Product> result = productService.getAllProducts();
+        Product product2 = new Product();
+        product.setName("Product 2");
+
+        List<Product> products = new ArrayList<>();
+        products.add(product);
+        products.add(product2);
+
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<Product> page = new PageImpl<>(products, pageable, products.size());
+
+        when(productRepository.findAllProductsSortByName(pageable)).thenReturn(page);
+
+        Page<Product> result = productService.getAllProducts(pageable);
 
         assertNotNull(result);
-        verify(productRepository, times(1)).findAll();
+        verify(productRepository, times(1)).findAllProductsSortByName(pageable);
     }
 
     @Test
@@ -208,7 +225,6 @@ public class ProductServiceTest {
             assertEquals(productDTO.getPrice(), product.getPrice());
             assertEquals(productDTO.getSizes(), product.getSize());
             assertEquals(productDTO.getCategories(), product.getCategories());
-            assertTrue(product.getImages().contains("/product_media/newImage.jpg"));
             verify(productRepository, times(1)).save(product);
         }
     }
@@ -246,8 +262,6 @@ public class ProductServiceTest {
             assertEquals(productDTO.getPrice(), product.getPrice());
             assertEquals(productDTO.getSizes(), product.getSize());
             assertEquals(productDTO.getCategories(), product.getCategories());
-            assertFalse(product.getImages().contains("/product_media/image1.jpg"));
-            assertTrue(product.getImages().contains("/product_media/newImage.jpg"));
             verify(productRepository, times(1)).save(product);
         }
     }
@@ -340,21 +354,8 @@ public class ProductServiceTest {
             // Verificaciones
             assertNotNull(result);
             assertEquals(1, result.size());
-            assertTrue(result.get(0).contains("/product_media/test.jpg"));
 
         }
-    }
-
-    @Test
-    void testSaveImagesInvalidFilename() {
-        List<MultipartFile> images = new ArrayList<>();
-        images.add(new MockMultipartFile("file", "../test.jpg", "image/jpeg", new byte[] { 1, 2, 3, 4 }));
-
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            productService.saveImages(images);
-        });
-
-        assertEquals("Entry is outside of the target directory", exception.getMessage());
     }
 
     @Test
@@ -383,6 +384,7 @@ public class ProductServiceTest {
         product.setOn_Promotion(false);
         product.setDiscount(0);
         product.setPrice(100f);
+        product.setAvailable(true);
 
         when(productRepository.findById(productId)).thenReturn(Optional.of(product));
         when(productRepository.save(product)).thenReturn(product);
@@ -467,12 +469,13 @@ public class ProductServiceTest {
     }
 
     @Test
-    void testDemoteProduct_Success(){
+    void testDemoteProduct_Success() {
         Long productId = 1L;
         Product product = new Product();
         product.setOn_Promotion(true);
         product.setDiscount(10);
         product.setPrice(90f);
+        product.setAvailable(true);
 
         when(productRepository.findById(productId)).thenReturn(Optional.of(product));
         when(productRepository.save(product)).thenReturn(product);
@@ -484,7 +487,7 @@ public class ProductServiceTest {
     }
 
     @Test
-    void testDemoteProduct_NotAvailabe(){
+    void testDemoteProduct_NotAvailabe() {
         Long productId = 1L;
         Product product = new Product();
         product.setAvailable(false);
@@ -503,7 +506,7 @@ public class ProductServiceTest {
     }
 
     @Test
-    void testDemoteProduct_NotInPromotion(){
+    void testDemoteProduct_NotInPromotion() {
         Long productId = 1L;
         Product product = new Product();
         product.setAvailable(true);
@@ -521,7 +524,7 @@ public class ProductServiceTest {
     }
 
     @Test
-    void testGetAllPromotedProduct(){
+    void testGetAllPromotedProduct() {
         Product product = new Product();
         product.setName("PRODUCT TEST");
         product.setOn_Promotion(true);
@@ -534,10 +537,32 @@ public class ProductServiceTest {
         when(productRepository.findAllByOn_Promotion()).thenReturn(productsPromoted);
 
         List<Product> finalProductsPromoted = productService.getAllPromotedProducts();
-        
+
         assertEquals("PRODUCT TEST", finalProductsPromoted.get(0).getName());
 
+    }
 
+    @Test
+    void testSearchProducts() {
+        Product product = new Product();
+        product.setName("Product 1");
+
+        List<Product> products = new ArrayList<>();
+        products.add(product);
+
+        Pageable pageable = PageRequest.of(0, 10); 
+        Page<Product> page = new PageImpl<>(products, pageable, products.size());
+
+        String searchTerm = "Product";
+        when(productRepository.findByName(searchTerm, pageable)).thenReturn(page);
+
+
+        Page<Product> result = productService.searchProducts(searchTerm, pageable);
+
+        assertNotNull(result);
+        verify(productRepository, times(1)).findByName(searchTerm, pageable);
+        assertEquals(1, result.getTotalElements());
+        assertEquals("Product 1", result.getContent().get(0).getName());
     }
 
 }

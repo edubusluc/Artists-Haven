@@ -1,5 +1,6 @@
 package com.artists_heaven.admin;
 
+import static org.junit.Assert.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -150,7 +151,6 @@ public class AdminServiceTest {
         category.setName("Test");
         Set<Category> categories = new HashSet<>(Set.of(category));
 
-
         Product product = new Product();
         product.setId(2L);
         product.setCategories(categories);
@@ -170,9 +170,38 @@ public class AdminServiceTest {
         Map<String, Integer> result = adminService.getMostCategory(year);
         assertEquals(1, result.size());
         assertEquals(1, result.get("Test"));
+    }
 
+    @Test
+    void testGetNotAvailableProducts() {
+        when(adminRepository.findNotAvailableProducts()).thenReturn(1);
+        Integer result = adminService.getNotAvailableProducts();
 
+        assertNotNull(result);
+    }
 
+    @Test
+    void testGetAvailableProducts() {
+        when(adminRepository.findAvailableProducts()).thenReturn(1);
+        Integer result = adminService.getAvailableProducts();
+
+        assertNotNull(result);
+    }
+
+    @Test
+    void testGetPromotedProducts() {
+        when(adminRepository.findPromotedProducts()).thenReturn(1);
+        Integer result = adminService.getPromotedProducts();
+
+        assertNotNull(result);
+    }
+
+    @Test
+    void testGetTotalProducts() {
+        when(adminRepository.findTotalProductsCount()).thenReturn(1);
+        Integer result = adminService.getTotalProducts();
+
+        assertNotNull(result);
     }
 
 }
