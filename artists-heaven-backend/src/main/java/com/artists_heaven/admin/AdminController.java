@@ -113,8 +113,8 @@ public class AdminController {
             Map<OrderStatus, Integer> orderStatusCounts = adminService.getOrderStatusCounts(year);
             Map<VerificationStatus, Integer> vericationStatusCount = adminService.getVerificationStatusCount(year);
             Map<String, Integer> orderItemCount = adminService.getMostSoldItems(year);
-            Map<String,Integer> categoryItemCount = adminService.getMostCategory(year);
-            Map<String,Integer> mostCountrySold = adminService.getCountrySold(year);
+            Map<String, Integer> categoryItemCount = adminService.getMostCategory(year);
+            Map<String, Integer> mostCountrySold = adminService.getCountrySold(year);
 
             // Create the DTO and set the values
             OrderStatisticsDTO orderStatistics = new OrderStatisticsDTO();
@@ -143,6 +143,24 @@ public class AdminController {
             return ResponseEntity.badRequest().build();
         }
     }
-    
+
+    @GetMapping("/product-management")
+    public ResponseEntity<ProductManagementDTO> getProductManagement() {
+        try {
+            Integer notAvailableProducts = adminService.getNotAvailableProducts();
+            Integer availableProducts = adminService.getAvailableProducts();
+            Integer promotedProducts = adminService.getPromotedProducts();
+            Integer totalProducts = adminService.getTotalProducts();
+
+            ProductManagementDTO productManagement = new ProductManagementDTO();
+            productManagement.setNotAvailableProducts(notAvailableProducts);
+            productManagement.setAvailableProducts(availableProducts);
+            productManagement.setPromotedProducts(promotedProducts);
+            productManagement.setTotalProducts(totalProducts);
+            return ResponseEntity.ok(productManagement);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
 
 }
