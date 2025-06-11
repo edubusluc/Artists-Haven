@@ -1,6 +1,6 @@
 import Footer from '../Footer';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSackDollar, faShirt, faUser } from '@fortawesome/free-solid-svg-icons';
+import { faShirt, faCheck, faXmark, faRectangleAd } from '@fortawesome/free-solid-svg-icons';
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -93,8 +93,8 @@ const AdminProductList = () => {
     const MetricCard = React.memo(({ icon, value, title, iconColor, bgColor }) => {
         return (
             <div className="flex-1 w-auto bg-white shadow-lg rounded-lg p-4 m-2 flex items-center">
-                <div className={`flex items-center mr-4 px-4 py-4 rounded-full ${bgColor}`}>
-                    <FontAwesomeIcon icon={icon} className={`${iconColor} text-2xl`} />
+                <div className={`flex items-center justify-center mr-4 w-12 h-12 rounded-full ${bgColor}`}>
+                    <FontAwesomeIcon icon={icon} className={`${iconColor} text-xl`} />
                 </div>
                 <div>
                     <p className="text-3xl font-bold text-indigo-600 truncate">{value}</p>
@@ -190,7 +190,7 @@ const AdminProductList = () => {
                                             <div className="mb-2">
                                                 {product.on_Promotion && product.discount > 0 ? (
                                                     <div className="flex items-center gap-2">
-                                                        <span className="text-sm text-gray-500 line-through">{(product.price/((100 - product.discount) /100)).toFixed(2)}€</span>
+                                                        <span className="text-sm text-gray-500 line-through">{(product.price / ((100 - product.discount) / 100)).toFixed(2)}€</span>
                                                         <span className="text-base font-bold text-rose-600">
                                                             {product.price.toFixed(2)}€
                                                         </span>
@@ -265,9 +265,9 @@ const AdminProductList = () => {
                         <div className="bg-gray-50 p-4 rounded-lg mb-4 flex justify-around">
                             <div className="flex flex-col sm:flex-row flex-wrap ">
                                 <MetricCard icon={faShirt} value={productManagement.totalProducts} title="Productos Totales" iconColor="text-blue-600" bgColor="bg-blue-300" />
-                                <MetricCard icon={faShirt} value={productManagement.availableProducts} title="Productos Disponibles" iconColor="text-blue-600" bgColor="bg-blue-300" />
-                                <MetricCard icon={faSackDollar} value={productManagement.notAvailableProducts} title="Productos No Disponibles" iconColor="text-green-600" bgColor="bg-green-300" />
-                                <MetricCard icon={faUser} value={productManagement.promotedProducts} title="Productos Promocionados" iconColor="text-orange-600" bgColor="bg-orange-300" />
+                                <MetricCard icon={faCheck} value={productManagement.availableProducts} title="Productos Disponibles" iconColor="text-green-600" bgColor="bg-green-300" />
+                                <MetricCard icon={faXmark} value={productManagement.notAvailableProducts} title="Productos No Disponibles" iconColor="text-red-600" bgColor="bg-red-300" />
+                                <MetricCard icon={faRectangleAd} value={productManagement.promotedProducts} title="Productos Promocionados" iconColor="text-yellow-600" bgColor="bg-yellow-300" />
                             </div>
                         </div>
 
