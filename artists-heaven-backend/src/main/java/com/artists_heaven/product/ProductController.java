@@ -45,7 +45,6 @@ public class ProductController {
             @RequestParam(defaultValue = "6") int size,
             @RequestParam(required = false) String search) {
 
-        // Construir objeto PageRequest
         PageRequest pageRequest = PageRequest.of(page, size);
 
 
@@ -53,7 +52,6 @@ public class ProductController {
             return productService.searchProducts(search, pageRequest);
         }
 
-        // Devolver todos los productos paginados
         return productService.getAllProducts(pageRequest);
     }
 
