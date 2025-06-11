@@ -43,7 +43,7 @@ public class Product {
     private Map<String, Integer> size;
 
     @Column(nullable = false)
-    private Boolean available = true;
+    private Boolean available = false;
 
     @ManyToMany
     @JoinTable(name = "product_category", joinColumns = @JoinColumn(name = "product_id"), inverseJoinColumns = @JoinColumn(name = "category_id"))

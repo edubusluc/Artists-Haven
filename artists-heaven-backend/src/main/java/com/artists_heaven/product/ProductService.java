@@ -12,6 +12,9 @@ import java.util.Set;
 import org.springframework.util.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Page;
+import java.util.UUID;
 
 @Service
 public class ProductService {
@@ -44,10 +47,6 @@ public class ProductService {
             product.setPrice(productDTO.getPrice());
             product.setSize(productDTO.getSizes());
             product.setImages(productDTO.getImages());
-
-            // Set the product's availability status to false by default
-            product.setAvailable(false);
-
             // Save the product to the repository and return the saved product
             return productRepository.save(product);
         } catch (Exception e) {
@@ -84,7 +83,16 @@ public class ProductService {
         for (MultipartFile image : images) {
             // Clean the filename to ensure it is safe to use
             String fileName = StringUtils.cleanPath(image.getOriginalFilename());
-            Path targetPath = Paths.get(UPLOAD_DIR, fileName).normalize();
+            String extension = "";
+
+            int dotIndex = fileName.lastIndexOf('.');
+            if (dotIndex > 0) {
+                extension = fileName.substring(dotIndex);
+            }
+
+            String uniqueFileName = UUID.randomUUID().toString() + extension;
+
+            Path targetPath = Paths.get(UPLOAD_DIR, uniqueFileName).normalize();
 
             // Ensure the file is not saved outside the target directory for security
             if (!targetPath.startsWith(TARGET_PATH)) {
@@ -95,8 +103,7 @@ public class ProductService {
                 // Save the image to the directory
                 Files.copy(image.getInputStream(), targetPath);
                 // Add the image's URL to the list (adjust the URL according to the system)
-                fileName = "/product_media/" + fileName;
-                imageUrls.add(fileName); // Add URL to the list
+                imageUrls.add("/product_media/" + uniqueFileName);
             } catch (IOException e) {
                 // Throw an exception if an error occurs while saving the image
                 throw new IllegalArgumentException("Error while saving images.");
@@ -171,9 +178,9 @@ public class ProductService {
      *
      * @return List of all products stored in the repository.
      */
-    public List<Product> getAllProducts() {
+    public Page<Product> getAllProducts(Pageable pageable) {
         // Retrieve and return all products from the repository
-        return productRepository.findAll();
+        return productRepository.findAllProductsSortByName(pageable);
     }
 
     /**
@@ -250,16 +257,16 @@ public class ProductService {
         save(product);
     }
 
-    public void promoteProduct(Long productId, Integer discount){
-        if(discount < 0 || discount > 100){
+    public void promoteProduct(Long productId, Integer discount) {
+        if (discount < 0 || discount > 100) {
             throw new IllegalArgumentException("Discount must be between 0 and 100");
         }
         Product product = findById(productId);
-        if(!product.getAvailable()){
+        if (!product.getAvailable()) {
             throw new IllegalArgumentException("Product is not available");
         }
 
-        if(product.getOn_Promotion()){
+        if (product.getOn_Promotion()) {
             throw new IllegalArgumentException("Product is already on promotion");
         }
         product.setOn_Promotion(true);
@@ -269,12 +276,12 @@ public class ProductService {
         save(product);
     }
 
-    public void demoteProduct(Long productId){
+    public void demoteProduct(Long productId) {
         Product product = findById(productId);
-        if(!product.getAvailable()){
+        if (!product.getAvailable()) {
             throw new IllegalArgumentException("Product is not available");
         }
-        if(!product.getOn_Promotion()){
+        if (!product.getOn_Promotion()) {
             throw new IllegalArgumentException("Product is not on promotion");
         }
         product.setOn_Promotion(false);
@@ -285,15 +292,19 @@ public class ProductService {
         save(product);
     }
 
-    private Float reCalculatePrice(Integer discount, Float price){
-        
+    private Float reCalculatePrice(Integer discount, Float price) {
+
         Float reCalculatePrice = (100 - discount) / 100f;
-        return price/reCalculatePrice;
-        
+        return price / reCalculatePrice;
+
     }
 
     public List<Product> getAllPromotedProducts() {
         return productRepository.findAllByOn_Promotion();
+    }
+
+    public Page<Product> searchProducts(String searchTerm, Pageable pageable) {
+        return productRepository.findByName(searchTerm, pageable);
     }
 
 }
