@@ -7,8 +7,11 @@ import com.artists_heaven.email.EmailSenderService;
 import com.artists_heaven.email.EmailType;
 import com.artists_heaven.entities.artist.Artist;
 import com.artists_heaven.entities.artist.ArtistRepository;
+import com.artists_heaven.entities.user.User;
+import com.artists_heaven.entities.user.UserProfileDTO;
 import com.artists_heaven.order.OrderService;
 import com.artists_heaven.order.OrderStatus;
+import com.artists_heaven.page.PageResponse;
 import com.artists_heaven.verification.VerificationStatus;
 import com.artists_heaven.verification.Verification;
 import com.artists_heaven.verification.VerificationRepository;
@@ -18,6 +21,8 @@ import java.util.List;
 import java.util.Map;
 import java.nio.file.Path;
 import org.springframework.core.io.Resource;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.HttpHeaders;
 
@@ -161,6 +166,18 @@ public class AdminController {
         } catch (Exception e) {
             return ResponseEntity.badRequest().build();
         }
+    }
+
+    @GetMapping("/users")
+    public PageResponse<UserProfileDTO> getUsers(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "6") int size,
+            @RequestParam(required = false) String search) {
+
+        PageRequest pageRequest = PageRequest.of(page, size);
+        Page<UserProfileDTO> userPage = adminService.getAllUsers(search, pageRequest);
+
+        return new PageResponse<>(userPage);
     }
 
 }

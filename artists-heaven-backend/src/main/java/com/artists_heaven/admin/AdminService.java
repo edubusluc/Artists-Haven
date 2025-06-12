@@ -5,8 +5,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import com.artists_heaven.entities.user.User;
+import com.artists_heaven.entities.user.UserProfileDTO;
 import com.artists_heaven.order.Order;
 import com.artists_heaven.order.OrderItem;
 import com.artists_heaven.order.OrderStatus;
@@ -129,6 +133,11 @@ public class AdminService {
 
     public Integer getTotalProducts() {
         return adminRepository.findTotalProductsCount();
+    }
+
+    public Page<UserProfileDTO> getAllUsers(String search, Pageable pageable) {
+        Page<User> users = adminRepository.findAllSort(search, pageable);
+        return users.map(UserProfileDTO::new);
     }
 
 }

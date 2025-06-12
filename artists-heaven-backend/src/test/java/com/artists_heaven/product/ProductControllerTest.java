@@ -45,6 +45,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.artists_heaven.entities.user.User;
 import com.artists_heaven.entities.user.UserRole;
+import com.artists_heaven.page.PageResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import jakarta.transaction.Transactional;
@@ -519,7 +520,7 @@ public class ProductControllerTest {
                 when(productService.searchProducts(search, pageable)).thenReturn(productPage);
 
                 // Act
-                Page<Product> result = productController.getAllProducts(page, size, search);
+                PageResponse<Product> result = productController.getAllProducts(page, size, search);
 
                 // Assert
                 assertNotNull(result);
@@ -545,7 +546,7 @@ public class ProductControllerTest {
                 when(productService.getAllProducts(pageable)).thenReturn(productPage);
 
                 // Act
-                Page<Product> result = productController.getAllProducts(page, size, null);
+                PageResponse<Product> result = productController.getAllProducts(page, size, null);
 
                 // Assert
                 assertNotNull(result);
