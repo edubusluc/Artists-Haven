@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.artists_heaven.entities.user.User;
+import com.artists_heaven.page.PageResponse;
 
 import java.nio.file.Paths;
 import java.nio.file.Path;
@@ -40,19 +41,21 @@ public class ProductController {
     }
 
     @GetMapping("/allProducts")
-    public Page<Product> getAllProducts(
+    public PageResponse<Product> getAllProducts(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "6") int size,
             @RequestParam(required = false) String search) {
 
         PageRequest pageRequest = PageRequest.of(page, size);
-
+        Page<Product> result;
 
         if (search != null && !search.isEmpty()) {
-            return productService.searchProducts(search, pageRequest);
+            result = productService.searchProducts(search, pageRequest);
+        } else {
+            result = productService.getAllProducts(pageRequest);
         }
 
-        return productService.getAllProducts(pageRequest);
+        return new PageResponse<>(result);
     }
 
     // Endpoint to retrieve a product media (image) by its file name

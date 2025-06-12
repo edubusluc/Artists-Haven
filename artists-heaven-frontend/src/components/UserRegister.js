@@ -36,7 +36,7 @@ const UserRegister = () => {
           .map((country) => ({
             value: country.translations?.spa?.common,
             label: currentLang === 'es'
-              ? country.translations?.spa?.common: country.name.common,
+              ? country.translations?.spa?.common : country.name.common,
             flag: country.flags.png,
           }))
           .sort((a, b) => a.label.localeCompare(b.label));
@@ -70,6 +70,8 @@ const UserRegister = () => {
       }
     }
 
+    console.log(user);
+
     try {
       const response = await fetch('/api/users/register', {
         method: 'POST',
@@ -78,11 +80,19 @@ const UserRegister = () => {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.message || 'Error al registrar el usuario');
       }
 
-      await response.json();
+      // Solo hacer .json() si hay contenido
+      let responseData = null;
+      try {
+        responseData = await response.json();
+      } catch (_) {
+        // No hay cuerpo JSON, está bien ignorarlo si no lo necesitas
+      }
+
+      console.log('Usuario registrado:', responseData);
 
       setUser(inputFields.reduce((acc, field) => ({ ...acc, [field.name]: '' }), {}));
       navigate('/users');

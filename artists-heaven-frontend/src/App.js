@@ -31,6 +31,7 @@ import AdminDashboard from './components/admin/AdminDashboard';
 import { CartProvider } from './context/CartContext';
 import './style.css';
 import './i18n/i18n';
+import AdminClient from './components/admin/AdmiClients';
 
 const App = () => {
   const [role, setRole] = useState(localStorage.getItem("role"));
@@ -84,6 +85,7 @@ const App = () => {
               <Route path="/success" element={<Success />} />
               <Route path="/admin/products/store" element={<AdminProductList />} />
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
+              <Route path="/admin/clients" element={<AdminClient />} />
             </Routes>
           </Router>
         </Suspense>

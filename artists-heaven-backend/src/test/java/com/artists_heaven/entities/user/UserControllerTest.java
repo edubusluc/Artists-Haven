@@ -124,6 +124,7 @@ public class UserControllerTest {
                 artist.setLastName("Artist lastName");
                 artist.setEmail("artist@email.com");
                 artist.setArtistName("Artist Name");
+                artist.setRole(UserRole.ARTIST);
                 when(userRepository.findByEmail("artist@email.com")).thenReturn(artist);
 
                 // Simular autenticación

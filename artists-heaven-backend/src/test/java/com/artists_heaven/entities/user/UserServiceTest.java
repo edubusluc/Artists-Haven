@@ -67,6 +67,7 @@ class UserServiceTest {
         User user = new User();
         user.setFirstName("John");
         user.setLastName("Doe");
+        user.setRole(UserRole.USER);
         Principal principal = mock(Authentication.class);
         when(((Authentication) principal).getPrincipal()).thenReturn(user);
 
@@ -82,6 +83,7 @@ class UserServiceTest {
         artist.setFirstName("John");
         artist.setLastName("Doe");
         artist.setArtistName("JDArtist");
+        artist.setRole(UserRole.ARTIST);
         Principal principal = mock(Authentication.class);
         when(((Authentication) principal).getPrincipal()).thenReturn(artist);
 

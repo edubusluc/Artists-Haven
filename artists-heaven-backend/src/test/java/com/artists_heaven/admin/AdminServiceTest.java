@@ -16,7 +16,15 @@ import org.junit.jupiter.api.BeforeEach;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
+import com.artists_heaven.entities.user.User;
+import com.artists_heaven.entities.user.UserProfileDTO;
+import com.artists_heaven.entities.user.UserRole;
 import com.artists_heaven.order.Order;
 import com.artists_heaven.order.OrderItem;
 import com.artists_heaven.order.OrderStatus;
@@ -25,9 +33,11 @@ import com.artists_heaven.product.Product;
 import com.artists_heaven.product.ProductService;
 import com.artists_heaven.verification.VerificationStatus;
 
+import lombok.ToString;
+
 import org.junit.jupiter.api.Test;
 
-public class AdminServiceTest {
+class AdminServiceTest {
 
     @InjectMocks
     private AdminService adminService;
@@ -202,6 +212,28 @@ public class AdminServiceTest {
         Integer result = adminService.getTotalProducts();
 
         assertNotNull(result);
+    }
+
+    @Test
+    void testGetAllUsers() {
+        // Arrange
+        String search = "john";
+        Pageable pageable = PageRequest.of(0, 10, Sort.by("name").ascending());
+        User user = new User();
+        user.setId(1L);
+        user.setFirstName("John Doe");
+        user.setRole(UserRole.USER);
+
+        Page<User> userPage = new PageImpl<>(List.of(user), pageable, 1);
+
+        when(adminRepository.findAllSort(search, pageable)).thenReturn(userPage);
+
+        // Act
+        Page<UserProfileDTO> result = adminService.getAllUsers(search, pageable);
+
+        // Assert
+        assertEquals(1, result.getTotalElements());
+        assertEquals("John Doe", result.getContent().get(0).getFirstName());
     }
 
 }

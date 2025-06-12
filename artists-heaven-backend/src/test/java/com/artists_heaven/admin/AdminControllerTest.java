@@ -15,6 +15,9 @@ import java.nio.file.Path;
 import java.nio.file.Files;
 
 import org.springframework.core.io.Resource;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -32,8 +35,10 @@ import com.artists_heaven.email.EmailSenderService;
 import com.artists_heaven.email.EmailType;
 import com.artists_heaven.entities.artist.Artist;
 import com.artists_heaven.entities.artist.ArtistRepository;
+import com.artists_heaven.entities.user.UserProfileDTO;
 import com.artists_heaven.order.OrderService;
 import com.artists_heaven.order.OrderStatus;
+import com.artists_heaven.page.PageResponse;
 import com.artists_heaven.verification.Verification;
 import com.artists_heaven.verification.VerificationRepository;
 import com.artists_heaven.verification.VerificationStatus;
@@ -300,6 +305,32 @@ public class AdminControllerTest {
                                 .andExpect(jsonPath("$.promotedProducts").value(100))
                                 .andExpect(jsonPath("$.totalProducts").value(100));
 
+        }
+
+        @Test
+        void testGetUsers() {
+                // Arrange
+                int page = 0;
+                int size = 6;
+                String search = "john";
+                PageRequest pageable = PageRequest.of(page, size);
+
+                UserProfileDTO dto = new UserProfileDTO();
+                dto.setId(1L);
+                dto.setFirstName("John Doe");
+                dto.setRole("USER");
+
+                Page<UserProfileDTO> userPage = new PageImpl<>(List.of(dto), pageable, 1);
+
+                when(adminService.getAllUsers(search, pageable)).thenReturn(userPage);
+
+                // Act
+                PageResponse<UserProfileDTO> response = adminController.getUsers(page, size, search);
+
+                // Assert
+                assertEquals(1, response.getTotalElements());
+                assertEquals(1, response.getContent().size());
+                assertEquals("John Doe", response.getContent().get(0).getFirstName());
         }
 
 }

@@ -63,7 +63,8 @@ public class SecurityConfiguration {
             "/api/product/demote/{id}",
             "/api/admin/staticsPerYear",
             "/api/admin/sales/monthly",
-            "/api/admin/product-management"
+            "/api/admin/product-management",
+            "/api/admin/users"
     };
 
     // Endpoints accessible only by ARTIST users
