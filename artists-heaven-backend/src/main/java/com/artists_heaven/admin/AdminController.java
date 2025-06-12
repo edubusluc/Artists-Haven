@@ -7,7 +7,6 @@ import com.artists_heaven.email.EmailSenderService;
 import com.artists_heaven.email.EmailType;
 import com.artists_heaven.entities.artist.Artist;
 import com.artists_heaven.entities.artist.ArtistRepository;
-import com.artists_heaven.entities.user.User;
 import com.artists_heaven.entities.user.UserProfileDTO;
 import com.artists_heaven.order.OrderService;
 import com.artists_heaven.order.OrderStatus;
