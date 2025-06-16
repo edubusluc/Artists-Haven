@@ -21,6 +21,11 @@ const AdminClient = () => {
         userDetails: { content: [] }
     });
 
+    const [verifications, setVerifications] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [users, setUsers] = useState([]);
+
 
     useEffect(() => {
         if (!authToken || role !== 'ADMIN') return;
@@ -75,6 +80,116 @@ const AdminClient = () => {
             controller.abort();
         };
     }, [authToken, page, searchTerm]);
+
+    useEffect(() => {
+        if (role !== "ADMIN") {
+            // Si el rol no es ADMIN, no hacemos la petición
+            return;
+        }
+        const fetchVerifications = async () => {
+            try {
+                const response = await fetch("/api/admin/verification/pending", {
+                    method: "GET",
+                    headers: {
+                        "Content-Type": "application/json",
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                });
+                if (!response.ok) {
+                    throw new Error(`Error: ${response.status}`);
+                }
+                const data = await response.json();
+                setVerifications(data);
+            } catch (err) {
+                setError(err.message);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchVerifications();
+    }, [authToken]);
+
+    const fetchVideoBlob = async (videoUrl, authToken) => {
+        try {
+            if (role !== "ADMIN") {
+                return;
+            }
+            const response = await fetch(`/api/admin${videoUrl}`, {
+                method: "GET",
+                headers: {
+                    'Authorization': `Bearer ${authToken}`
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to fetch video: ${response.status}`);
+            }
+
+            const videoBlob = await response.blob();
+            return URL.createObjectURL(videoBlob);
+        } catch (error) {
+            console.error("Error fetching video blob:", error);
+            return null;
+        }
+    };
+
+    const VideoLink = ({ videoUrl, authToken }) => {
+        const [videoSrc, setVideoSrc] = useState(null);
+
+        useEffect(() => {
+            const fetchAndSetVideo = async () => {
+                const videoBlobUrl = await fetchVideoBlob(videoUrl, authToken);
+                setVideoSrc(videoBlobUrl);
+            };
+
+            fetchAndSetVideo();
+        }, [videoUrl, authToken]);
+
+        return (
+            <div>
+                {videoSrc ? (
+                    <a href={videoSrc} target="_blank" rel="noopener noreferrer">
+                        Open Video
+                    </a>
+                ) : (
+                    <p>Loading video...</p>
+                )}
+            </div>
+        )
+    }
+
+    const verifyArtist = (id, verificationId) => {
+        if (role !== "ADMIN") {
+            // Si el rol no es ADMIN, no hacemos la petición
+            return;
+        }
+        fetch('/api/admin/validate_artist', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify({
+                id,
+                verificationId
+            }),
+        })
+            .then(response => {
+                if (response.ok) {
+                    setUsers(users.map(user =>
+                        user.id === id ? { ...user, role: "ARTIST" } : user
+                    ));
+                    console.log("Artitsa verificado")
+                    window.location.reload()
+                } else {
+                    console.log('Error al verificar al artista');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+    };
 
     useEffect(() => {
         window.scrollTo(0, 0);
@@ -187,6 +302,64 @@ const AdminClient = () => {
                                 />
                             </div>
                         </div>
+                    </div>
+                    <div className="bg-white p-4 rounded-lg mb-4 w-full overflow-x-auto">
+                    <p className="custom-font-footer-black text-xl md:text-2xl font-bold text-center md:text-left mb-6">
+                            Verificaciones Pendientes
+                        </p>
+
+                        {verifications.length > 0 ? (
+                            <table className="min-w-full divide-y divide-gray-200 text-sm">
+                                <thead className="bg-gray-100 text-gray-600 uppercase text-xs">
+                                    <tr>
+                                        <th className="px-4 py-3 text-left">ID</th>
+                                        <th className="px-4 py-3 text-left">Artista</th>
+                                        <th className="px-4 py-3 text-left">Video</th>
+                                        <th className="px-4 py-3 text-left">Fecha</th>
+                                        <th className="px-4 py-3 text-left">Estado</th>
+                                        <th className="px-4 py-3 text-left">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-200">
+                                    {verifications.map((verification) => (
+                                        <tr key={verification.id} className="hover:bg-gray-50">
+                                            <td className="px-4 py-3">{verification.id}</td>
+                                            <td className="px-4 py-3 font-medium text-gray-800">
+                                                {verification.artist?.artistName || "Desconocido"}
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <VideoLink videoUrl={verification.videoUrl} authToken={authToken} />
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                {new Date(verification.date).toLocaleString()}
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <span className={`px-2 py-1 rounded text-xs font-semibold
+                                ${verification.status === 'PENDING'
+                                                        ? 'bg-yellow-100 text-yellow-700'
+                                                        : 'bg-green-100 text-green-700'}`}>
+                                                    {verification.status}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                {!verification.artist?.isvalid ? (
+                                                    <button
+                                                        onClick={() => verifyArtist(verification.artist.id, verification.id)}
+                                                        className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 transition"
+                                                    >
+                                                        Verificar
+                                                    </button>
+                                                ) : (
+                                                    <span className="text-gray-500 italic text-sm">Ya verificado</span>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        ) : (
+                            <p className="text-gray-500 text-sm text-center">No hay verificaciones pendientes.</p>
+                        )}
                     </div>
                     <div>USUARIOS PENALIZADOS</div>
                 </div>

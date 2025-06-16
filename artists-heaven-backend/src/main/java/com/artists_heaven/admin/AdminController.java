@@ -8,10 +8,15 @@ import com.artists_heaven.email.EmailType;
 import com.artists_heaven.entities.artist.Artist;
 import com.artists_heaven.entities.artist.ArtistRepository;
 import com.artists_heaven.entities.user.UserProfileDTO;
+import com.artists_heaven.order.Order;
+import com.artists_heaven.order.OrderDetailsDTO;
 import com.artists_heaven.order.OrderService;
 import com.artists_heaven.order.OrderStatus;
 import com.artists_heaven.page.PageResponse;
 import com.artists_heaven.verification.VerificationStatus;
+
+import jakarta.persistence.EntityNotFoundException;
+
 import com.artists_heaven.verification.Verification;
 import com.artists_heaven.verification.VerificationRepository;
 
@@ -179,4 +184,30 @@ public class AdminController {
         return new PageResponse<>(userPage);
     }
 
+    @GetMapping("/orders")
+    public PageResponse<OrderDetailsDTO> getOrders(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "6") int size) {
+
+        PageRequest pageRequest = PageRequest.of(page, size);
+        Page<Order> orderPage = adminService.getAllOrderSortByDate(pageRequest);
+
+        // Mapea cada Order a OrderDTO
+        Page<OrderDetailsDTO> dtoPage = orderPage.map(OrderDetailsDTO::new);
+
+        return new PageResponse<>(dtoPage);
+    }
+
+    @PostMapping("/updateStatus")
+    public ResponseEntity<String> updateOrderStatus(@RequestBody OrderStatusUpdateDTO request) {
+        try {
+            adminService.updateOrderStatus(request.getOrderId(), request.getStatus());
+            return ResponseEntity.ok("Order status updated successfully.");
+        } catch (EntityNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("An error occurred while updating the order status.");
+        }
+    }
 }

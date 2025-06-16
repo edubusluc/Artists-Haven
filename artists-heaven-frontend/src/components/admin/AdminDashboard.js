@@ -1,6 +1,5 @@
-import bg from '../../util-image/bg.png';
 import Footer from '../Footer';
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBug, faEnvelope, faShieldAlt, faExclamationCircle, faLock, faCoffee, faSackDollar, faShirt, faUser, faMusic } from '@fortawesome/free-solid-svg-icons';
 import SalesChart from '../charts/SalesChart';

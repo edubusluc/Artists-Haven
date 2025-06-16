@@ -2,6 +2,8 @@ package com.artists_heaven.admin;
 
 import static org.junit.Assert.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -27,13 +29,14 @@ import com.artists_heaven.entities.user.UserProfileDTO;
 import com.artists_heaven.entities.user.UserRole;
 import com.artists_heaven.order.Order;
 import com.artists_heaven.order.OrderItem;
+import com.artists_heaven.order.OrderService;
 import com.artists_heaven.order.OrderStatus;
 import com.artists_heaven.product.Category;
 import com.artists_heaven.product.Product;
 import com.artists_heaven.product.ProductService;
 import com.artists_heaven.verification.VerificationStatus;
 
-import lombok.ToString;
+import jakarta.persistence.EntityNotFoundException;
 
 import org.junit.jupiter.api.Test;
 
@@ -47,6 +50,9 @@ class AdminServiceTest {
 
     @Mock
     private ProductService productService;
+
+    @Mock
+    private OrderService orderService;
 
     @BeforeEach
     void setUp() {
@@ -236,4 +242,52 @@ class AdminServiceTest {
         assertEquals("John Doe", result.getContent().get(0).getFirstName());
     }
 
+    @Test
+    void testGetAllOrderSortByDate() {
+        Order order = new Order();
+
+        Pageable pageable = PageRequest.of(0, 10, Sort.by("createdDate").ascending());
+
+        Page<Order> orderPage = new PageImpl<>(List.of(order), pageable, 1);
+        when(adminRepository.findAllOrderSortByDate(pageable)).thenReturn(orderPage);
+
+        Page<Order> result = adminService.getAllOrderSortByDate(pageable);
+
+        assertEquals(1, result.getTotalElements());
+    }
+
+    @Test
+    void testUpdateOrderStatus() {
+        Long orderId = 1L;
+        OrderStatus newStatus = OrderStatus.SENT;
+        Order order = new Order();
+        order.setId(orderId);
+        order.setStatus(OrderStatus.PAID);
+
+        when(orderService.findOrderById(orderId)).thenReturn(order);
+
+        adminService.updateOrderStatus(orderId, newStatus);
+
+        assertEquals(newStatus, order.getStatus());
+        verify(orderService, times(1)).saveOrder(order);
+    }
+
+    @Test
+    void testUpdateOrderStatus_OrderNotFound() {
+        // Datos de prueba
+        Long orderId = 1L;
+        OrderStatus newStatus = OrderStatus.PAID;
+
+        // Simulamos que el repositorio no encuentra la orden y lanza una excepción
+        when(orderService.findOrderById(orderId))
+                .thenThrow(new EntityNotFoundException("Order not found with id: " + orderId));
+
+        // Llamamos al método updateOrderStatus y verificamos que se lanza la excepción
+        EntityNotFoundException exception = assertThrows(EntityNotFoundException.class, () -> {
+            adminService.updateOrderStatus(orderId, newStatus);
+        });
+
+        // Verificamos el mensaje de la excepción
+        assertEquals("Order not found with id: " + orderId, exception.getMessage());
+    }
 }

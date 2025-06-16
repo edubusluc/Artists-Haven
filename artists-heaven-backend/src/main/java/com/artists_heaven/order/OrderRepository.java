@@ -8,8 +8,8 @@ import org.springframework.data.repository.query.Param;
 
 public interface OrderRepository extends JpaRepository<Order, Long> {
 
-    @Query("SELECT o FROM Order o WHERE o.userId = :userId")
-    List<Order> getOrdersByUserId(Long userId);
+    @Query("SELECT o FROM Order o WHERE o.user.id = :userId")
+    List<Order> getOrdersByUserId(@Param("userId") Long userId);
 
     @Query("SELECT COUNT(o) FROM Order o WHERE EXTRACT(YEAR FROM o.createdDate) = :year")
     Integer getNumOrdersPerYear(@Param("year") int year);
