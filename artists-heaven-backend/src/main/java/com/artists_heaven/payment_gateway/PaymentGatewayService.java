@@ -447,7 +447,7 @@ public class PaymentGatewayService {
         order.setTotalPrice(amount.floatValue());
         order.setPaymentIntent(session.getPaymentIntent());
         // Set the user ID associated with the order.
-        order.setUserId(userId);
+        order.setUser(user);
         // If a user is provided, set the user's country in the order.
         if (user != null) {
             order.setCountry(user.getCountry());

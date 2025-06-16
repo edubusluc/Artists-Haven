@@ -84,7 +84,7 @@ public class RatingServiceTest {
         item.setProductId(product.getId());
 
         Order order = new Order();
-        order.setUserId(user.getId());
+        order.setUser(user);
         order.setItems(new ArrayList<>(List.of(item)));
 
         when(productRepository.findById(1L)).thenReturn(Optional.of(product));
