@@ -5,6 +5,14 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.artists_heaven.entities.artist.Artist;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
@@ -23,6 +31,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.http.MediaType;
 
 @RestController
 @RequestMapping("/api/event")
@@ -36,128 +45,132 @@ public class EventController {
         this.eventService = eventService;
     }
 
-    // Endpoint to retrieve all events
+    @Operation(summary = "Retrieve all events", description = "Fetches a list of all events.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "List of events retrieved successfully", content = @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = Event.class))))
+    })
     @GetMapping("/allEvents")
     public List<Event> getAllEvents() {
-        // Calling the service method to fetch all events from the database
-        // and returning the list of events
         return eventService.getAllEvents();
     }
 
-    // Endpoint to create a new event
+    @Operation(summary = "Create a new event", description = "Creates a new event associated with the authenticated artist and uploads an event image.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201", description = "Event created successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = Event.class))),
+            @ApiResponse(responseCode = "400", description = "Bad request - invalid data or user is not an artist", content = @Content(mediaType = "application/json"))
+    })
     @PostMapping("/new")
     public ResponseEntity<Event> newEvent(
-            @RequestPart("event") EventDTO eventDTO, // Event data from the request
-            @RequestPart("images") MultipartFile image) { // Image for the event
-
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Event data and event image", required = true, content = {
+                    @Content(mediaType = "multipart/form-data")
+            }) @RequestPart("event") EventDTO eventDTO,
+            @RequestPart("images") MultipartFile image) {
         try {
-            // Getting the authenticated user (current logged-in user)
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             Object principalUser = authentication.getPrincipal();
 
-            // Checking if the authenticated user is an Artist
             if (principalUser instanceof Artist) {
                 Artist artist = (Artist) principalUser;
-                // Setting the artist's ID to the event data
                 eventDTO.setArtistId(artist.getId());
 
-                // Saving the event image and getting the image URL
                 String imageUrls = eventService.saveImages(image);
                 eventDTO.setImage(imageUrls);
 
-                // Creating a new event using the event data and returning the created event
                 Event newEvent = eventService.newEvent(eventDTO);
                 return new ResponseEntity<>(newEvent, HttpStatus.CREATED);
             } else {
-                // Throwing an exception if the user is not an Artist
-                throw new IllegalArgumentException(ERROR_MESSAGE);
+                throw new IllegalArgumentException("User is not an artist");
             }
-
         } catch (IllegalArgumentException e) {
-            // Returning a bad request response if there's an error
             return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
         }
     }
 
-    // Endpoint to retrieve all events created by the authenticated artist
+    @Operation(summary = "Get all events created by the authenticated artist", description = "Retrieves a list of all events created by the currently authenticated artist.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "List of events retrieved successfully", content = @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = Event.class)))),
+            @ApiResponse(responseCode = "400", description = "Bad request - user is not an artist", content = @Content(mediaType = "application/json"))
+    })
     @GetMapping("/allMyEvents")
     public ResponseEntity<List<Event>> getAllMyEvents() {
-        // Getting the authenticated user (current logged-in user)
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         Object principalUser = authentication.getPrincipal();
 
-        // Checking if the authenticated user is an Artist
         if (eventService.isArtist()) {
             Artist artist = (Artist) principalUser;
-            // Fetching all events created by the authenticated artist using their ID
             List<Event> events = eventService.getAllMyEvents(artist.getId());
-            // Returning the list of events with a successful response
             return ResponseEntity.ok(events);
         } else {
-            // Returning a bad request response if the user is not an artist
             return ResponseEntity.badRequest().body(null);
         }
     }
 
-    // Endpoint to delete an event by its ID
+    @Operation(summary = "Delete an event by ID", description = "Deletes an event if it belongs to the authenticated artist. Also deletes associated images.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Event deleted successfully"),
+            @ApiResponse(responseCode = "400", description = "Bad request - user is not an artist or invalid request"),
+            @ApiResponse(responseCode = "404", description = "Event not found or does not belong to the authenticated artist")
+    })
     @DeleteMapping("/delete/{id}")
-    public ResponseEntity<String> deleteEvent(@PathVariable Long id) {
-        // Getting the authenticated user (current logged-in user)
+    public ResponseEntity<String> deleteEvent(
+            @Parameter(description = "ID of the event to delete") @PathVariable Long id) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         Object principalUser = authentication.getPrincipal();
 
-        // Checking if the authenticated user is an Artist
         if (!eventService.isArtist()) {
-            // Returning a bad request response if the user is not an artist
             return ResponseEntity.badRequest().body(ERROR_MESSAGE);
         }
 
         Artist artist = (Artist) principalUser;
 
         try {
-            // Fetching the event by its ID
             Event event = eventService.getEventById(id);
 
-            // Verifying that the event belongs to the authenticated artist
             if (!event.getArtist().getId().equals(artist.getId())) {
-                // Returning a "not found" response if the event does not belong to the artist
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body("This event does not belong to you");
             }
 
-            // Deleting associated images for the event
             eventService.deleteImages(event.getImage());
-
-            // Deleting the event from the database
             eventService.deleteEvent(id);
 
-            // Returning a success message after the event is deleted
             return ResponseEntity.ok("Event deleted successfully");
         } catch (IllegalArgumentException e) {
-            // Returning a bad request response if there is an error
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 
-    // Endpoint to get the details of an event by its ID
+    @Operation(summary = "Get event details by ID", description = "Retrieves detailed information about an event specified by its ID.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Event details retrieved successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = Event.class))),
+            @ApiResponse(responseCode = "404", description = "Event not found", content = @Content(mediaType = "application/json"))
+    })
     @GetMapping("details/{id}")
-    public ResponseEntity<Event> eventDetails(@PathVariable Long id) {
+    public ResponseEntity<Event> eventDetails(
+            @Parameter(description = "ID of the event to retrieve", required = true) @PathVariable Long id) {
         try {
-            // Fetching the event details by its ID
             Event event = eventService.getEventById(id);
-
-            // Returning the event details with a successful response
             return ResponseEntity.ok(event);
         } catch (IllegalArgumentException e) {
-            // Returning a "not found" response if the event does not exist
             return ResponseEntity.notFound().build();
         }
     }
 
-    // Endpoint to update an existing event by its ID
+    @Operation(summary = "Update an existing event", description = "Updates the details of an existing event by its ID. "
+            +
+            "Only the artist who created the event can update it. " +
+            "An optional new image can be provided to replace the current one.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Event updated successfully"),
+            @ApiResponse(responseCode = "400", description = "Bad request, e.g. validation errors or user not an artist"),
+            @ApiResponse(responseCode = "404", description = "Event not found or does not belong to the authenticated artist")
+    })
     @PutMapping("/edit/{id}")
-    public ResponseEntity<String> updateEvent(@PathVariable Long id,
-            @RequestPart("event") EventDTO eventDTO, // Event data to update
-            @RequestPart(value = "image", required = false) MultipartFile newImage) { // Optional new image
+    public ResponseEntity<String> updateEvent(
+            @Parameter(description = "ID of the event to update", required = true) @PathVariable Long id,
+            @Parameter(description = "Event data to update", required = true, content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE)) @RequestPart("event") EventDTO eventDTO,
+            @Parameter(description = "Optional new image file to replace the current event image") @RequestPart(value = "image", required = false) MultipartFile newImage) { // Optional
+                                                                                                                                                                             // new
+                                                                                                                                                                             // image
 
         // Getting the authenticated user (current logged-in user)
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -199,9 +212,16 @@ public class EventController {
         }
     }
 
-    // Endpoint to retrieve an event media (image) by its file name
+    @Operation(summary = "Retrieve event media by file name", description = "Returns the image file associated with an event by its file name. "
+            +
+            "The image is served with a PNG content type.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Image retrieved successfully", content = @Content(mediaType = "image/png")),
+            @ApiResponse(responseCode = "404", description = "Image file not found")
+    })
     @GetMapping("/event_media/{fileName:.+}")
-    public ResponseEntity<Resource> getProductImage(@PathVariable String fileName) {
+    public ResponseEntity<Resource> getProductImage(
+            @Parameter(description = "Name of the image file to retrieve", required = true, example = "event_image.png") @PathVariable String fileName) {
         // Constructing the base path to the directory where event media is stored
         String basePath = System.getProperty("user.dir") + "/artists-heaven-backend/src/main/resources/event_media/";
 

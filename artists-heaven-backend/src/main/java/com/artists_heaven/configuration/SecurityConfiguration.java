@@ -49,6 +49,9 @@ public class SecurityConfiguration {
             "/api/payment_process/stripeWebhook",
             "/api/rating/productReview/**",
             "/api/product/allPromotedProducts",
+            "/v3/api-docs/**",
+            "/swagger-ui/**",
+            "/swagger-ui.html"
     };
 
     // Endpoints accessible only by ADMIN users
@@ -114,20 +117,26 @@ public class SecurityConfiguration {
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-        // Configures CORS settings
         CorsConfiguration configuration = new CorsConfiguration();
-        // Allowed origins
         configuration.setAllowedOrigins(List.of("http://localhost:3000", "http://localhost:8080"));
-        // Allowed HTTP methods
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE"));
-        // Allowed headers
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
-        // Allows credentials such as cookies or authorization headers
         configuration.setAllowCredentials(true);
 
-        // Applies the CORS configuration to all paths
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+
+        // Configuración general para toda la API
         source.registerCorsConfiguration("/**", configuration);
+
+        // Configuración específica para Swagger UI
+        CorsConfiguration swaggerConfig = new CorsConfiguration();
+        swaggerConfig.setAllowedOrigins(List.of("http://localhost:3000"));
+        swaggerConfig.setAllowedMethods(List.of("GET"));
+        swaggerConfig.setAllowedHeaders(List.of("*"));
+        swaggerConfig.setAllowCredentials(true);
+        source.registerCorsConfiguration("/swagger-ui/**", swaggerConfig);
+        source.registerCorsConfiguration("/v3/api-docs/**", swaggerConfig);
+
         return source;
     }
 

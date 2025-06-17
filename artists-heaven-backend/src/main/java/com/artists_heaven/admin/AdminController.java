@@ -15,6 +15,13 @@ import com.artists_heaven.order.OrderStatus;
 import com.artists_heaven.page.PageResponse;
 import com.artists_heaven.verification.VerificationStatus;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.persistence.EntityNotFoundException;
 
 import com.artists_heaven.verification.Verification;
@@ -62,39 +69,49 @@ public class AdminController {
         this.adminService = adminService;
     }
 
+    @Operation(summary = "Validate artist account", description = "This endpoint marks an artist as verified and updates the associated verification request status to 'ACCEPTED'.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Artist successfully validated", content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"message\": \"Artist verified successfully\"}"))),
+            @ApiResponse(responseCode = "404", description = "Artist or verification request not found", content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Artist not found\"}")))
+    })
     @PostMapping("/validate_artist")
-    public ResponseEntity<Map<String, String>> validateArtist(@RequestBody Map<String, Long> payload) {
+    public ResponseEntity<Map<String, String>> validateArtist(
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Payload containing the artist ID and verification request ID", required = true, content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"id\": 123, \"verificationId\": 456}"))) @RequestBody Map<String, Long> payload) {
         Long artistId = payload.get("id");
 
         Artist artist = artistRepository.findById(artistId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Artista no encontrado"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Artist not found"));
 
         artist.setIsvalid(true);
         artistRepository.save(artist);
 
         Long verificationId = payload.get("verificationId");
         Verification verification = verificationRepository.findById(verificationId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Verificación no encontrada"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Verification not found"));
 
         verification.setStatus(VerificationStatus.ACCEPTED);
         verificationRepository.save(verification);
 
-        return ResponseEntity.ok(Map.of("message", "Artista verificado de forma correcta"));
-
+        return ResponseEntity.ok(Map.of("message", "Artist verified successfully"));
     }
 
-    ////////////////////////////////////////////
-    // Get all verification request
-    ////////////////////////////////////////////
+    @Operation(summary = "Get all pending verifications", description = "Returns a list of all verification requests, regardless of their status. You may want to filter by 'PENDING' on the client side.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "List of verification requests retrieved successfully", content = @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = Verification.class))))
+    })
     @GetMapping("/verification/pending")
     public ResponseEntity<List<Verification>> getAllValidation() {
         List<Verification> verificationList = verificationRepository.findAll();
         return ResponseEntity.ok(verificationList);
     }
 
+    @Operation(summary = "Get verification video by filename", description = "Retrieves a video file used for artist verification from the local server directory. The file must exist under the verification_media folder.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Video file retrieved successfully", content = @Content(mediaType = "video/mp4", schema = @Schema(type = "string", format = "binary"))),
+            @ApiResponse(responseCode = "404", description = "Video file not found")
+    })
     @GetMapping("/verification_media/{fileName:.+}")
     public ResponseEntity<Resource> getVerificationVideo(@PathVariable String fileName) {
-        // Obtén el directorio base del proyecto de forma dinámica
         String basePath = System.getProperty("user.dir")
                 + "/artists-heaven-backend/src/main/resources/verification_media/";
         Path filePath = Paths.get(basePath, fileName);
@@ -109,8 +126,14 @@ public class AdminController {
                 .body(resource);
     }
 
+    @Operation(summary = "Get yearly platform statistics", description = "Returns statistical data for a given year, including number of orders, total income, email counts, user and artist counts, order statuses, verification statuses, top-selling items, top categories, and countries with the most sales.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Yearly statistics retrieved successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = OrderStatisticsDTO.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid year parameter or processing error")
+    })
     @GetMapping("/staticsPerYear")
-    public ResponseEntity<OrderStatisticsDTO> getNumOrdersPerYear(@RequestParam int year) {
+    public ResponseEntity<OrderStatisticsDTO> getNumOrdersPerYear(
+            @Parameter(description = "Year for which to retrieve statistics", example = "2024", required = true) @RequestParam int year) {
         try {
             Integer numOrders = orderService.getNumOrdersPerYear(year);
             Double incomePerYear = orderService.getIncomePerYear(year);
@@ -123,7 +146,6 @@ public class AdminController {
             Map<String, Integer> categoryItemCount = adminService.getMostCategory(year);
             Map<String, Integer> mostCountrySold = adminService.getCountrySold(year);
 
-            // Create the DTO and set the values
             OrderStatisticsDTO orderStatistics = new OrderStatisticsDTO();
             orderStatistics.setNumOrders(numOrders);
             orderStatistics.setIncomePerYear(incomePerYear);
@@ -135,14 +157,21 @@ public class AdminController {
             orderStatistics.setOrderItemCount(orderItemCount);
             orderStatistics.setCategoryItemCount(categoryItemCount);
             orderStatistics.setMostCountrySold(mostCountrySold);
+
             return ResponseEntity.ok(orderStatistics);
         } catch (Exception e) {
             return ResponseEntity.badRequest().build();
         }
     }
 
+    @Operation(summary = "Get monthly sales data", description = "Returns a list of sales figures per month for the specified year. Each item in the list contains the month and total sales amount.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Monthly sales data retrieved successfully", content = @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = MonthlySalesDTO.class)))),
+            @ApiResponse(responseCode = "400", description = "Invalid year parameter or processing error")
+    })
     @GetMapping("/sales/monthly")
-    public ResponseEntity<List<MonthlySalesDTO>> getMonthlySalesData(@RequestParam int year) {
+    public ResponseEntity<List<MonthlySalesDTO>> getMonthlySalesData(
+            @Parameter(description = "Year for which to retrieve monthly sales data", example = "2024", required = true) @RequestParam int year) {
         try {
             List<MonthlySalesDTO> monthlySalesData = adminService.getMonthlySalesData(year);
             return ResponseEntity.ok(monthlySalesData);
@@ -151,6 +180,11 @@ public class AdminController {
         }
     }
 
+    @Operation(summary = "Get product management statistics", description = "Retrieves counts of products by status, including not available, available, promoted, and total products.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Product management statistics retrieved successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ProductManagementDTO.class))),
+            @ApiResponse(responseCode = "400", description = "Failed to retrieve product statistics")
+    })
     @GetMapping("/product-management")
     public ResponseEntity<ProductManagementDTO> getProductManagement() {
         try {
@@ -170,34 +204,50 @@ public class AdminController {
         }
     }
 
+    @Operation(summary = "Get paginated list of users", description = "Retrieves a paginated list of user profiles. Supports optional search by user attributes.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Paginated list of users retrieved successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = PageResponse.class)))
+    })
     @GetMapping("/users")
     public PageResponse<UserProfileDTO> getUsers(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "6") int size,
-            @RequestParam(required = false) String search) {
+            @Parameter(description = "Page number (0-based)", example = "0") @RequestParam(defaultValue = "0") int page,
 
+            @Parameter(description = "Page size (number of users per page)", example = "6") @RequestParam(defaultValue = "6") int size,
+
+            @Parameter(description = "Optional search keyword to filter users", example = "john") @RequestParam(required = false) String search) {
         PageRequest pageRequest = PageRequest.of(page, size);
         Page<UserProfileDTO> userPage = adminService.getAllUsers(search, pageRequest);
 
         return new PageResponse<>(userPage);
     }
 
+    @Operation(summary = "Get paginated list of orders", description = "Retrieves a paginated list of orders sorted by date, returning detailed order information.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Paginated list of orders retrieved successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = PageResponse.class)))
+    })
     @GetMapping("/orders")
     public PageResponse<OrderDetailsDTO> getOrders(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "6") int size) {
+            @Parameter(description = "Page number (0-based)", example = "0") @RequestParam(defaultValue = "0") int page,
 
+            @Parameter(description = "Page size (number of orders per page)", example = "6") @RequestParam(defaultValue = "6") int size) {
         PageRequest pageRequest = PageRequest.of(page, size);
         Page<Order> orderPage = adminService.getAllOrderSortByDate(pageRequest);
 
-        // Mapea cada Order a OrderDTO
+        // Map each Order entity to OrderDetailsDTO
         Page<OrderDetailsDTO> dtoPage = orderPage.map(OrderDetailsDTO::new);
 
         return new PageResponse<>(dtoPage);
     }
 
+    @Operation(summary = "Update the status of an order", description = "Updates the status of a specific order based on the provided order ID and new status.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Order status updated successfully", content = @Content(mediaType = "text/plain")),
+            @ApiResponse(responseCode = "404", description = "Order not found", content = @Content(mediaType = "text/plain")),
+            @ApiResponse(responseCode = "500", description = "Internal server error occurred while updating the order status", content = @Content(mediaType = "text/plain"))
+    })
     @PostMapping("/updateStatus")
-    public ResponseEntity<String> updateOrderStatus(@RequestBody OrderStatusUpdateDTO request) {
+    public ResponseEntity<String> updateOrderStatus(
+            @Parameter(description = "Request payload containing order ID and new status", required = true) @RequestBody OrderStatusUpdateDTO request) {
         try {
             adminService.updateOrderStatus(request.getOrderId(), request.getStatus());
             return ResponseEntity.ok("Order status updated successfully.");
@@ -208,4 +258,5 @@ public class AdminController {
                     .body("An error occurred while updating the order status.");
         }
     }
+
 }
