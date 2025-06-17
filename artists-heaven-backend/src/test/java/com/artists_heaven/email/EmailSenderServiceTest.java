@@ -2,6 +2,7 @@ package com.artists_heaven.email;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 import java.util.List;
@@ -18,12 +19,10 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 
 import com.artists_heaven.entities.artist.Artist;
 import com.artists_heaven.order.Order;
-import com.artists_heaven.verification.VerificationStatus;
-
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 
-public class EmailSenderServiceTest {
+class EmailSenderServiceTest {
 
     @Mock
     private JavaMailSender mailSender;
@@ -93,6 +92,8 @@ public class EmailSenderServiceTest {
 
 
         emailSenderService.sendPurchaseConfirmationEmail(userEmail, order);
+        verify(mailSender, times(1)).send(mimeMessage);
+        verify(pdfGeneratorService, times(1)).generateInvoice(eq(12345L), eq(order), eq(90.0f));
     }
 
     @Test

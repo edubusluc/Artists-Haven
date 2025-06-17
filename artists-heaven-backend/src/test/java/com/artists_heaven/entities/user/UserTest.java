@@ -8,10 +8,10 @@ import java.util.Collection;
 
 import org.springframework.security.core.GrantedAuthority;
 
-public class UserTest {
+class UserTest {
 
     @Test
-    public void testGetAuthoritiesAsArtist() {
+    void testGetAuthoritiesAsArtist() {
         User user = new User();
         user.setRole(UserRole.ARTIST);
 
@@ -22,7 +22,7 @@ public class UserTest {
     }
 
     @Test
-    public void testGetAuthoritiesAsUser() {
+    void testGetAuthoritiesAsUser() {
         User user = new User();
         user.setRole(UserRole.USER);
 
@@ -31,5 +31,5 @@ public class UserTest {
         assertEquals(1, authorities.size());
         assertTrue(authorities.stream().anyMatch(a -> "ROLE_USER".equals(a.getAuthority())));
     }
-    
+
 }

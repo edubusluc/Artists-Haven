@@ -44,7 +44,7 @@ public class AdminService {
     }
 
     public List<MonthlySalesDTO> getMonthlySalesData(int year) {
-        List<Object[]> results = adminRepository.findMonthlySalesData(year, OrderStatus.PAID);
+        List<Object[]> results = adminRepository.findMonthlySalesData(year, OrderStatus.RETURN_ACCEPTED);
         List<MonthlySalesDTO> monthlySalesDTOList = new ArrayList<>();
         for (Object[] result : results) {
             Integer month = (int) result[0]; // El mes en formato "YYYY-MM"

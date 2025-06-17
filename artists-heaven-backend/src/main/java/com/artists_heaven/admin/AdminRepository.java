@@ -25,7 +25,7 @@ public interface AdminRepository extends JpaRepository<User, Long> {
         @Query("SELECT " +
                         " EXTRACT(MONTH FROM o.createdDate), COUNT(o), SUM(o.totalPrice) " +
                         "FROM Order o " +
-                        "WHERE o.status = :status " +
+                        "WHERE o.status <> :status " +
                         "AND EXTRACT(YEAR FROM o.createdDate) = :year " +
                         "GROUP BY EXTRACT(MONTH FROM o.createdDate) " +
                         "ORDER BY EXTRACT(MONTH FROM o.createdDate)")

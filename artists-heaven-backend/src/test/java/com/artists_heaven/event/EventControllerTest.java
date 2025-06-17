@@ -40,7 +40,7 @@ import com.artists_heaven.entities.artist.Artist;
 import com.artists_heaven.entities.user.User;
 import com.artists_heaven.entities.user.UserRole;
 
-public class EventControllerTest {
+class EventControllerTest {
 
         private MockMvc mockMvc;
 
@@ -399,22 +399,23 @@ public class EventControllerTest {
 
         @Test
         void testGetProductImageSuccess() throws Exception {
-            String fileName = UUID.randomUUID() + "test.jpg";
-            String basePath = System.getProperty("user.dir") + "/artists-heaven-backend/src/main/resources/event_media/";
-            Path filePath = Paths.get(basePath, fileName);
-    
-            // Ensure the directory exists
-            Files.createDirectories(filePath.getParent());
-        
-            // Create the file for the test
-            Files.createFile(filePath);
-    
-            mockMvc.perform(get("/api/event/event_media/" + fileName))
-                    .andExpect(status().isOk())
-                    .andExpect(header().string(HttpHeaders.CONTENT_TYPE, "image/png"));
-    
-            // Clean up the created file
-            Files.deleteIfExists(filePath);
+                String fileName = UUID.randomUUID() + "test.jpg";
+                String basePath = System.getProperty("user.dir")
+                                + "/artists-heaven-backend/src/main/resources/event_media/";
+                Path filePath = Paths.get(basePath, fileName);
+
+                // Ensure the directory exists
+                Files.createDirectories(filePath.getParent());
+
+                // Create the file for the test
+                Files.createFile(filePath);
+
+                mockMvc.perform(get("/api/event/event_media/" + fileName))
+                                .andExpect(status().isOk())
+                                .andExpect(header().string(HttpHeaders.CONTENT_TYPE, "image/png"));
+
+                // Clean up the created file
+                Files.deleteIfExists(filePath);
         }
 
         @Test

@@ -1,17 +1,12 @@
 package com.artists_heaven.entities.artist;
 
-import java.util.Set;
-
 import org.hibernate.validator.constraints.URL;
 
 import com.artists_heaven.entities.user.User;
-import com.artists_heaven.event.Event;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.DiscriminatorValue;
 import jakarta.persistence.Entity;
-import jakarta.persistence.OneToMany;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -30,8 +25,4 @@ public class Artist extends User {
 
     @Column(name = "is_valid")
     private Boolean isvalid = false;
-
-    @OneToMany(mappedBy = "artist")
-    @JsonManagedReference
-    private transient Set<Event> events;
 }

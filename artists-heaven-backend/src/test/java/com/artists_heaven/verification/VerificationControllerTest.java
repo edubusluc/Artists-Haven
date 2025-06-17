@@ -17,7 +17,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.artists_heaven.email.EmailSenderService;
 import com.artists_heaven.entities.artist.Artist;
 
-public class VerificationControllerTest {
+class VerificationControllerTest {
 
     @Mock
     private EmailSenderService emailSenderService;
@@ -29,7 +29,7 @@ public class VerificationControllerTest {
     private VerificationController verificationController;
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         MockitoAnnotations.openMocks(this);
     }
 
@@ -43,7 +43,7 @@ public class VerificationControllerTest {
         ResponseEntity<Map<String, Object>> response = verificationController.sendValidation(email, video);
 
         assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
-        assertEquals("El usuario no es un artista", response.getBody().get("error"));
+        assertEquals("User is not an artist", response.getBody().get("error"));
     }
 
     @Test
@@ -58,7 +58,7 @@ public class VerificationControllerTest {
         ResponseEntity<Map<String, Object>> response = verificationController.sendValidation(email, video);
 
         assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
-        assertEquals("Usuario no válido o ya verificado", response.getBody().get("error"));
+        assertEquals("User is not eligible or already verified", response.getBody().get("error"));
     }
 
     @Test
@@ -74,7 +74,7 @@ public class VerificationControllerTest {
         ResponseEntity<Map<String, Object>> response = verificationController.sendValidation(email, video);
 
         assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
-        assertEquals("Ya existe una solicitud para este usuario", response.getBody().get("error"));
+        assertEquals("There is already a pending request for this user", response.getBody().get("error"));
     }
 
     @Test
@@ -95,7 +95,7 @@ public class VerificationControllerTest {
         verify(emailSenderService).sendVerificationEmail(artist);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals("Solicitud enviada correctamente", response.getBody().get("message"));
+        assertEquals("Request submitted successfully", response.getBody().get("message"));
     }
 
     @Test
@@ -108,6 +108,6 @@ public class VerificationControllerTest {
         ResponseEntity<Map<String, Object>> response = verificationController.sendValidation(email, video);
 
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
-        assertEquals("Error al procesar la solicitud", response.getBody().get("error"));
+        assertEquals("Error processing the request", response.getBody().get("error"));
     }
 }

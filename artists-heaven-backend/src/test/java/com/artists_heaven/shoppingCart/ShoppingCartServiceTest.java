@@ -29,7 +29,7 @@ import com.artists_heaven.shopping_cart.ShoppingCart;
 import com.artists_heaven.shopping_cart.ShoppingCartRepository;
 import com.artists_heaven.shopping_cart.ShoppingCartService;
 
-public class ShoppingCartServiceTest {
+class ShoppingCartServiceTest {
 
     @Mock
     private ShoppingCartRepository shoppingCartRepository;
@@ -44,7 +44,7 @@ public class ShoppingCartServiceTest {
     private ShoppingCartService shoppingCartService;
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         MockitoAnnotations.openMocks(this);
     }
 

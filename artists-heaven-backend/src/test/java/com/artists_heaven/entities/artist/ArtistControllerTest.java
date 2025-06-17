@@ -20,7 +20,7 @@ import org.springframework.http.MediaType;
 import com.artists_heaven.entities.user.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-public class ArtistControllerTest {
+class ArtistControllerTest {
 
     private MockMvc mockMvc;
 
@@ -36,14 +36,14 @@ public class ArtistControllerTest {
     private ObjectMapper objectMapper = new ObjectMapper();
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         MockitoAnnotations.openMocks(this);
 
         mockMvc = MockMvcBuilders.standaloneSetup(artistController).build();
     }
 
     @Test
-    public void testRegisterArtist() throws Exception {
+    void testRegisterArtist() throws Exception {
         // Crear un objeto Artist para enviar como payload
         Artist artist = new Artist();
         artist.setFirstName("John");
@@ -66,9 +66,8 @@ public class ArtistControllerTest {
                 .andExpect(MockMvcResultMatchers.jsonPath("$.lastName").value("Doe"));
     }
 
-
     @Test
-    public void testRegisterArtistSuccessBadRequest() throws Exception {
+    void testRegisterArtistSuccessBadRequest() throws Exception {
         Artist artist = new Artist();
         artist.setEmail("invalid-email@example.com");
         artist.setArtistName("Invalid Artist");

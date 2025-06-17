@@ -22,7 +22,7 @@ import com.artists_heaven.entities.artist.Artist;
 
 import org.springframework.security.core.Authentication;
 
-public class UserControllerTest {
+class UserControllerTest {
 
         private MockMvc mockMvc;
 

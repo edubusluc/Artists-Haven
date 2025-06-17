@@ -9,6 +9,14 @@ import org.springframework.web.multipart.MultipartFile;
 import com.artists_heaven.entities.user.User;
 import com.artists_heaven.page.PageResponse;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+
 import java.nio.file.Paths;
 import java.nio.file.Path;
 import java.util.List;
@@ -41,10 +49,16 @@ public class ProductController {
     }
 
     @GetMapping("/allProducts")
+    @Operation(summary = "Retrieve paginated list of products", description = "Returns a paginated list of products. Supports optional search by product name or description.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Successfully retrieved paginated products list", content = @Content(mediaType = "application/json", schema = @Schema(implementation = PageResponse.class)))
+    })
     public PageResponse<Product> getAllProducts(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "6") int size,
-            @RequestParam(required = false) String search) {
+            @Parameter(description = "Page number to retrieve (0-based)", example = "0") @RequestParam(defaultValue = "0") int page,
+
+            @Parameter(description = "Number of products per page", example = "6") @RequestParam(defaultValue = "6") int size,
+
+            @Parameter(description = "Optional search keyword to filter products by name or description", example = "laptop", required = false) @RequestParam(required = false) String search) {
 
         PageRequest pageRequest = PageRequest.of(page, size);
         Page<Product> result;
@@ -58,64 +72,68 @@ public class ProductController {
         return new PageResponse<>(result);
     }
 
-    // Endpoint to retrieve a product media (image) by its file name
     @GetMapping("/product_media/{fileName:.+}")
-    public ResponseEntity<Resource> getProductImage(@PathVariable String fileName) {
-        // Constructing the base path to the directory where product media is stored
+    @Operation(summary = "Retrieve product image by file name", description = "Returns the product image file corresponding to the given file name. "
+            +
+            "Supports serving PNG images stored in the product_media directory.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Image file successfully retrieved", content = @Content(mediaType = "image/png")),
+            @ApiResponse(responseCode = "404", description = "Image file not found", content = @Content)
+    })
+    public ResponseEntity<Resource> getProductImage(
+            @Parameter(description = "Name of the image file to retrieve, including extension (e.g., 'product1.png')", required = true) @PathVariable String fileName) {
+
         String basePath = System.getProperty("user.dir") + "/artists-heaven-backend/src/main/resources/product_media/";
-
-        // Resolving the full file path using the base path and file name
         Path filePath = Paths.get(basePath, fileName);
-
-        // Creating a Resource object to represent the file
         Resource resource = new FileSystemResource(filePath.toFile());
 
-        // Checking if the requested file exists
         if (!resource.exists()) {
-            // Returning a "not found" response if the file does not exist
             return ResponseEntity.notFound().build();
         }
 
-        // Returning the image as a response with the correct content type header
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_TYPE, "image/png") // Setting the content type to PNG
-                .body(resource); // Returning the file content
+                .header(HttpHeaders.CONTENT_TYPE, "image/png")
+                .body(resource);
     }
 
-    // Endpoint to retrieve all product categories
     @GetMapping("/categories")
+    @Operation(summary = "Retrieve all product categories", description = "Returns a set of all available product categories.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Successfully retrieved categories", content = @Content(mediaType = "application/json", schema = @Schema(implementation = Category.class, type = "array")))
+    })
     public Set<Category> getAllCategories() {
-        // Fetching and returning the set of all categories from the product service
         return productService.getAllCategories();
     }
 
-    // Endpoint to create a new product
     @PostMapping("/new")
+    @Operation(summary = "Create a new product", description = "Creates a new product with provided product details and associated images. The images are saved, their URLs are linked to the product, and the product is registered.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201", description = "Product created successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = Product.class))),
+            @ApiResponse(responseCode = "400", description = "Bad request - invalid product data or images", content = @Content(mediaType = "application/json"))
+    })
     public ResponseEntity<Product> newProduct(
-            @RequestPart("product") ProductDTO productDTO, // Product data to create
-            @RequestPart("images") List<MultipartFile> images) { // List of product images
+            @Parameter(description = "Product data to create", required = true) @RequestPart("product") ProductDTO productDTO,
 
+            @Parameter(description = "List of product images", required = true, content = @Content(mediaType = "image/*")) @RequestPart("images") List<MultipartFile> images) {
         try {
-            // Save the images and retrieve their URLs
             List<String> imageUrls = productService.saveImages(images);
-
-            // Set the image URLs in the product DTO
             productDTO.setImages(imageUrls);
-
-            // Register the new product using the provided data and return the created
-            // product in the response
             Product newProduct = productService.registerProduct(productDTO);
-            return new ResponseEntity<>(newProduct, HttpStatus.CREATED); // Return with "Created" status
+            return new ResponseEntity<>(newProduct, HttpStatus.CREATED);
         } catch (IllegalArgumentException e) {
-            // If there is an error (e.g., invalid data), return a bad request status with
-            // no product
-            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST); // Return with "Bad Request" status
+            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
         }
     }
 
     // Endpoint to retrieve details of a specific product by its ID
     @GetMapping("/details/{id}")
-    public ResponseEntity<Product> productDetails(@PathVariable("id") Long id) {
+    @Operation(summary = "Retrieve product details by ID", description = "Returns detailed information of a specific product identified by its ID.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Product found and returned successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = Product.class))),
+            @ApiResponse(responseCode = "404", description = "Product not found", content = @Content)
+    })
+    public ResponseEntity<Product> productDetails(
+            @Parameter(description = "ID of the product to retrieve", required = true) @PathVariable("id") Long id) {
         try {
             // Attempt to find the product by ID
             Product product = productService.findById(id);
@@ -130,7 +148,13 @@ public class ProductController {
 
     // Endpoint to delete a product by its ID
     @DeleteMapping("/delete/{id}")
-    public ResponseEntity<String> deleteProduct(@PathVariable("id") Long id) {
+    @Operation(summary = "Delete a product by ID", description = "Deletes a product identified by its ID if it exists.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Product deleted successfully", content = @Content),
+            @ApiResponse(responseCode = "404", description = "Product not found", content = @Content)
+    })
+    public ResponseEntity<String> deleteProduct(
+            @Parameter(description = "ID of the product to delete", required = true) @PathVariable("id") Long id) {
         try {
             // Attempt to find the product by its ID
             Product product = productService.findById(id);
@@ -148,12 +172,19 @@ public class ProductController {
 
     // Endpoint to update an existing product by its ID
     @PutMapping("edit/{id}")
-    public ResponseEntity<String> updateProduct(@PathVariable("id") Long id,
-            @RequestPart("product") ProductDTO productDTO, // Product data to update
-            @RequestPart(value = "newImages", required = false) List<MultipartFile> newImages, // List of new images
-            @RequestPart(value = "removedImages", required = false) List<MultipartFile> removedImages) { // List of
-                                                                                                         // removed
-                                                                                                         // images
+    @Operation(summary = "Update an existing product by ID", description = "Updates the product data, optionally adding new images and removing specified images.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Product updated successfully", content = @Content(mediaType = "text/plain")),
+            @ApiResponse(responseCode = "400", description = "Bad request - invalid update data", content = @Content(mediaType = "text/plain"))
+    })
+    public ResponseEntity<String> updateProduct(
+            @Parameter(description = "ID of the product to update", required = true) @PathVariable("id") Long id,
+
+            @Parameter(description = "Product data to update", required = true) @RequestPart("product") ProductDTO productDTO,
+
+            @Parameter(description = "List of new images to add", required = false, content = @Content(mediaType = "image/*")) @RequestPart(value = "newImages", required = false) List<MultipartFile> newImages,
+
+            @Parameter(description = "List of images to remove", required = false, content = @Content(mediaType = "image/*")) @RequestPart(value = "removedImages", required = false) List<MultipartFile> removedImages) {
 
         // Find the product by its ID
         Product product = productService.findById(id);
@@ -173,7 +204,18 @@ public class ProductController {
     }
 
     @PutMapping("promote/{id}")
-    public ResponseEntity<String> promoteProduct(@PathVariable Long id, @RequestBody PromoteDTO promoteDTO) {
+    @Operation(summary = "Promote a product by applying a discount", description = "Allows an admin user to promote a product by setting a discount percentage.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Product promoted successfully", content = @Content(mediaType = "text/plain")),
+            @ApiResponse(responseCode = "400", description = "Bad request - invalid input data", content = @Content(mediaType = "text/plain")),
+            @ApiResponse(responseCode = "401", description = "Unauthorized - authentication is required", content = @Content(mediaType = "text/plain")),
+            @ApiResponse(responseCode = "403", description = "Forbidden - only admins can promote products", content = @Content(mediaType = "text/plain"))
+    })
+    public ResponseEntity<String> promoteProduct(
+            @Parameter(description = "ID of the product to promote", required = true) @PathVariable Long id,
+
+            @Parameter(description = "Promotion details containing product ID and discount", required = true) @RequestBody PromoteDTO promoteDTO) {
+
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         if (authentication == null || !authentication.isAuthenticated()) {
@@ -194,7 +236,16 @@ public class ProductController {
     }
 
     @PutMapping("demote/{id}")
-    public ResponseEntity<String> demoteProduct(@PathVariable Long id) {
+    @Operation(summary = "Remove promotion from a product", description = "Allows an admin user to remove the promotion (discount) from a specific product.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Product demoted successfully", content = @Content(mediaType = "text/plain")),
+            @ApiResponse(responseCode = "400", description = "Bad request - invalid input data", content = @Content(mediaType = "text/plain")),
+            @ApiResponse(responseCode = "401", description = "Unauthorized - authentication is required", content = @Content(mediaType = "text/plain")),
+            @ApiResponse(responseCode = "403", description = "Forbidden - only admins can demote products", content = @Content(mediaType = "text/plain"))
+    })
+    public ResponseEntity<String> demoteProduct(
+            @Parameter(description = "ID of the product to demote", required = true) @PathVariable Long id) {
+
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         if (authentication == null || !authentication.isAuthenticated()) {
@@ -215,6 +266,10 @@ public class ProductController {
     }
 
     @GetMapping("allPromotedProducts")
+    @Operation(summary = "Retrieve all promoted products", description = "Fetches and returns a list of all products that currently have active promotions.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Successfully retrieved list of promoted products", content = @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = Product.class))))
+    })
     public ResponseEntity<List<Product>> getAllPromotedProducts() {
         // Fetching and returning the list of all promoted products from the product
         // service

@@ -31,7 +31,7 @@ import com.artists_heaven.shopping_cart.CartItemDTO;
 import com.artists_heaven.shopping_cart.ProductItemDTO;
 import com.artists_heaven.shopping_cart.ShoppingCartService;
 
-public class PaymentGatewayServiceTest {
+class PaymentGatewayServiceTest {
 
     @Mock
     private UserService userService;

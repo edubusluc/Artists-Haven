@@ -26,7 +26,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-public class RatingServiceTest {
+class RatingServiceTest {
 
     @Mock
     private RatingRepository ratingRepository;

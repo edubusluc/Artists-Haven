@@ -4,6 +4,15 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.artists_heaven.entities.user.User;
 import com.artists_heaven.shopping_cart.CartItemDTO;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import jakarta.transaction.Transactional;
 
 import java.util.List;
@@ -12,8 +21,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 @RestController
@@ -26,44 +33,56 @@ public class PaymentGatewayController {
         this.paymentGatewayService = paymentGatewayService;
     }
 
-    // Endpoint to handle the checkout process for payment
     @PostMapping("/checkout")
-    public ResponseEntity<String>  paymentCheckout(@RequestBody List<CartItemDTO> items) {
-        // Get the current authenticated user
+    @Operation(summary = "Process payment checkout", description = "Processes the payment for the list of cart items associated with the authenticated user.", security = @SecurityRequirement(name = "bearerAuth"))
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Payment processed successfully", content = @Content(mediaType = "text/plain")),
+            @ApiResponse(responseCode = "500", description = "Internal server error during payment processing", content = @Content(mediaType = "text/plain"))
+    })
+    public ResponseEntity<String> paymentCheckout(
+            @RequestBody(description = "List of items to checkout", required = true, content = @Content(array = @ArraySchema(schema = @Schema(implementation = CartItemDTO.class)))) @org.springframework.web.bind.annotation.RequestBody List<CartItemDTO> items) {
+
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         Object principalUser = authentication.getPrincipal();
         Long id = null;
 
-        // Check if the authenticated user is an instance of User and retrieve their ID
         if (principalUser instanceof User user) {
             id = user.getId();
         }
 
         try {
-            // Process the payment checkout and return the result
             return ResponseEntity.ok(paymentGatewayService.checkoutProducts(items, id));
         } catch (Exception e) {
-            // Return an error message if the payment processing fails
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
 
-    // Endpoint to handle incoming Stripe webhook events
     @Transactional
     @PostMapping("/stripeWebhook")
-    public ResponseEntity<String> handleStripeEvent(@RequestBody String payload, // The event payload sent by Stripe
-            @RequestHeader("Stripe-Signature") String sigHeader) { // The Stripe signature to verify the event
+    @Operation(summary = "Handle incoming Stripe webhook events", description = "Receives and processes Stripe webhook events. Verifies event authenticity using the Stripe signature header.", security = {} // No
+                                                                                                                                                                                                              // authentication
+                                                                                                                                                                                                              // required,
+                                                                                                                                                                                                              // since
+                                                                                                                                                                                                              // Stripe
+                                                                                                                                                                                                              // needs
+                                                                                                                                                                                                              // to
+                                                                                                                                                                                                              // call
+                                                                                                                                                                                                              // this
+                                                                                                                                                                                                              // endpoint
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Event received and processed successfully", content = @Content(mediaType = "text/plain")),
+            @ApiResponse(responseCode = "500", description = "Internal server error while processing the event", content = @Content(mediaType = "text/plain"))
+    })
+    public ResponseEntity<String> handleStripeEvent(
+            @RequestBody(description = "Raw JSON payload sent by Stripe webhook", required = true, content = @Content(schema = @Schema(type = "string", format = "json"))) String payload,
+            @org.springframework.web.bind.annotation.RequestHeader(name = "Stripe-Signature") String sigHeader) {
 
         try {
-            // Process the Stripe event using the provided payload and signature
             paymentGatewayService.processStripeEvent(payload, sigHeader);
-
-            // Return a 200 OK response if the event is processed successfully
-            return ResponseEntity.ok("Evento recibido");
+            return ResponseEntity.ok("Event received");
         } catch (Exception e) {
-            // Return an error response in case of an exception (e.g., invalid event or
-            // processing error)
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error interno del servidor");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Internal server error");
         }
     }
 }

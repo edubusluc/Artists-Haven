@@ -77,7 +77,7 @@ class OrderControllerTest {
     }
 
     @Test
-    public void testGetOrder_Success_AdminAccess() throws Exception {
+    void testGetOrder_Success_AdminAccess() throws Exception {
         // Datos de prueba
 
         User userAdmin = new User();
@@ -108,7 +108,7 @@ class OrderControllerTest {
     }
 
     @Test
-    public void testGetOrder_Success_UserAccess() throws Exception {
+    void testGetOrder_Success_UserAccess() throws Exception {
         // Datos de prueba
         User user = new User();
         user.setId(2L);
@@ -138,7 +138,7 @@ class OrderControllerTest {
     }
 
     @Test
-    public void testGetOrder_Failure_NoAccess() throws Exception {
+    void testGetOrder_Failure_NoAccess() throws Exception {
         // Datos de prueba
         User user = new User();
         user.setId(2L);
@@ -171,7 +171,7 @@ class OrderControllerTest {
     }
 
     @Test
-    public void testGetOrder_Failure_OrderNotFound() throws Exception {
+    void testGetOrder_Failure_OrderNotFound() throws Exception {
         Long orderId = 1L;
 
         User userAdmin = new User();

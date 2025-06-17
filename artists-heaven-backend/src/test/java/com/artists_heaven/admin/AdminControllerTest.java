@@ -57,7 +57,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
-public class AdminControllerTest {
+class AdminControllerTest {
 
         @Mock
         private Resource resource;
@@ -83,13 +83,13 @@ public class AdminControllerTest {
         private MockMvc mockMvc;
 
         @BeforeEach
-        public void setUp() {
+        void setUp() {
                 MockitoAnnotations.openMocks(this);
                 mockMvc = MockMvcBuilders.standaloneSetup(adminController).build();
         }
 
         @Test
-        public void testValidateArtistSuccess() {
+        void testValidateArtistSuccess() {
                 // Arrange
                 Long artistId = 1L;
                 Artist artist = new Artist();
@@ -112,7 +112,7 @@ public class AdminControllerTest {
 
                 // Assert
                 assertEquals(HttpStatus.OK, response.getStatusCode());
-                assertEquals("Artista verificado de forma correcta",
+                assertEquals("Artist verified successfully",
                                 ((Map<String, String>) response.getBody()).get("message"));
 
                 assertEquals(true, artist.getIsvalid());
@@ -123,7 +123,7 @@ public class AdminControllerTest {
         }
 
         @Test
-        public void testValidateArtistNullArtist() {
+        void testValidateArtistNullArtist() {
                 // Arrange
                 Long artistId = 1L;
                 Artist artist = new Artist();
@@ -143,11 +143,11 @@ public class AdminControllerTest {
                                 () -> adminController.validateArtist(payload));
 
                 assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
-                assertEquals("Artista no encontrado", exception.getReason());
+                assertEquals("Artist not found", exception.getReason());
         }
 
         @Test
-        public void testValidateArtistNullVerification() {
+        void testValidateArtistNullVerification() {
                 // Arrange
                 Long artistId = 1L;
                 Artist artist = new Artist();
@@ -169,11 +169,11 @@ public class AdminControllerTest {
                                 () -> adminController.validateArtist(payload));
 
                 assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
-                assertEquals("Verificación no encontrada", exception.getReason());
+                assertEquals("Verification not found", exception.getReason());
         }
 
         @Test
-        public void testGetAllValidation() throws Exception {
+        void testGetAllValidation() throws Exception {
                 // Arrange
                 Verification verification1 = new Verification();
                 verification1.setId(1L);
@@ -199,7 +199,7 @@ public class AdminControllerTest {
         }
 
         @Test
-        public void testGetVerificationVideoSuccess() throws Exception {
+        void testGetVerificationVideoSuccess() throws Exception {
                 String fileName = "sample.mp4";
                 String basePath = System.getProperty("user.dir")
                                 + "/artists-heaven-backend/src/main/resources/verification_media/";
@@ -221,7 +221,7 @@ public class AdminControllerTest {
         }
 
         @Test
-        public void testGetVerificationVideoNotFound() throws Exception {
+        void testGetVerificationVideoNotFound() throws Exception {
                 // Arrange
                 String fileName = "non-existent-video.mp4";
                 when(resource.exists()).thenReturn(false);
@@ -366,7 +366,7 @@ public class AdminControllerTest {
         }
 
         @Test
-        public void testUpdateOrderStatus_Success() throws Exception {
+        void testUpdateOrderStatus_Success() throws Exception {
                 // Datos de prueba
                 Long orderId = 1L;
                 OrderStatus orderStatus = OrderStatus.PAID;
@@ -386,7 +386,7 @@ public class AdminControllerTest {
         }
 
         @Test
-        public void testUpdateOrderStatus_OrderNotFound() throws Exception {
+        void testUpdateOrderStatus_OrderNotFound() throws Exception {
                 // Datos de prueba
                 Long orderId = 1L;
                 OrderStatus orderStatus = OrderStatus.PAID;
@@ -408,7 +408,7 @@ public class AdminControllerTest {
         }
 
         @Test
-        public void testUpdateOrderStatus_InternalServerError() throws Exception {
+        void testUpdateOrderStatus_InternalServerError() throws Exception {
                 // Datos de prueba
                 Long orderId = 1L;
                 OrderStatus orderStatus = OrderStatus.PAID;

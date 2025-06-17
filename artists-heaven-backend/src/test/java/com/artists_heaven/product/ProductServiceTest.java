@@ -45,7 +45,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
-public class ProductServiceTest {
+class ProductServiceTest {
 
     @Mock
     private ProductRepository productRepository;
@@ -54,7 +54,7 @@ public class ProductServiceTest {
     private ProductService productService;
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         MockitoAnnotations.openMocks(this);
     }
 
@@ -550,12 +550,11 @@ public class ProductServiceTest {
         List<Product> products = new ArrayList<>();
         products.add(product);
 
-        Pageable pageable = PageRequest.of(0, 10); 
+        Pageable pageable = PageRequest.of(0, 10);
         Page<Product> page = new PageImpl<>(products, pageable, products.size());
 
         String searchTerm = "Product";
         when(productRepository.findByName(searchTerm, pageable)).thenReturn(page);
-
 
         Page<Product> result = productService.searchProducts(searchTerm, pageable);
 

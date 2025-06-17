@@ -66,6 +66,8 @@ public class Order {
     private String paymentIntent;
 
     public Order() {
+        // No-argument constructor required by JPA for entity instantiation via
+        // reflection
     }
 
 }
