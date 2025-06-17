@@ -23,6 +23,10 @@ public class AuthController {
 
     private final UserRepository userRepository;
 
+    private final String TOKEN = "token";
+    
+    private final String ERROR = "error";
+
     public AuthController(AuthService authService, UserRepository userRepository) {
         this.authService = authService;
         this.userRepository = userRepository;
@@ -53,7 +57,7 @@ public class AuthController {
 
             // Create a response map to include the token and user role
             Map<String, Object> response = new HashMap<>();
-            response.put("token", token);
+            response.put(TOKEN, token);
             response.put("role", role);
 
             // Return a successful response with the token and user role
@@ -61,7 +65,7 @@ public class AuthController {
 
         } catch (Exception e) {
             // Handle general exceptions with optional logging for better debugging
-            return new ResponseEntity<>(Map.of("error", "Invalid credentials or server error"),
+            return new ResponseEntity<>(Map.of(ERROR, "Invalid credentials or server error"),
                     HttpStatus.UNAUTHORIZED);
         }
     }
@@ -77,21 +81,21 @@ public class AuthController {
             Map<String, String> map = authService.handleGoogleLogin(idTokenString);
 
              // Retrieve the generated JWT token and user email from the response map
-            String token = map.get("token");
+            String token = map.get(TOKEN);
             String email = map.get("email");
             String role = map.get("role");
 
             // Check if the token is successfully generated
             if (token != null) {
                 // Return a successful response containing the JWT token and user email
-                return new ResponseEntity<>(Map.of("token", token, "email",email, "role",role), HttpStatus.OK);
+                return new ResponseEntity<>(Map.of(TOKEN, token, "email",email, "role",role), HttpStatus.OK);
             } else {
                  // Return an Unauthorized response if the ID token is invalid
-                return new ResponseEntity<>(Map.of("error", "Invalid ID token"), HttpStatus.UNAUTHORIZED);
+                return new ResponseEntity<>(Map.of(ERROR, "Invalid ID token"), HttpStatus.UNAUTHORIZED);
             }
         } catch (Exception e) {
             // Handle exceptions with a generic error message and internal server error status
-            return new ResponseEntity<>(Map.of("error", "Error verifying token"), HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>(Map.of(ERROR, "Error verifying token"), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
