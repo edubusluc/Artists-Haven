@@ -22,6 +22,8 @@ public class VerificationController {
 
     private final VerificationService verificationService;
 
+    private final String ERROR = "error";
+
 
     public VerificationController(EmailSenderService emailSenderService, VerificationService verificationService) {
         this.emailSenderService = emailSenderService;
@@ -37,18 +39,18 @@ public class VerificationController {
             // Validación de la existencia y estado del artista
             Artist artist = verificationService.validateArtist(email);
             if (artist == null) {
-                return new ResponseEntity<>(Map.of("error", "El usuario no es un artista"), HttpStatus.UNAUTHORIZED);
+                return new ResponseEntity<>(Map.of(ERROR, "El usuario no es un artista"), HttpStatus.UNAUTHORIZED);
             }
 
             // Verifica si el artista ya está validado o tiene una solicitud pendiente
             if (!verificationService.isArtistEligibleForVerification(artist)) {
-                return new ResponseEntity<>(Map.of("error", "Usuario no válido o ya verificado"),
+                return new ResponseEntity<>(Map.of(ERROR, "Usuario no válido o ya verificado"),
                         HttpStatus.UNAUTHORIZED);
             }
 
             // Verifica si ya existe una solicitud pendiente
             if (verificationService.hasPendingVerification(artist)) {
-                return new ResponseEntity<>(Map.of("error", "Ya existe una solicitud para este usuario"),
+                return new ResponseEntity<>(Map.of(ERROR, "Ya existe una solicitud para este usuario"),
                         HttpStatus.UNAUTHORIZED);
             }
 
@@ -61,7 +63,7 @@ public class VerificationController {
 
             return ResponseEntity.ok(Map.of("message", "Solicitud enviada correctamente"));
         } catch (Exception e) {
-            return new ResponseEntity<>(Map.of("error", "Error al procesar la solicitud"),
+            return new ResponseEntity<>(Map.of(ERROR, "Error al procesar la solicitud"),
                     HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
