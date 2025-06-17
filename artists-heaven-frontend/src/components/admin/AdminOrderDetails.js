@@ -1,0 +1,165 @@
+import React, { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+
+const OrderDetails = () => {
+    const { id } = useParams();
+    const navigate = useNavigate();
+    const [order, setOrder] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [errorMessage, setErrorMessage] = useState("");
+    const [authToken] = useState(localStorage.getItem("authToken"));
+    const rol = localStorage.getItem("role");
+
+    const orderStatuses = [
+        "PAID",
+        "IN_PREPARATION",
+        "SENT",
+        "DELIVERED",
+        "CANCELED",
+        "RETURN_REQUEST",
+        "RETURN_ACCEPTED",
+    ];
+
+    useEffect(() => {
+        if (rol !== "ADMIN") {
+            setErrorMessage("No tienes permisos para acceder a esta página.");
+            setLoading(false);
+            return;
+        }
+
+        fetch(`/api/orders/${id}`, {
+            headers: {
+                Authorization: `Bearer ${authToken}`,
+            },
+        })
+            .then((res) => {
+                if (!res.ok) throw new Error("Error al obtener el pedido");
+                return res.json();
+            })
+            .then((data) => {
+                setOrder(data);
+                setLoading(false);
+            })
+            .catch((err) => {
+                console.error(err);
+                setErrorMessage("No se pudo cargar el pedido.");
+                setLoading(false);
+            });
+    }, [id, rol, authToken]);
+
+    const updateOrderStatus = async (orderId, newStatus) => {
+        try {
+            const response = await fetch("/api/admin/updateStatus", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${authToken}`,
+                },
+                body: JSON.stringify({ orderId, status: newStatus }),
+            });
+            if (!response.ok) throw new Error("Error al actualizar el estado");
+
+            setOrder((prev) => ({ ...prev, status: newStatus }));
+        } catch (error) {
+            console.error("Error actualizando estado:", error);
+            alert("No se pudo actualizar el estado. Intenta de nuevo.");
+        }
+    };
+
+    if (loading)
+        return (
+            <div className="p-6 text-center text-gray-500 text-lg animate-pulse">Cargando pedido...</div>
+        );
+
+    if (!order)
+        return (
+            <div className="p-6 text-center text-red-500 font-semibold">{errorMessage}</div>
+        );
+
+    return (
+        <div className="min-h-screen bg-gradient-to-r from-gray-300 to-white flex flex-col p-6 lg:p-12 space-y-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* COLUMNA 1 */}
+                <div className="w-full bg-white rounded-xl shadow-2xl p-8 space-y-6 ring-1 ring-gray-200">
+                    <p className="text-3xl font-bold text-gray-800">
+                        Gestión de Pedido - {order.identifier} - {order.status}
+                    </p>
+
+                    {/* Card de Información del Pedido */}
+                    <div className="bg-gray-50 p-6 rounded-xl shadow-lg space-y-6">
+                        <h3 className="text-xl font-semibold text-gray-800">Detalles del Pedido</h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                            <p className="text-gray-700">ID Interno: <span className="font-medium">{order.id}</span></p>
+                            <p className="text-gray-700">Identificador: <span className="font-medium">{order.identifier}</span></p>
+                            <p className="text-gray-700">Total: <span className="font-medium">€{order.totalPrice.toFixed(2)}</span></p>
+                            <p className="text-gray-700">Fecha de compra: <span className="font-medium">{new Date(order.createdDate).toLocaleDateString()}</span></p>
+                        </div>
+                    </div>
+
+                    {/* Card de Dirección */}
+                    <div className="bg-gray-50 p-6 rounded-xl shadow-lg space-y-4">
+                        <h3 className="text-xl font-semibold text-gray-800">Información del comprador</h3>
+                        <p className="text-gray-700">
+                            Dirección de envio: <span className="font-medium">{order.addressLine1} - {order.addressLine2} {order.postalCode}, {order.city}, {order.country}</span>
+                        </p>
+                        <p className="text-gray-700">Email: <span className="font-medium">{order.email}</span></p>
+                        <p className="text-gray-700">Teléfono: <span className="font-medium">{order.phone}</span></p>
+                    </div>
+
+                    {/* Actualizar Estado */}
+                    <div className="bg-gray-50 p-6 rounded-xl shadow-lg mt-6">
+                        <label htmlFor="status-select" className="block text-sm font-semibold text-gray-800 mb-2">
+                            Actualizar Estado
+                        </label>
+                        <select
+                            id="status-select"
+                            value={order.status}
+                            onChange={(e) => updateOrderStatus(order.id, e.target.value)}
+                            className="w-full sm:w-auto border border-gray-300 rounded-xl px-4 py-2 text-gray-700 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-300"
+                        >
+                            {orderStatuses.map((status) => (
+                                <option key={status} value={status}>
+                                    {status.replaceAll("_", " ")}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Botón de Volver */}
+                    <div className="mt-8 flex justify-center sm:justify-start">
+                        <button
+                            onClick={() => navigate("/admin/orders")}
+                            className="bg-yellow-500 hover:bg-yellow-600 text-white font-medium py-2 px-6 rounded-full shadow-lg transition-all duration-300 transform hover:scale-105"
+                        >
+                        ← Volver a Pedidos
+                        </button>
+                    </div>
+                </div>
+
+                {/* COLUMNA 2 */}
+                <section className="bg-white rounded-3xl shadow-xl p-10 max-h-[600px] overflow-y-auto ring-1 ring-gray-100">
+                    <h3 className="text-2xl font-bold text-gray-800 mb-6">Productos del Pedido</h3>
+                    <ul className="space-y-4">
+                        {order.items.map((item, idx) => (
+                            <li
+                                key={idx}
+                                className="border border-gray-200 p-5 rounded-xl bg-gray-50 flex flex-col sm:flex-row sm:justify-between sm:items-center shadow-md hover:shadow-xl transition-all duration-200"
+                            >
+                                <div className="mb-3 sm:mb-0">
+                                    <p className="text-gray-800 font-semibold">{item.name}</p>
+                                    <p className="text-sm text-gray-600">Talla: {item.size}</p>
+                                </div>
+                                <div className="flex gap-6 text-sm text-gray-700">
+                                    <p><span className="font-medium">Cantidad:</span> {item.quantity}</p>
+                                    <p><span className="font-medium">Precio Unitario:</span> €{item.price.toFixed(2)}</p>
+                                </div>
+                            </li>
+                        ))}
+                    </ul>
+                </section>
+            </div>
+        </div>
+    );
+};
+
+export default OrderDetails;

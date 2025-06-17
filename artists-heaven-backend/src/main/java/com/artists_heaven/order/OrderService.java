@@ -4,6 +4,8 @@ import java.util.List;
 
 import org.springframework.stereotype.Service;
 
+import jakarta.persistence.EntityNotFoundException;
+
 @Service
 public class OrderService {
 
@@ -23,6 +25,15 @@ public class OrderService {
 
     public Double getIncomePerYear(int year) {
         return orderRepository.getIncomePerYear(year);
+    }
+
+    public void saveOrder(Order order) {
+        orderRepository.save(order);
+    }
+
+    public Order findOrderById(Long id) {
+        return orderRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Order not found with id: " + id));
     }
 
 }

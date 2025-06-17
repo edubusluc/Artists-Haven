@@ -13,6 +13,7 @@ import com.artists_heaven.entities.user.User;
 import com.artists_heaven.entities.user.UserProfileDTO;
 import com.artists_heaven.order.Order;
 import com.artists_heaven.order.OrderItem;
+import com.artists_heaven.order.OrderService;
 import com.artists_heaven.order.OrderStatus;
 import com.artists_heaven.product.Category;
 import com.artists_heaven.product.Product;
@@ -26,9 +27,12 @@ public class AdminService {
 
     private final ProductService productService;
 
-    public AdminService(AdminRepository adminRepository, ProductService productService) {
+    private final OrderService orderService;
+
+    public AdminService(AdminRepository adminRepository, ProductService productService, OrderService orderService) {
         this.adminRepository = adminRepository;
         this.productService = productService;
+        this.orderService = orderService;
     }
 
     public int countUsers() {
@@ -138,6 +142,17 @@ public class AdminService {
     public Page<UserProfileDTO> getAllUsers(String search, Pageable pageable) {
         Page<User> users = adminRepository.findAllSort(search, pageable);
         return users.map(UserProfileDTO::new);
+    }
+
+    public Page<Order> getAllOrderSortByDate(Pageable pageable) {
+        Page<Order> orders = adminRepository.findAllOrderSortByDate(pageable);
+        return orders;
+    }
+
+    public void updateOrderStatus(Long id, OrderStatus orderStatus) {
+        Order order = orderService.findOrderById(id);
+        order.setStatus(orderStatus);
+        orderService.saveOrder(order);
     }
 
 }
