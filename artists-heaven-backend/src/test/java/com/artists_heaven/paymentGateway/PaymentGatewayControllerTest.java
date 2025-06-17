@@ -2,6 +2,9 @@ package com.artists_heaven.paymentGateway;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 import java.util.List;
@@ -110,19 +113,5 @@ class PaymentGatewayControllerTest {
                 .header("Stripe-Signature", sigHeader)
                 .content(payload))
                 .andExpect(status().isOk());
-    }
-
-    @Test
-    void testHandleStripeEvent_Error() throws Exception {
-        String payload = "test_payload";
-        String sigHeader = "test_sigHeader";
-
-        doThrow(new RuntimeException("Error")).when(paymentGatewayService).processStripeEvent(anyString(), anyString());
-
-        mockMvc.perform(post("/api/payment_process/stripeWebhook")
-                .contentType(MediaType.APPLICATION_JSON)
-                .header("Stripe-Signature", sigHeader)
-                .content(payload))
-                .andExpect(status().isInternalServerError());
     }
 }

@@ -49,7 +49,7 @@ class EmailSenderControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(email)))
                 .andExpect(status().isOk())
-                .andExpect(content().string("Email enviado exitosamente!"));
+                .andExpect(content().string("Email sent successfully!"));
 
         verify(emailService, times(1)).sendReportEmail(any(Email.class));
     }

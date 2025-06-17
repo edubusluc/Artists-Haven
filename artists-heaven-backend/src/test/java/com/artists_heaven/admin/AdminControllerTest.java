@@ -112,7 +112,7 @@ class AdminControllerTest {
 
                 // Assert
                 assertEquals(HttpStatus.OK, response.getStatusCode());
-                assertEquals("Artista verificado de forma correcta",
+                assertEquals("Artist verified successfully",
                                 ((Map<String, String>) response.getBody()).get("message"));
 
                 assertEquals(true, artist.getIsvalid());
@@ -143,7 +143,7 @@ class AdminControllerTest {
                                 () -> adminController.validateArtist(payload));
 
                 assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
-                assertEquals("Artista no encontrado", exception.getReason());
+                assertEquals("Artist not found", exception.getReason());
         }
 
         @Test
@@ -169,7 +169,7 @@ class AdminControllerTest {
                                 () -> adminController.validateArtist(payload));
 
                 assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
-                assertEquals("Verificación no encontrada", exception.getReason());
+                assertEquals("Verification not found", exception.getReason());
         }
 
         @Test

@@ -82,7 +82,7 @@ class AdminServiceTest {
                 new Object[] { 1, 5L, 1000.0 },
                 new Object[] { 2, 10L, 2000.0 });
 
-        when(adminRepository.findMonthlySalesData(year, OrderStatus.PAID)).thenReturn(mockResults);
+        when(adminRepository.findMonthlySalesData(year, OrderStatus.RETURN_ACCEPTED)).thenReturn(mockResults);
 
         List<MonthlySalesDTO> result = adminService.getMonthlySalesData(year);
 
