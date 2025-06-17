@@ -17,7 +17,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.artists_heaven.email.EmailSenderService;
 import com.artists_heaven.entities.artist.Artist;
 
-public class VerificationControllerTest {
+class VerificationControllerTest {
 
     @Mock
     private EmailSenderService emailSenderService;
@@ -29,7 +29,7 @@ public class VerificationControllerTest {
     private VerificationController verificationController;
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         MockitoAnnotations.openMocks(this);
     }
 
