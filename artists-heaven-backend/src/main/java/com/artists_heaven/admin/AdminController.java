@@ -63,7 +63,7 @@ public class AdminController {
     }
 
     @PostMapping("/validate_artist")
-    public ResponseEntity<?> validateArtist(@RequestBody Map<String, Long> payload) {
+    public ResponseEntity<Map<String, String>> validateArtist(@RequestBody Map<String, Long> payload) {
         Long artistId = payload.get("id");
 
         Artist artist = artistRepository.findById(artistId)
@@ -87,10 +87,8 @@ public class AdminController {
     // Get all verification request
     ////////////////////////////////////////////
 
-    @GetMapping("/verification/pending")
-    public ResponseEntity<?> getAllValidation() {
+    public ResponseEntity<List<Verification>> getAllValidation() {
         List<Verification> verificationList = verificationRepository.findAll();
-
         return ResponseEntity.ok(verificationList);
     }
 
