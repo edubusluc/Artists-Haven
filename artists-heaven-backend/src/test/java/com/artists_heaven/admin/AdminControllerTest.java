@@ -2,6 +2,8 @@ package com.artists_heaven.admin;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -17,6 +19,7 @@ import java.nio.file.Files;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.http.MediaType;
 import org.springframework.data.domain.PageRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,6 +39,8 @@ import com.artists_heaven.email.EmailType;
 import com.artists_heaven.entities.artist.Artist;
 import com.artists_heaven.entities.artist.ArtistRepository;
 import com.artists_heaven.entities.user.UserProfileDTO;
+import com.artists_heaven.order.Order;
+import com.artists_heaven.order.OrderDetailsDTO;
 import com.artists_heaven.order.OrderService;
 import com.artists_heaven.order.OrderStatus;
 import com.artists_heaven.page.PageResponse;
@@ -43,7 +48,10 @@ import com.artists_heaven.verification.Verification;
 import com.artists_heaven.verification.VerificationRepository;
 import com.artists_heaven.verification.VerificationStatus;
 
+import jakarta.persistence.EntityNotFoundException;
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -333,4 +341,95 @@ public class AdminControllerTest {
                 assertEquals("John Doe", response.getContent().get(0).getFirstName());
         }
 
+        @Test
+        void testGetOrders() {
+
+                int page = 0;
+                int size = 6;
+                PageRequest pageable = PageRequest.of(page, size);
+
+                Order order = new Order();
+                order.setId(1L);
+                order.setStatus(OrderStatus.PAID);
+
+                Page<Order> orderPage = new PageImpl<>(List.of(order), pageable, 1);
+
+                when(adminService.getAllOrderSortByDate(pageable)).thenReturn(orderPage);
+
+                // Act
+                PageResponse<OrderDetailsDTO> response = adminController.getOrders(page, size);
+
+                // Asserts
+                assertEquals(1, response.getTotalElements());
+                assertEquals(1, response.getContent().size());
+
+        }
+
+        @Test
+        public void testUpdateOrderStatus_Success() throws Exception {
+                // Datos de prueba
+                Long orderId = 1L;
+                OrderStatus orderStatus = OrderStatus.PAID;
+                OrderStatusUpdateDTO request = new OrderStatusUpdateDTO();
+                request.setOrderId(orderId);
+                request.setStatus(orderStatus);
+
+                // Simulamos que el servicio actualiza correctamente el estado de la orden
+                doNothing().when(adminService).updateOrderStatus(orderId, orderStatus);
+
+                // Hacemos la petición POST
+                mockMvc.perform(post("/api/admin/updateStatus")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"orderId\": 1, \"status\": \"PAID\"}"))
+                                .andExpect(status().isOk())
+                                .andExpect(content().string("Order status updated successfully."));
+        }
+
+        @Test
+        public void testUpdateOrderStatus_OrderNotFound() throws Exception {
+                // Datos de prueba
+                Long orderId = 1L;
+                OrderStatus orderStatus = OrderStatus.PAID;
+                OrderStatusUpdateDTO request = new OrderStatusUpdateDTO();
+                request.setOrderId(orderId);
+                request.setStatus(orderStatus);
+
+                // Simulamos que el servicio lanza una EntityNotFoundException
+                doThrow(new EntityNotFoundException("Order not found with id: " + orderId))
+                                .when(adminService).updateOrderStatus(orderId, orderStatus);
+
+                // Hacemos la petición POST
+                mockMvc.perform(post("/api/admin/updateStatus")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"orderId\": 1, \"status\": \"PAID\"}"))
+                                .andExpect(status().isNotFound()) // Verificamos que la respuesta es 404 NOT FOUND
+                                .andExpect(content().string("Order not found with id: " + orderId)); // Verificamos el
+                                                                                                     // mensaje de error
+        }
+
+        @Test
+        public void testUpdateOrderStatus_InternalServerError() throws Exception {
+                // Datos de prueba
+                Long orderId = 1L;
+                OrderStatus orderStatus = OrderStatus.PAID;
+                OrderStatusUpdateDTO request = new OrderStatusUpdateDTO();
+                request.setOrderId(orderId);
+                request.setStatus(orderStatus);
+
+                // Simulamos una excepción genérica
+                doThrow(new RuntimeException("Unexpected error")).when(adminService).updateOrderStatus(orderId,
+                                orderStatus);
+
+                // Hacemos la petición POST
+                mockMvc.perform(post("/api/admin/updateStatus")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"orderId\": 1, \"status\": \"PAID\"}"))
+                                .andExpect(status().isInternalServerError()) // Verificamos que la respuesta es 500
+                                                                             // INTERNAL SERVER ERROR
+                                .andExpect(content().string("An error occurred while updating the order status.")); // Verificamos
+                                                                                                                    // el
+                                                                                                                    // mensaje
+                                                                                                                    // de
+                                                                                                                    // error
+        }
 }

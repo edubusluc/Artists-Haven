@@ -64,4 +64,7 @@ public interface AdminRepository extends JpaRepository<User, Long> {
                         "ORDER BY u.role")
         Page<User> findAllSort(@Param("search") String search, Pageable pageable);
 
+        @Query("SELECT o FROM Order o ORDER BY o.createdDate")
+        Page<Order> findAllOrderSortByDate(Pageable pageable);
+
 }

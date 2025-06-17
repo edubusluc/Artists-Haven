@@ -64,7 +64,10 @@ public class SecurityConfiguration {
             "/api/admin/staticsPerYear",
             "/api/admin/sales/monthly",
             "/api/admin/product-management",
-            "/api/admin/users"
+            "/api/admin/users",
+            "/api/admin/orders",
+            "/api/admin/updateStatus",
+            "/api/admin/orderDetails/{id}"
     };
 
     // Endpoints accessible only by ARTIST users
@@ -80,6 +83,7 @@ public class SecurityConfiguration {
             "/api/users/profile",
             "/api/rating/new",
             "/api/orders/myOrders",
+            "/api/orders/{id}"
     };
 
     @Bean
