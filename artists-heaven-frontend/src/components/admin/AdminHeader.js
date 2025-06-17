@@ -1,6 +1,6 @@
 import React, { useContext, useState, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faTachometerAlt, faBoxOpen, faUsers, faChartLine, faBars, faShoppingCart, faUser, faRightFromBracket } from '@fortawesome/free-solid-svg-icons';
+import { faTachometerAlt, faBoxOpen, faUsers, faBars, faShoppingCart, faUser, faRightFromBracket } from '@fortawesome/free-solid-svg-icons';
 import { Link } from "react-router-dom";
 import { useTranslation } from 'react-i18next';
 import Logout from "../Logout";
@@ -43,7 +43,6 @@ const AdminHeader = () => {
         { to: "admin/products/store", icon: faBoxOpen, label: "Gestión de Productos" },
         { to: "admin/orders", icon: faShoppingCart, label: "Órdenes" },
         { to: "admin/clients", icon: faUsers, label: "Clientes" },
-        { to: "admin/reports", icon: faChartLine, label: "Análisis y Reportes" },
     ];
 
     const toggleSidebar = () => {
