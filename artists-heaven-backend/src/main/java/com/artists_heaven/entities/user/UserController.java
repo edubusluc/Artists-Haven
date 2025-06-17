@@ -46,7 +46,7 @@ public class UserController {
 
     // Endpoint to get the profile of the currently authenticated user
     @GetMapping("/profile")
-    public ResponseEntity<?> getUserProfile(Principal principal) {
+    public ResponseEntity<Object> getUserProfile(Principal principal) {
         try {
             // Call the service to get the user profile
             UserProfileDTO userProfileDTO = userService.getUserProfile(principal);
@@ -64,7 +64,7 @@ public class UserController {
 
      // Endpoint to update the profile of the currently authenticated user
     @PutMapping("/profile/edit")
-    public ResponseEntity<?> updateUserProfile(@RequestBody UserProfileDTO userProfileDTO, Principal principal) {
+    public ResponseEntity<Object> updateUserProfile(@RequestBody UserProfileDTO userProfileDTO, Principal principal) {
         try {
             // Call the service to update the user profile
             userService.updateUserProfile(userProfileDTO, principal);
