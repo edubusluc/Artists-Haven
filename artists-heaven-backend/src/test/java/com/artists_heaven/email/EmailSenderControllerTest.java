@@ -16,7 +16,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-public class EmailSenderControllerTest {
+class EmailSenderControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -30,13 +30,13 @@ public class EmailSenderControllerTest {
     private ObjectMapper objectMapper = new ObjectMapper();
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         MockitoAnnotations.openMocks(this);
         mockMvc = MockMvcBuilders.standaloneSetup(emailSenderController).build();
     }
 
     @Test
-    public void testSendEmail() throws Exception {
+    void testSendEmail() throws Exception {
         Email email = new Email();
         email.setId(1L);
         email.setUsername("testUser");

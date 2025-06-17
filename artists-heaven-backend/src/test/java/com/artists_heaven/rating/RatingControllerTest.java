@@ -23,7 +23,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import com.artists_heaven.entities.user.User;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-public class RatingControllerTest {
+class RatingControllerTest {
 
     private MockMvc mockMvc;
 
@@ -101,7 +101,8 @@ public class RatingControllerTest {
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
-        when(ratingService.createRating(anyLong(), anyLong(), anyInt(), anyString())).thenThrow(new RuntimeException("Unauthorized"));
+        when(ratingService.createRating(anyLong(), anyLong(), anyInt(), anyString()))
+                .thenThrow(new RuntimeException("Unauthorized"));
 
         mockMvc.perform(post("/api/rating/new")
                 .contentType(MediaType.APPLICATION_JSON)

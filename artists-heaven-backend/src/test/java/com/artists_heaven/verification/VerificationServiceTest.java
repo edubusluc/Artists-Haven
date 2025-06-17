@@ -18,7 +18,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.stream.Stream;
 
-public class VerificationServiceTest {
+class VerificationServiceTest {
 
     @Mock
     private ArtistRepository artistRepository;
@@ -30,7 +30,7 @@ public class VerificationServiceTest {
     private VerificationService verificationService;
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         MockitoAnnotations.openMocks(this);
     }
 

@@ -86,7 +86,7 @@ public class AdminController {
     ////////////////////////////////////////////
     // Get all verification request
     ////////////////////////////////////////////
-
+    @GetMapping("/verification/pending")
     public ResponseEntity<List<Verification>> getAllValidation() {
         List<Verification> verificationList = verificationRepository.findAll();
         return ResponseEntity.ok(verificationList);

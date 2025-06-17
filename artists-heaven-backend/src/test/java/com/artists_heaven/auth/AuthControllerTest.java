@@ -28,7 +28,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.http.MediaType;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
 
-public class AuthControllerTest {
+class AuthControllerTest {
 
     private MockMvc mockMvc;
 
@@ -56,14 +56,14 @@ public class AuthControllerTest {
     private ObjectMapper objectMapper = new ObjectMapper();
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         MockitoAnnotations.openMocks(this);
 
         mockMvc = MockMvcBuilders.standaloneSetup(authController).build();
     }
 
     @Test
-    public void testLoginUser_withValidCredentials() throws Exception {
+    void testLoginUser_withValidCredentials() throws Exception {
 
         String mockJwt = "mock-jwt-token";
         User user = new User();
@@ -82,7 +82,7 @@ public class AuthControllerTest {
     }
 
     @Test
-    public void testLoginUser_withUserNull() throws Exception {
+    void testLoginUser_withUserNull() throws Exception {
 
         String mockJwt = "mock-jwt-token";
         User user = new User();
@@ -101,7 +101,7 @@ public class AuthControllerTest {
     }
 
     @Test
-    public void testLoginUser_withNullToken() throws Exception {
+    void testLoginUser_withNullToken() throws Exception {
         LoginRequest loginRequest = new LoginRequest("wrongemail@email.com", "password1234");
         when(authService.login(anyString(), anyString())).thenReturn(null);
         mockMvc.perform(post("/api/auth/login")
@@ -111,7 +111,7 @@ public class AuthControllerTest {
     }
 
     @Test
-    public void testLoginUser_withNonValidCredentials() throws Exception {
+    void testLoginUser_withNonValidCredentials() throws Exception {
         when(authService.login(anyString(), anyString()))
                 .thenThrow(new IllegalArgumentException("Invalid credentials"));
         // Create a LoginRequest payload
@@ -125,7 +125,7 @@ public class AuthControllerTest {
     }
 
     @Test
-    public void testGoogleLogin_withExistingUser() throws Exception {
+    void testGoogleLogin_withExistingUser() throws Exception {
         // Crear un mapa simulado para la respuesta de handleGoogleLogin
         Map<String, String> mockResponse = Map.of("token", "mockJwtToken", "email", "user@example.com", "role", "USER");
 
@@ -142,29 +142,30 @@ public class AuthControllerTest {
                 .andExpect(MockMvcResultMatchers.status().isOk()) // Verificar que el estado es OK
                 .andExpect(MockMvcResultMatchers.jsonPath("$.token").value("mockJwtToken")) // Verificar el token
                 .andExpect(MockMvcResultMatchers.jsonPath("$.email").value("user@example.com")); // Verificar el email
-        }
-
-        @Test
-        public void testGoogleLoginInvalidToken() throws Exception {
-            // Simular un mapa con un error
-            Map<String, String> mockResponse = Map.of("error", "Invalid ID token");
-    
-            // Mockear el comportamiento del servicio para un ID token inválido
-            when(authService.handleGoogleLogin(anyString())).thenReturn(mockResponse);
-    
-            // Crear la solicitud de login
-            Map<String, String> requestPayload = Map.of("idTokenString", "invalidToken");
-    
-            // Realizar la solicitud POST y verificar el resultado
-            mockMvc.perform(post("/api/auth/google-login")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(objectMapper.writeValueAsString(requestPayload)))
-                    .andExpect(MockMvcResultMatchers.status().isUnauthorized()) // Verificar que el estado es 401
-                    .andExpect(MockMvcResultMatchers.jsonPath("$.error").value("Invalid ID token")); // Verificar el mensaje de error
-        }
+    }
 
     @Test
-    public void testGoogleLogin_withUnauthorizedException() throws Exception {
+    void testGoogleLoginInvalidToken() throws Exception {
+        // Simular un mapa con un error
+        Map<String, String> mockResponse = Map.of("error", "Invalid ID token");
+
+        // Mockear el comportamiento del servicio para un ID token inválido
+        when(authService.handleGoogleLogin(anyString())).thenReturn(mockResponse);
+
+        // Crear la solicitud de login
+        Map<String, String> requestPayload = Map.of("idTokenString", "invalidToken");
+
+        // Realizar la solicitud POST y verificar el resultado
+        mockMvc.perform(post("/api/auth/google-login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(requestPayload)))
+                .andExpect(MockMvcResultMatchers.status().isUnauthorized()) // Verificar que el estado es 401
+                .andExpect(MockMvcResultMatchers.jsonPath("$.error").value("Invalid ID token")); // Verificar el mensaje
+                                                                                                 // de error
+    }
+
+    @Test
+    void testGoogleLogin_withUnauthorizedException() throws Exception {
         // Mock an exception when verifying the token
         when(jwtTokenProvider.generateToken(any(Authentication.class)))
                 .thenThrow(new RuntimeException("Error verifying token"));

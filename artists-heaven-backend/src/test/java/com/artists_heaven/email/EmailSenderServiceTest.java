@@ -22,7 +22,7 @@ import com.artists_heaven.order.Order;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 
-public class EmailSenderServiceTest {
+class EmailSenderServiceTest {
 
     @Mock
     private JavaMailSender mailSender;

@@ -24,7 +24,7 @@ import com.artists_heaven.payment_gateway.PaymentGatewayService;
 import com.artists_heaven.shopping_cart.CartItemDTO;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-public class PaymentGatewayControllerTest {
+class PaymentGatewayControllerTest {
 
     private MockMvc mockMvc;
 

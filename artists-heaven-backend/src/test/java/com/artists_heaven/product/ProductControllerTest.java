@@ -24,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -60,7 +61,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
-public class ProductControllerTest {
+class ProductControllerTest {
 
         private MockMvc mockMvc;
 
@@ -77,36 +78,39 @@ public class ProductControllerTest {
                 SecurityContextHolder.clearContext();
         }
 
-        // @Test
-        // @Transactional
-        // void testGetAllProducts() throws Exception {
-        // List<Product> products = new ArrayList<>();
-        // Product product1 = new Product();
-        // product1.setCategories(new HashSet<>());
-        // product1.setDescription("Description");
-        // product1.setName("Product1");
-        // product1.setPrice(100.0f);
-        // product1.setSize(new HashMap<>());
-        // product1.setImages(new ArrayList<>());
-        // product1.setAvailable(true);
-        // products.add(product1);
+        @Test
+        @Transactional
+        void testGetAllProducts() throws Exception {
+                List<Product> products = new ArrayList<>();
+                Product product1 = new Product();
+                product1.setCategories(new HashSet<>());
+                product1.setDescription("Description");
+                product1.setName("Product1");
+                product1.setPrice(100.0f);
+                product1.setSize(new HashMap<>());
+                product1.setImages(new ArrayList<>());
+                product1.setAvailable(true);
+                products.add(product1);
 
-        // Product product2 = new Product();
-        // product2.setCategories(new HashSet<>());
-        // product2.setDescription("Description");
-        // product2.setName("Product2");
-        // product2.setPrice(100.0f);
-        // product2.setSize(new HashMap<>());
-        // product2.setImages(new ArrayList<>());
-        // product2.setAvailable(true);
+                Product product2 = new Product();
+                product2.setCategories(new HashSet<>());
+                product2.setDescription("Description");
+                product2.setName("Product2");
+                product2.setPrice(100.0f);
+                product2.setSize(new HashMap<>());
+                product2.setImages(new ArrayList<>());
+                product2.setAvailable(true);
+                products.add(product2);
 
-        // when(productService.getAllProducts()).thenReturn(products);
+                Pageable pageable = PageRequest.of(0, 10);
+                Page<Product> page = new PageImpl<>(products, pageable, products.size());
 
-        // mockMvc.perform(get("/api/product/allProducts"))
-        // .andExpect(status().isOk())
-        // .andExpect(jsonPath("$.length()").value(1))
-        // .andExpect(jsonPath("$[0].name").value("Product1"));
-        // }
+                when(productService.getAllProducts(any(Pageable.class))).thenReturn(page);
+
+                mockMvc.perform(get("/api/product/allProducts"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.content[0].name").value("Product1"));
+        }
 
         @Test
         @Transactional

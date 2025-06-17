@@ -15,7 +15,7 @@ import com.artists_heaven.entities.user.User;
 import com.artists_heaven.entities.user.UserRepository;
 import com.artists_heaven.entities.user.UserRole;
 
-public class ArtistServiceTest {
+class ArtistServiceTest {
 
     @Mock
     private ArtistRepository artistRepository;
@@ -29,12 +29,12 @@ public class ArtistServiceTest {
     private PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         MockitoAnnotations.openMocks(this);
     }
 
     @Test
-    public void testRegisterArtist_EmailAlreadyExists() {
+    void testRegisterArtist_EmailAlreadyExists() {
         Artist artist = new Artist();
         artist.setEmail("test@example.com");
 
@@ -51,7 +51,7 @@ public class ArtistServiceTest {
     }
 
     @Test
-    public void testRegisterArtist_ArtistNameAlreadyExists() {
+    void testRegisterArtist_ArtistNameAlreadyExists() {
         Artist artist = new Artist();
         artist.setArtistName("existingArtist");
 
@@ -66,7 +66,7 @@ public class ArtistServiceTest {
     }
 
     @Test
-    public void testRegisterArtist_Success() {
+    void testRegisterArtist_Success() {
         Artist artist = new Artist();
         artist.setArtistName("newArtist");
         artist.setEmail("test@example.com");

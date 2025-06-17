@@ -26,7 +26,7 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 
 import java.lang.reflect.Method;
 
-public class AuthServiceTest {
+class AuthServiceTest {
 
     private Method mapRoleToAuthorityMethod;
 
@@ -46,7 +46,7 @@ public class AuthServiceTest {
     private TokenVerifier tokenVerifier;
 
     @BeforeEach
-    public void setUp() throws Exception {
+    void setUp() throws Exception {
         MockitoAnnotations.openMocks(this);
 
         mapRoleToAuthorityMethod = AuthService.class.getDeclaredMethod("mapRoleToAuthority", UserRole.class);
@@ -54,7 +54,7 @@ public class AuthServiceTest {
     }
 
     @Test
-    public void testLoginSuccess() {
+    void testLoginSuccess() {
         String email = "test@example.com";
         String password = "password";
         User user = new User();
@@ -75,7 +75,7 @@ public class AuthServiceTest {
     }
 
     @Test
-    public void testLoginFailure() {
+    void testLoginFailure() {
         String email = "test@example.com";
         String password = "password";
 
@@ -89,7 +89,7 @@ public class AuthServiceTest {
     }
 
     @Test
-    public void testHandleGoogleLoginSuccess() throws Exception {
+    void testHandleGoogleLoginSuccess() throws Exception {
         String idTokenString = "idToken";
         GoogleIdToken.Payload payload = new GoogleIdToken.Payload();
         payload.setEmail("test@example.com");
@@ -114,7 +114,7 @@ public class AuthServiceTest {
     }
 
     @Test
-    public void testHandleGoogleLoginInvalidToken() throws Exception {
+    void testHandleGoogleLoginInvalidToken() throws Exception {
         String idTokenString = "invalidToken";
 
         when(tokenVerifier.verifyToken(idTokenString)).thenReturn(null);
@@ -127,19 +127,19 @@ public class AuthServiceTest {
     }
 
     @Test
-    public void testMapRoleToAuthority_User() throws Exception {
+    void testMapRoleToAuthority_User() throws Exception {
         String authority = (String) mapRoleToAuthorityMethod.invoke(authService, UserRole.USER);
         assertEquals("ROLE_USER", authority);
     }
 
     @Test
-    public void testMapRoleToAuthority_Artist() throws Exception {
+    void testMapRoleToAuthority_Artist() throws Exception {
         String authority = (String) mapRoleToAuthorityMethod.invoke(authService, UserRole.ARTIST);
         assertEquals("ROLE_ARTIST", authority);
     }
 
     @Test
-    public void testMapRoleToAuthority_Admin() throws Exception {
+    void testMapRoleToAuthority_Admin() throws Exception {
         String authority = (String) mapRoleToAuthorityMethod.invoke(authService, UserRole.ADMIN);
         assertEquals("ROLE_ADMIN", authority);
     }
