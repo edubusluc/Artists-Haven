@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import NonAuthorise from '../NonAuthorise';
@@ -25,6 +25,9 @@ const AdminClient = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [users, setUsers] = useState([]);
+
+    const [videoBlobsCache, setVideoBlobsCache] = useState({});
+    const pendingFetches = React.useRef({});
 
 
     useEffect(() => {
@@ -74,7 +77,6 @@ const AdminClient = () => {
             };
         };
 
-
         fetchData();
         return () => {
             controller.abort();
@@ -110,41 +112,54 @@ const AdminClient = () => {
         fetchVerifications();
     }, [authToken]);
 
-    const fetchVideoBlob = async (videoUrl, authToken) => {
-        try {
-            if (role !== "ADMIN") {
-                return;
+    const fetchVideoBlob = useCallback(async (videoUrl) => {
+        if (videoBlobsCache[videoUrl]) {
+            return videoBlobsCache[videoUrl];
+        }
+        if (pendingFetches.current[videoUrl]) {
+            return pendingFetches.current[videoUrl];
+        }
+        const fetchPromise = fetch(`/api/admin${videoUrl}`, {
+            method: "GET",
+            headers: {
+                'Authorization': `Bearer ${authToken}`
             }
-            const response = await fetch(`/api/admin${videoUrl}`, {
-                method: "GET",
-                headers: {
-                    'Authorization': `Bearer ${authToken}`
-                }
+        })
+            .then(response => {
+                if (!response.ok) throw new Error(`Failed to fetch video: ${response.status}`);
+                return response.blob();
+            })
+            .then(videoBlob => {
+                const blobUrl = URL.createObjectURL(videoBlob);
+                setVideoBlobsCache(prev => ({ ...prev, [videoUrl]: blobUrl }));
+                delete pendingFetches.current[videoUrl];
+                return blobUrl;
+            })
+            .catch(error => {
+                console.error("Error fetching video blob:", error);
+                delete pendingFetches.current[videoUrl];
+                return null;
             });
 
-            if (!response.ok) {
-                throw new Error(`Failed to fetch video: ${response.status}`);
-            }
+        pendingFetches.current[videoUrl] = fetchPromise;
 
-            const videoBlob = await response.blob();
-            return URL.createObjectURL(videoBlob);
-        } catch (error) {
-            console.error("Error fetching video blob:", error);
-            return null;
-        }
-    };
+        return fetchPromise;
+    }, [authToken, videoBlobsCache]);
 
-    const VideoLink = ({ videoUrl, authToken }) => {
+    const VideoLink = ({ videoUrl }) => {
         const [videoSrc, setVideoSrc] = useState(null);
 
         useEffect(() => {
-            const fetchAndSetVideo = async () => {
-                const videoBlobUrl = await fetchVideoBlob(videoUrl, authToken);
-                setVideoSrc(videoBlobUrl);
-            };
+            let isMounted = true;
 
-            fetchAndSetVideo();
-        }, [videoUrl, authToken]);
+            fetchVideoBlob(videoUrl).then(blobUrl => {
+                if (isMounted) setVideoSrc(blobUrl);
+            });
+
+            return () => {
+                isMounted = false;
+            };
+        }, [videoUrl, fetchVideoBlob]);
 
         return (
             <div>
@@ -156,8 +171,8 @@ const AdminClient = () => {
                     <p>Loading video...</p>
                 )}
             </div>
-        )
-    }
+        );
+    };
 
     const verifyArtist = (id, verificationId) => {
         if (role !== "ADMIN") {
@@ -304,7 +319,7 @@ const AdminClient = () => {
                         </div>
                     </div>
                     <div className="bg-white p-4 rounded-lg mb-4 w-full overflow-x-auto">
-                    <p className="custom-font-footer-black text-xl md:text-2xl font-bold text-center md:text-left mb-6">
+                        <p className="custom-font-footer-black text-xl md:text-2xl font-bold text-center md:text-left mb-6">
                             Verificaciones Pendientes
                         </p>
 
