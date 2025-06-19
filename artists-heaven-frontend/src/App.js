@@ -55,7 +55,7 @@ import MyOrders from './components/MyOrders';
 import AdminHeader from './components/admin/AdminHeader';
 import AdminDashboard from './components/admin/AdminDashboard';
 import AdminProductList from './components/admin/AdminProductList';
-import AdminClient from './components/admin/AdmiClients';
+import AdminClient from './components/admin/AdminClients';
 import AdminOrder from './components/admin/AdminOrder';
 import AdminOrderDetails from './components/admin/AdminOrderDetails';
 
