@@ -74,7 +74,6 @@ public class PaymentGatewayController {
 
             return ResponseEntity.ok("Evento recibido");
         } catch (Exception e) {
-            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error interno del servidor");
         }
     }
