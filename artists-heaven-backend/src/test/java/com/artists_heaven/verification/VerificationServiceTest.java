@@ -69,7 +69,7 @@ class VerificationServiceTest {
     @Test
     void testIsArtistEligibleForVerification_True() {
         Artist artist = new Artist();
-        artist.setIsvalid(false);
+        artist.setIsVerificated(false);
 
         boolean result = verificationService.isArtistEligibleForVerification(artist);
 
@@ -79,7 +79,7 @@ class VerificationServiceTest {
     @Test
     void testIsArtistEligibleForVerification_False() {
         Artist artist = new Artist();
-        artist.setIsvalid(true);
+        artist.setIsVerificated(true);
 
         boolean result = verificationService.isArtistEligibleForVerification(artist);
 
