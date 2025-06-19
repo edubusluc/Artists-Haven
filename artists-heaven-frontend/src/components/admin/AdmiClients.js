@@ -176,7 +176,6 @@ const AdminClient = () => {
 
     const verifyArtist = (id, verificationId) => {
         if (role !== "ADMIN") {
-            // Si el rol no es ADMIN, no hacemos la petición
             return;
         }
         fetch('/api/admin/validate_artist', {
@@ -357,7 +356,7 @@ const AdminClient = () => {
                                                 </span>
                                             </td>
                                             <td className="px-4 py-3">
-                                                {!verification.artist?.isvalid ? (
+                                                {!verification.artist?.isVerificated ? (
                                                     <button
                                                         onClick={() => verifyArtist(verification.artist.id, verification.id)}
                                                         className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 transition"

@@ -10,8 +10,11 @@ const SalesChart = ({ year }) => {
         "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
     ];
 
+    const role = localStorage.getItem("role")?.toLowerCase();
+    const rolePath = role === "artist" ? "artists" : role;
+
     useEffect(() => {
-        fetch(`/api/admin/sales/monthly?year=${year}`, {
+        fetch(`/api/${rolePath}/sales/monthly?year=${year}`, {
             method: "GET",
             headers: {
                 'Authorization': `Bearer ${authToken}`,
@@ -49,7 +52,16 @@ const SalesChart = ({ year }) => {
                 <Tooltip />
                 <Legend />
                 <Area type="monotone" dataKey="totalOrders" name="Ventas Realizadas" stroke="#8884d8" fillOpacity={1} fill="url(#colorOrders)" />
-                <Area type="monotone" dataKey="totalRevenue" name="Ingresos Obtenidos" stroke="#82ca9d" fillOpacity={1} fill="url(#colorRevenue)" />
+                {role === 'ADMIN' && (
+                    <Area
+                        type="monotone"
+                        dataKey="totalRevenue"
+                        name="Ingresos Obtenidos"
+                        stroke="#82ca9d"
+                        fillOpacity={1}
+                        fill="url(#colorRevenue)"
+                    />
+                )}
 
             </AreaChart>
         </ResponsiveContainer>

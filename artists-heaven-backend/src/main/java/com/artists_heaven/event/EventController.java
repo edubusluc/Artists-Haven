@@ -4,6 +4,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.artists_heaven.entities.artist.Artist;
+import com.artists_heaven.page.PageResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -18,8 +19,10 @@ import java.nio.file.Paths;
 import java.util.List;
 
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -32,6 +35,7 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.http.MediaType;
+import org.springframework.data.domain.Page;
 
 @RestController
 @RequestMapping("/api/event")
@@ -86,22 +90,26 @@ public class EventController {
         }
     }
 
-    @Operation(summary = "Get all events created by the authenticated artist", description = "Retrieves a list of all events created by the currently authenticated artist.")
+    @GetMapping("/allMyEvents")
+    @Operation(summary = "Get paginated events created by the authenticated artist", description = "Retrieves a paginated list of events created by the currently authenticated artist.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "List of events retrieved successfully", content = @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = Event.class)))),
+            @ApiResponse(responseCode = "200", description = "Paginated list of events retrieved successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = PageResponse.class))),
             @ApiResponse(responseCode = "400", description = "Bad request - user is not an artist", content = @Content(mediaType = "application/json"))
     })
-    @GetMapping("/allMyEvents")
-    public ResponseEntity<List<Event>> getAllMyEvents() {
+    public ResponseEntity<?> getAllMyEvents(
+            @Parameter(description = "Page number to retrieve (0-based)", example = "0") @RequestParam(defaultValue = "0") int page,
+
+            @Parameter(description = "Number of events per page", example = "6") @RequestParam(defaultValue = "6") int size) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         Object principalUser = authentication.getPrincipal();
 
         if (eventService.isArtist()) {
             Artist artist = (Artist) principalUser;
-            List<Event> events = eventService.getAllMyEvents(artist.getId());
-            return ResponseEntity.ok(events);
+            PageRequest pageRequest = PageRequest.of(page, size);
+            Page<Event> eventsPage = eventService.getAllMyEvents(artist.getId(), pageRequest);
+            return ResponseEntity.ok(new PageResponse<>(eventsPage));
         } else {
-            return ResponseEntity.badRequest().body(null);
+            return ResponseEntity.badRequest().body("User is not an artist");
         }
     }
 
