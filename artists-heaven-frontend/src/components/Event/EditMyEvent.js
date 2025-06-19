@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 
-const CreateEventForm = () => {
+const EditMyEvent = () => {
+    const { id } = useParams();
+    const navigate = useNavigate();
+
     const [event, setEvent] = useState({
         name: "",
         description: "",
@@ -10,99 +13,123 @@ const CreateEventForm = () => {
         moreInfo: "",
     });
 
-    const [images, setImages] = useState([]);
-    const [successMessage, setSuccessMessage] = useState("");
+    const [image, setImage] = useState(null);
+    const [previewImage, setPreviewImage] = useState(null);
     const [errorMessage, setErrorMessage] = useState("");
+    const [successMessage, setSuccessMessage] = useState("");
     const [validationError, setValidationError] = useState("");
+
     const [authToken] = useState(localStorage.getItem("authToken"));
     const role = localStorage.getItem("role");
-    const navigate = useNavigate();
 
+    useEffect(() => {
+        if (role !== "ARTIST") {
+            setErrorMessage("No tienes permisos para acceder a esta página.");
+            return;
+        }
 
+        const fetchEventDetails = async () => {
+            try {
+                const response = await fetch(`/api/event/details/${id}`, {
+                    method: "GET",
+                    headers: {
+                        Authorization: `Bearer ${authToken}`,
+                    },
+                });
 
-    if (role !== "ARTIST") {
-        return <div className="text-red-600 p-4">No tienes permisos para acceder a esta página</div>;
-    }
+                if (!response.ok) {
+                    throw new Error("Error al obtener el evento");
+                }
+
+                const data = await response.json();
+                setEvent(data);
+                setPreviewImage(`/api/event${data.image}`);
+            } catch (error) {
+                setErrorMessage(error.message);
+            }
+        };
+
+        fetchEventDetails();
+    }, [id, authToken, role]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
         setEvent((prev) => ({ ...prev, [name]: value }));
     };
 
-
-    const handleImageChange = (e) => {
-        const files = Array.from(e.target.files);
-        const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/bmp", "image/webp"];
-        const invalidFiles = files.filter(file => !allowedTypes.includes(file.type));
-        if (invalidFiles.length > 0) {
-            setErrorMessage("Solo se permiten archivos de imagen válidos (jpg, png, gif, bmp, webp).");
-            setImages([]);
-            return;
+    const handleFileChange = (e) => {
+        const file = e.target.files[0];
+        if (file && file.type.startsWith("image/")) {
+            setImage(file);
+            const previewUrl = URL.createObjectURL(file);
+            setPreviewImage(previewUrl);
+        } else {
+            setErrorMessage("Por favor selecciona un archivo de imagen válido.");
+            setImage(null);
+            setPreviewImage(null);
         }
-        setErrorMessage("");
-        setImages(files);
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        // Validar que haya imágenes
-        if (images.length === 0) {
-            setValidationError("Debes seleccionar al menos una imagen válida.");
-            return;
-        }
-
-        // Validar fecha
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const eventDate = new Date(event.date);
+
         if (eventDate <= today) {
             setValidationError("La fecha del evento debe ser posterior a la fecha actual.");
             return;
+        }
+
+        if (!image) {
+            const allowedExtensions = [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp"];
+            const lowerPreview = previewImage ? previewImage.toLowerCase() : "";
+
+            const isValidImage = allowedExtensions.some(ext => lowerPreview.endsWith(ext));
+
+            if (!isValidImage) {
+                setErrorMessage("La imagen actual no es un formato válido. Por favor selecciona una imagen válida.");
+                return;
+            }
         }
 
         setValidationError("");
         setErrorMessage("");
         setSuccessMessage("");
 
-        const formData = new FormData();
-        formData.append("event", new Blob([JSON.stringify(event)], { type: "application/json" }));
-        images.forEach((file) => formData.append("images", file));
+        const data = new FormData();
+        data.append("event", new Blob([JSON.stringify(event)], { type: "application/json" }));
+        if (image) data.append("image", image);
 
         try {
-            const response = await fetch("/api/event/new", {
-                method: "POST",
-                body: formData,
+            const response = await fetch(`/api/event/edit/${id}`, {
+                method: "PUT",
                 headers: {
                     Authorization: `Bearer ${authToken}`,
                 },
+                body: data,
             });
 
-            if (response.ok) {
-                const data = await response.json();
-                setSuccessMessage(`Evento "${data.name}" creado con éxito.`);
-                setEvent({
-                    name: "",
-                    description: "",
-                    date: "",
-                    location: "",
-                    moreInfo: "",
-                });
-                setImages([]);
-                navigate("/");
-            } else {
-                const err = await response.text();
-                throw new Error(err || "Error al crear el evento.");
+            if (!response.ok) {
+                throw new Error("Error al actualizar el evento");
             }
+
+            setSuccessMessage("Evento actualizado con éxito");
+            navigate("/event/all-my-Events");
         } catch (error) {
             setErrorMessage(error.message);
         }
     };
 
+    if (role !== "ARTIST") {
+        return <div className="text-red-600 p-4">No tienes permisos para acceder a esta página</div>;
+    }
+
     return (
         <div className="min-h-screen bg-gradient-to-r from-gray-300 to-white py-10 px-4 sm:px-10">
             <div className="max-w-4xl mx-auto bg-white shadow-md rounded-lg p-6">
-                <h2 className="text-2xl font-bold mb-6 text-gray-700 text-center">Crear Nuevo Evento</h2>
+                <h2 className="text-2xl font-bold mb-6 text-gray-700 text-center">Editar Evento</h2>
 
                 {validationError && (
                     <div className="text-red-900 text-sm mt-2 bg-red-300 rounded-md p-4 mb-4">{validationError}</div>
@@ -175,14 +202,22 @@ const CreateEventForm = () => {
                     </div>
 
                     <div>
-                        <label className="block font-semibold mb-2 text-sm text-gray-600">Subir imágenes</label>
+                        <label className="block font-semibold mb-2 text-sm text-gray-600">Imagen actual</label>
+                        {previewImage && (
+                            <div className="mb-3">
+                                <img
+                                    src={previewImage}
+                                    alt={event.name}
+                                    className="w-36 h-36 object-cover rounded shadow"
+                                />
+                            </div>
+                        )}
                         <input
                             type="file"
-                            onChange={handleImageChange}
+                            name="image"
+                            onChange={handleFileChange}
                             className="block w-full text-sm text-gray-500"
-                            required
                             accept="image/*"
-
                         />
                     </div>
 
@@ -190,14 +225,12 @@ const CreateEventForm = () => {
                         type="submit"
                         className="w-full py-2 bg-yellow-400 text-black font-semibold rounded-md shadow-md transition duration-300 ease-in-out hover:bg-yellow-500 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-yellow-300"
                     >
-                        Crear Evento
+                        Actualizar Evento
                     </button>
-
-                    {successMessage && <div className="text-green-600 text-sm mt-3">{successMessage}</div>}
                 </form>
             </div>
         </div>
     );
 };
 
-export default CreateEventForm;
+export default EditMyEvent;

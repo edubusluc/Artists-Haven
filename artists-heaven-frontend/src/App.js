@@ -44,7 +44,7 @@ import CreateRatingForm from './components/CreateRatingForm';
 // Components - Events
 import CreateEventForm from './components/Event/CreateEventForm';
 import AllEvents from './components/AllEvents';
-import EditMyEvent from './components/EditMyEvent';
+import EditMyEvent from './components/Event/EditMyEvent';
 import AllMyEvents from './components/Event/AllMyEvents';
 
 // Components - Orders
