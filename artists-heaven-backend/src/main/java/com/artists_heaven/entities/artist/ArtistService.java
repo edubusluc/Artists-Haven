@@ -1,12 +1,23 @@
 package com.artists_heaven.entities.artist;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.artists_heaven.admin.MonthlySalesDTO;
 import com.artists_heaven.entities.user.User;
 import com.artists_heaven.entities.user.UserRepository;
 import com.artists_heaven.entities.user.UserRole;
+import com.artists_heaven.order.OrderItem;
+import com.artists_heaven.order.OrderStatus;
+import com.artists_heaven.verification.VerificationStatus;
+
+import jakarta.persistence.EntityNotFoundException;
 
 @Service
 public class ArtistService {
@@ -53,6 +64,77 @@ public class ArtistService {
 
         // Save the artist in the database and return the saved entity
         return artistRepository.save(artist);
+    }
+
+    public Artist findById(Long id) {
+        return artistRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Artist not found with id: " + id));
+    }
+
+    public String isArtistVerificated(Long id) {
+        Boolean isVerified = artistRepository.isArtistVerificated(id);
+        List<VerificationStatus> latestVerificationStatus = artistRepository.findLatestVerificationStatus(id);
+        String result = "";
+        if (isVerified) {
+            result = "Verified";
+        } else {
+            result = "Not Verified";
+        }
+
+        if (latestVerificationStatus.size() != 0) {
+            result = latestVerificationStatus.get(0).toString();
+        }
+        return result;
+    }
+
+    public Integer getFutureEvents(Long id, Integer year) {
+        return artistRepository.findFutureEventsForArtist(id, year);
+    }
+
+    public Integer getPastEvents(Long id, Integer year) {
+        return artistRepository.findPastEventsForArtist(id, year);
+    }
+
+    public Map<String, Integer> getOrderItemCount(Long id, Integer year) {
+        Artist artist = findById(id);
+        List<OrderItem> ordersItemsByYear = artistRepository.getOrdersPerYear(artist.getArtistName().toUpperCase(),
+                year);
+        Map<String, Integer> itemsCount = new HashMap<>();
+
+        for (OrderItem orderItem : ordersItemsByYear) {
+            String itemName = orderItem.getName();
+            itemsCount.merge(itemName, 1, Integer::sum);
+        }
+        return itemsCount;
+    }
+
+    public Map<String, Integer> getMostCountrySold(Long id, Integer year) {
+        Artist artist = findById(id);
+        List<OrderItem> ordersItemsByYear = artistRepository.getOrdersPerYear(artist.getArtistName().toUpperCase(), year);
+        Map<String, Integer> itemsCount = new HashMap<>();
+
+        for (OrderItem orderItem : ordersItemsByYear) {
+            itemsCount.merge(orderItem.getOrder().getCountry(), 1, Integer::sum);
+        }
+        return itemsCount;
+    }
+
+    public List<MonthlySalesDTO> getMonthlySalesDataPerArtist(Long id, int year) {
+        Artist artist = findById(id);
+        List<Object[]> results = artistRepository.findMonthlySalesData(artist.getArtistName().toUpperCase(), year, OrderStatus.RETURN_ACCEPTED);
+        List<MonthlySalesDTO> monthlySalesDTOList = new ArrayList<>();
+        for (Object[] result : results) {
+            Integer month = (int) result[0]; 
+            Long totalOrders = (Long) result[1]; // El número total de productos vendidos
+
+            MonthlySalesDTO dto = new MonthlySalesDTO();
+            dto.setMonth(month);
+            dto.setTotalOrders(totalOrders);
+
+            monthlySalesDTOList.add(dto);
+        }
+
+        return monthlySalesDTOList;
     }
 
 }

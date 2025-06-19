@@ -12,15 +12,17 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import jakarta.servlet.http.HttpServletRequest;
 import io.swagger.v3.oas.annotations.parameters.RequestBody;
-import jakarta.transaction.Transactional;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 @RestController
@@ -57,32 +59,23 @@ public class PaymentGatewayController {
         }
     }
 
-    @Transactional
     @PostMapping("/stripeWebhook")
-    @Operation(summary = "Handle incoming Stripe webhook events", description = "Receives and processes Stripe webhook events. Verifies event authenticity using the Stripe signature header.", security = {} // No
-                                                                                                                                                                                                              // authentication
-                                                                                                                                                                                                              // required,
-                                                                                                                                                                                                              // since
-                                                                                                                                                                                                              // Stripe
-                                                                                                                                                                                                              // needs
-                                                                                                                                                                                                              // to
-                                                                                                                                                                                                              // call
-                                                                                                                                                                                                              // this
-                                                                                                                                                                                                              // endpoint
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Event received and processed successfully", content = @Content(mediaType = "text/plain")),
-            @ApiResponse(responseCode = "500", description = "Internal server error while processing the event", content = @Content(mediaType = "text/plain"))
-    })
-    public ResponseEntity<String> handleStripeEvent(
-            @RequestBody(description = "Raw JSON payload sent by Stripe webhook", required = true, content = @Content(schema = @Schema(type = "string", format = "json"))) String payload,
-            @org.springframework.web.bind.annotation.RequestHeader(name = "Stripe-Signature") String sigHeader) {
-
+    public ResponseEntity<String> handleStripeEvent(HttpServletRequest request,
+            @RequestHeader("Stripe-Signature") String sigHeader) {
         try {
+            // Leer el payload como bytes directamente
+            byte[] payloadBytes = request.getInputStream().readAllBytes();
+
+            // Convertir a String usando UTF-8, sin modificar nada
+            String payload = new String(payloadBytes, StandardCharsets.UTF_8);
+
+            // Procesar evento
             paymentGatewayService.processStripeEvent(payload, sigHeader);
-            return ResponseEntity.ok("Event received");
+
+            return ResponseEntity.ok("Evento recibido");
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Internal server error");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error interno del servidor");
         }
     }
+
 }

@@ -470,7 +470,7 @@ public class PaymentGatewayService {
     private void createOrderItems(Session session, Order order, Long userId) {
         // Create a list to hold the order items.
         List<OrderItem> items = new ArrayList<>();
-        String country = "";
+
 
         List<String> fields = session.getCustomFields().stream()
                 .map(field -> field.getText().getValue())
@@ -483,11 +483,8 @@ public class PaymentGatewayService {
         String postalCode = userId != null ? fields.get(2) : session.getCustomerDetails().getAddress().getPostalCode();
         String phone = session.getCustomerDetails().getPhone();
         String email = session.getCustomerDetails().getEmail();
+        String country = getCountryName(session.getCustomerDetails().getAddress().getCountry());
 
-        if (userId == null) {
-            country = session.getCustomerDetails().getAddress().getCountry();
-            country = getCountryName(country);
-        }
 
         // Set the country name based on the country code.
 
@@ -581,9 +578,11 @@ public class PaymentGatewayService {
         order.setItems(items);
         if (!country.isEmpty()) {
             order.setCountry(country);
-        } else
+        }
+
+        orderRepository.save(order);
             // Save the order to the repository.
-            orderRepository.save(order);
+            
     }
 
     /**

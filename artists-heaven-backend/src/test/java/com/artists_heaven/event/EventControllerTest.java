@@ -28,6 +28,9 @@ import org.mockito.MockitoAnnotations;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.core.Authentication;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -140,26 +143,36 @@ class EventControllerTest {
                 Artist artist = new Artist();
                 artist.setId(1L);
 
-                List<Event> events = new ArrayList<>();
-                events.add(new Event());
+                Event event = new Event();
+
+                int page = 0;
+                int size = 6;
+                PageRequest pageable = PageRequest.of(page, size);
+
+                Page<Event> eventPage = new PageImpl<>(List.of(event), pageable, 1);
 
                 when(authentication.getPrincipal()).thenReturn(artist);
                 SecurityContextHolder.getContext().setAuthentication(authentication);
                 when(eventService.isArtist()).thenReturn(true);
-                when(eventService.getAllMyEvents(artist.getId())).thenReturn(events);
+                when(eventService.getAllMyEvents(artist.getId(), pageable)).thenReturn(eventPage);
 
                 mockMvc.perform(get("/api/event/allMyEvents"))
                                 .andExpect(status().isOk())
-                                .andExpect(jsonPath("$", hasSize(1)));
+                                .andExpect(jsonPath("$.content", hasSize(1)));
 
                 verify(eventService, times(1)).isArtist();
-                verify(eventService, times(1)).getAllMyEvents(artist.getId());
+                verify(eventService, times(1)).getAllMyEvents(artist.getId(), pageable);
         }
 
         @Test
         void testGetAllMyEventsNotArtist() throws Exception {
                 Artist artist = new Artist();
                 artist.setId(1L);
+                
+                int page = 0;
+                int size = 6;
+                PageRequest pageable = PageRequest.of(page, size);
+
                 when(authentication.getPrincipal()).thenReturn(artist);
                 SecurityContextHolder.getContext().setAuthentication(authentication);
                 when(eventService.isArtist()).thenReturn(false);
@@ -168,7 +181,7 @@ class EventControllerTest {
                                 .andExpect(status().isBadRequest());
 
                 verify(eventService, times(1)).isArtist();
-                verify(eventService, times(0)).getAllMyEvents(anyLong());
+                verify(eventService, times(0)).getAllMyEvents(1L, pageable);
         }
 
         @Test

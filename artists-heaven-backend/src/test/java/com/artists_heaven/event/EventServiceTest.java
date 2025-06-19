@@ -19,6 +19,9 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -26,11 +29,11 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.util.StringUtils;
 import com.artists_heaven.entities.artist.Artist;
 import com.artists_heaven.entities.artist.ArtistRepository;
+import com.artists_heaven.entities.user.UserProfileDTO;
 
 class EventServiceTest {
 
     private static final String UPLOAD_DIR = "artists-heaven-backend/src/main/resources/event_media/";
-
 
     @Mock
     private EventRepository eventRepository;
@@ -135,7 +138,7 @@ class EventServiceTest {
         eventDto.setArtistId(1L);
 
         Artist artist = new Artist();
-        artist.setIsvalid(true);
+        artist.setIsVerificated(true);
         when(artistRepository.findById(anyLong())).thenReturn(Optional.of(artist));
         when(eventRepository.save(any(Event.class))).thenThrow(new RuntimeException("Invalid data"));
 
@@ -156,7 +159,7 @@ class EventServiceTest {
         eventDto.setImage("Image");
         eventDto.setArtistId(1L);
         Artist artist = new Artist();
-        artist.setIsvalid(true);
+        artist.setIsVerificated(true);
         when(artistRepository.findById(anyLong())).thenReturn(Optional.of(artist));
         when(eventRepository.save(any(Event.class))).thenReturn(new Event());
 
@@ -165,15 +168,15 @@ class EventServiceTest {
         verify(eventRepository, times(1)).save(any(Event.class));
     }
 
-
-@Test
+    @Test
     void testSaveImagesSuccess() {
         String originalFilename = "test.jpg";
         String sanitizedFilename = "test.jpg"; // Assuming sanitizeFilename does not change the name
         String fileName = UUID.randomUUID().toString() + "_" + sanitizedFilename;
         Path targetPath = Paths.get(UPLOAD_DIR, fileName);
 
-        MultipartFile newMultipartFile = new MockMultipartFile("file", originalFilename, "image/jpeg", new byte[]{1, 2, 3, 4});
+        MultipartFile newMultipartFile = new MockMultipartFile("file", originalFilename, "image/jpeg",
+                new byte[] { 1, 2, 3, 4 });
 
         // Mock the static method Files.copy
         try (MockedStatic<Files> mockedFiles = mockStatic(Files.class)) {
@@ -214,17 +217,22 @@ class EventServiceTest {
 
     @Test
     void testGetAllMyEvents() {
-        List<Event> events = List.of(new Event(), new Event());
-        when(eventRepository.findByArtistId(1L)).thenReturn(events);
+        int page = 0;
+        int size = 6;
+        PageRequest pageable = PageRequest.of(page, size);
 
-        List<Event> result = eventService.getAllMyEvents(1L);
+        Event event = new Event();
+        Page<Event> events = new PageImpl<>(List.of(event), pageable, 1);
 
-        assertEquals(2, result.size());
-        verify(eventRepository, times(1)).findByArtistId(1L);
+        when(eventRepository.findByArtistId(1L, pageable)).thenReturn(events);
+
+        Page<Event> result = eventService.getAllMyEvents(1L, pageable);
+        assertEquals(1, result.getContent().size());
+        verify(eventRepository, times(1)).findByArtistId(1L, pageable);
     }
 
     @Test
-    void testDeleteImagesSuccess(){
+    void testDeleteImagesSuccess() {
         String removedImage = "event_media/test.jpg";
         String cleanedPath = StringUtils.cleanPath(removedImage);
         Path targetPath = Paths.get("artists-heaven-backend/src/main/resources", cleanedPath).normalize();

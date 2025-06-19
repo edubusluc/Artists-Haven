@@ -13,6 +13,8 @@ import com.artists_heaven.order.OrderDetailsDTO;
 import com.artists_heaven.order.OrderService;
 import com.artists_heaven.order.OrderStatus;
 import com.artists_heaven.page.PageResponse;
+import com.artists_heaven.product.Category;
+import com.artists_heaven.product.CategoryRepository;
 import com.artists_heaven.verification.VerificationStatus;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -60,32 +62,51 @@ public class AdminController {
 
     private final AdminService adminService;
 
+    private final CategoryRepository categoryRepository;
+
     public AdminController(ArtistRepository artistRepository, VerificationRepository verificationRepository,
-            OrderService orderService, EmailSenderService emailSenderService, AdminService adminService) {
+            OrderService orderService, EmailSenderService emailSenderService, AdminService adminService,
+            CategoryRepository categoryRepository) {
         this.orderService = orderService;
         this.emailSenderService = emailSenderService;
         this.artistRepository = artistRepository;
         this.verificationRepository = verificationRepository;
         this.adminService = adminService;
+        this.categoryRepository = categoryRepository;
     }
 
-    @Operation(summary = "Validate artist account", description = "This endpoint marks an artist as verified and updates the associated verification request status to 'ACCEPTED'.")
+    @Operation(summary = "Validate artist account", description = "This endpoint marks an artist as verified, creates a new category using the artist's name, and updates the verification request status to 'ACCEPTED'.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Artist successfully validated", content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"message\": \"Artist verified successfully\"}"))),
+            @ApiResponse(responseCode = "400", description = "Missing or invalid payload data", content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Missing artist ID or verification ID\"}"))),
             @ApiResponse(responseCode = "404", description = "Artist or verification request not found", content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Artist not found\"}")))
     })
     @PostMapping("/validate_artist")
     public ResponseEntity<Map<String, String>> validateArtist(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Payload containing the artist ID and verification request ID", required = true, content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"id\": 123, \"verificationId\": 456}"))) @RequestBody Map<String, Long> payload) {
-        Long artistId = payload.get("id");
+
+        final String ID_KEY = "id";
+        final String VERIFICATION_ID_KEY = "verificationId";
+
+        if (payload == null || !payload.containsKey(ID_KEY) || !payload.containsKey(VERIFICATION_ID_KEY) ||
+                payload.get(ID_KEY) == null || payload.get(VERIFICATION_ID_KEY) == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Missing artist ID or verification ID");
+        }
+
+        Long artistId = payload.get(ID_KEY);
+        Long verificationId = payload.get(VERIFICATION_ID_KEY);
 
         Artist artist = artistRepository.findById(artistId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Artist not found"));
 
-        artist.setIsvalid(true);
+        artist.setIsVerificated(true);
         artistRepository.save(artist);
 
-        Long verificationId = payload.get("verificationId");
+        // Create a new category with the artist's name in uppercase
+        Category category = new Category();
+        category.setName(artist.getArtistName().toUpperCase());
+        categoryRepository.save(category);
+
         Verification verification = verificationRepository.findById(verificationId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Verification not found"));
 

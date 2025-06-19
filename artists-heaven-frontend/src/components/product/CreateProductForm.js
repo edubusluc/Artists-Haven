@@ -115,7 +115,7 @@ const CreateProductForm = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-10 px-4 sm:px-10">
+    <div className="min-h-screen bg-gradient-to-r from-gray-300 to-white  py-10 px-4 sm:px-10">
       <div className="max-w-4xl mx-auto bg-white shadow-md rounded-lg p-6">
 
         <h2 className="text-2xl font-bold mb-6 text-gray-700 text-center">Crear Nuevo Producto</h2>

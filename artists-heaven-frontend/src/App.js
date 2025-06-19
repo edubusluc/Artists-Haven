@@ -25,9 +25,12 @@ import EmailForm from './components/EmailForm';
 
 // Components - Artists
 import ArtistsRegister from './components/ArtistsRegister';
+import ArtistDashboard from './components/artist/ArtistDashboard';
+import ArtistHeader from './components/artist/ArtistHeader';
+
 
 // Components - Verification
-import VerificationForm from './components/VerificationForm';
+import VerificationForm from './components/artist/VerificationForm';
 import VerificationList from './components/VerificationList';
 
 // Components - Products
@@ -39,10 +42,10 @@ import PromoteProductForm from './components/product/PromoteProductForm';
 import CreateRatingForm from './components/CreateRatingForm';
 
 // Components - Events
-import CreateEventForm from './components/CreateEventForm';
-import AllMyEvents from './components/AllMyEvents';
+import CreateEventForm from './components/Event/CreateEventForm';
 import AllEvents from './components/AllEvents';
-import EditMyEvent from './components/EditMyEvent';
+import EditMyEvent from './components/Event/EditMyEvent';
+import AllMyEvents from './components/Event/AllMyEvents';
 
 // Components - Orders
 import MyOrders from './components/MyOrders';
@@ -52,13 +55,24 @@ import MyOrders from './components/MyOrders';
 import AdminHeader from './components/admin/AdminHeader';
 import AdminDashboard from './components/admin/AdminDashboard';
 import AdminProductList from './components/admin/AdminProductList';
-import AdminClient from './components/admin/AdmiClients';
+import AdminClient from './components/admin/AdminClients';
 import AdminOrder from './components/admin/AdminOrder';
 import AdminOrderDetails from './components/admin/AdminOrderDetails';
 
 const AppRoutes = ({ role }) => (
   <Routes>
-    <Route path="/" element={role === 'ADMIN' ? <AdminDashboard /> : <HomePage />} />
+    <Route
+      path="/"
+      element={
+        role === 'ADMIN' ? (
+          <AdminDashboard />
+        ) : role === 'ARTIST' ? (
+          <ArtistDashboard />
+        ) : (
+          <HomePage />
+        )
+      }
+    />
     <Route path="/users" element={<UserList />} />
     <Route path="/user/register" element={<UserRegister />} />
     <Route path="/artists/register" element={<ArtistsRegister />} />
@@ -86,6 +100,7 @@ const AppRoutes = ({ role }) => (
     <Route path="/admin/clients" element={<AdminClient />} />
     <Route path="/admin/orders" element={<AdminOrder />} />
     <Route path="/admin/orderDetails/:id" element={<AdminOrderDetails />} />
+    <Route path="/artist/dashboard" element={<ArtistDashboard />} />
   </Routes>
 );
 
@@ -105,7 +120,13 @@ const App = () => {
       <CartProvider>
         <Suspense fallback={<div className="text-white">Cargando traducciones...</div>}>
           <Router>
-            {role === "ADMIN" ? <AdminHeader /> : <Header />}
+            {role === 'ADMIN' ? (
+              <AdminHeader />
+            ) : role === 'ARTIST' ? (
+              <ArtistHeader />
+            ) : (
+              <Header />
+            )}
             <AppRoutes role={role} />
           </Router>
         </Suspense>

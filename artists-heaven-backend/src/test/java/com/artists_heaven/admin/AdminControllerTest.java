@@ -44,6 +44,7 @@ import com.artists_heaven.order.OrderDetailsDTO;
 import com.artists_heaven.order.OrderService;
 import com.artists_heaven.order.OrderStatus;
 import com.artists_heaven.page.PageResponse;
+import com.artists_heaven.product.CategoryRepository;
 import com.artists_heaven.verification.Verification;
 import com.artists_heaven.verification.VerificationRepository;
 import com.artists_heaven.verification.VerificationStatus;
@@ -77,6 +78,9 @@ class AdminControllerTest {
         @Mock
         private VerificationRepository verificationRepository;
 
+        @Mock
+        private CategoryRepository categoryRepository;
+        
         @InjectMocks
         private AdminController adminController;
 
@@ -94,7 +98,8 @@ class AdminControllerTest {
                 Long artistId = 1L;
                 Artist artist = new Artist();
                 artist.setId(artistId);
-                artist.setIsvalid(false);
+                artist.setIsVerificated(false);
+                artist.setArtistName("Artist Name Test");
 
                 Verification verification = new Verification();
                 verification.setId(1L);
@@ -115,7 +120,7 @@ class AdminControllerTest {
                 assertEquals("Artist verified successfully",
                                 ((Map<String, String>) response.getBody()).get("message"));
 
-                assertEquals(true, artist.getIsvalid());
+                assertEquals(true, artist.getIsVerificated());
                 assertEquals(VerificationStatus.ACCEPTED, verification.getStatus());
 
                 verify(artistRepository).save(artist);
@@ -128,7 +133,7 @@ class AdminControllerTest {
                 Long artistId = 1L;
                 Artist artist = new Artist();
                 artist.setId(artistId);
-                artist.setIsvalid(false);
+                artist.setIsVerificated(false);
 
                 Verification verification = new Verification();
                 verification.setId(1L);
@@ -152,7 +157,8 @@ class AdminControllerTest {
                 Long artistId = 1L;
                 Artist artist = new Artist();
                 artist.setId(artistId);
-                artist.setIsvalid(false);
+                artist.setIsVerificated(false);
+                artist.setArtistName("Artist Name Test");
 
                 Verification verification = new Verification();
                 verification.setId(1L);

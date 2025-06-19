@@ -8,6 +8,8 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -119,7 +121,7 @@ public class EventService {
             validateEventDate(eventDTO.getDate());
 
             //Validate the artist is verified
-            if (!artist.getIsvalid()) {
+            if (!artist.getIsVerificated()) {
                 throw new IllegalArgumentException("Artist is not verified");
             }
 
@@ -219,9 +221,9 @@ public class EventService {
      * @param id the ID of the artist whose events are to be retrieved.
      * @return a list of events linked to the specified artist.
      */
-    public List<Event> getAllMyEvents(Long id) {
+    public Page<Event> getAllMyEvents(Long id, Pageable pageable) {
         // Query the repository to find all events by the artist's ID
-        return eventRepository.findByArtistId(id);
+        return eventRepository.findByArtistId(id, pageable);
     }
 
     /**

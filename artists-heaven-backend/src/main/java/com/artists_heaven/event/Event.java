@@ -5,7 +5,6 @@ import java.time.LocalDate;
 import com.artists_heaven.entities.artist.Artist;
 
 import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -39,7 +38,7 @@ public class Event {
 
     private String moreInfo;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @ManyToOne(optional = false)
     private Artist artist;
 
     private String image;

@@ -128,7 +128,7 @@ const VerificationList = () => {
                         <td>{new Date(verification.date).toLocaleString()}</td>
                         <td>{verification.status}</td>
                         <td>
-                            {!verification.artist.isvalid ? (
+                            {!verification.artist.isVerificated ? (
                                 <button onClick={() => verifyArtist(verification.artist.id, verification.id)}>Verificar Artista</button>
                             ) : (
                                 <span>El artista ya está verificado</span>

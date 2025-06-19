@@ -35,7 +35,7 @@ public class VerificationService {
     }
 
     public boolean isArtistEligibleForVerification(Artist artist) {
-        return artist != null && !artist.getIsvalid();
+        return artist != null && !artist.getIsVerificated();
     }
 
     public boolean hasPendingVerification(Artist artist) {
