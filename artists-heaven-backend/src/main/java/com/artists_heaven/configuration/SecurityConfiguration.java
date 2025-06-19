@@ -79,6 +79,8 @@ public class SecurityConfiguration {
             "/api/event/new",
             "/api/event/allMyEvents",
             "/api/event/edit/{id}",
+            "/api/artists/dashboard",
+            "/api/artists/sales/monthly"
     };
 
     private static final String[] AUTHENTICATED_ENDPOINTS = {

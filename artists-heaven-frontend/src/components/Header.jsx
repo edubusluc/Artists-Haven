@@ -52,14 +52,6 @@ const Header = () => {
         return total;
     };
 
-    const links = [
-        { to: "admin/dashboard", icon: faTachometerAlt, label: "Dashboard" },
-        { to: "admin/products/store", icon: faBoxOpen, label: "Gestión de Productos" },
-        { to: "admin/orders", icon: faShoppingCart, label: "Órdenes" },
-        { to: "admin/clients", icon: faUsers, label: "Clientes" },
-        { to: "admin/reports", icon: faChartLine, label: "Análisis y Reportes" },
-    ];
-
     const handleRedirectToPayment = async () => {
         try {
             const response = await fetch("/api/payment_process/checkout", {

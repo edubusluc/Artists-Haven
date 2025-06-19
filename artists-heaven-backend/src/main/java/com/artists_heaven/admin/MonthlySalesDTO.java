@@ -47,4 +47,7 @@ public class MonthlySalesDTO {
         this.totalRevenue = totalRevenue;
     }
 
+    public MonthlySalesDTO() {
+    }
+
 }
