@@ -28,6 +28,8 @@ public class SecurityConfiguration {
     private static final String[] PUBLIC_ENDPOINTS = {
             "/api/users/register",
             "/api/artists/register",
+            "/api/artists/main",
+            "/api/artists/mainArtist_media/**",
             "/api/auth/login",
             "/api/auth/google-login",
             "/api/emails/send",
@@ -37,6 +39,7 @@ public class SecurityConfiguration {
             "/api/product/categories",
             "/api/product/allProducts",
             "/api/product/product_media/**",
+            "/api/product/sorted12Product",
             "/api/product/details/{id}",
             "/api/event/event_media/**",
             "/api/myShoppingCart",
