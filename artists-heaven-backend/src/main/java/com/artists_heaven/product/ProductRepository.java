@@ -27,4 +27,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     @Query("SELECT p FROM Product p ORDER BY p.name")
     Page<Product> findAllProductsSortByName(Pageable pageable);
 
+    @Query(value = "SELECT * FROM Product p where p.available = true ORDER BY p.created_date desc LIMIT 12", nativeQuery = true)
+    List<Product> find12ProductsSortedByName();
+
 }

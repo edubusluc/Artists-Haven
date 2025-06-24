@@ -2,6 +2,8 @@ package com.artists_heaven.order;
 
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import jakarta.persistence.EntityNotFoundException;
@@ -17,6 +19,10 @@ public class OrderService {
 
     public List<Order> getMyOrders(Long userId) {
         return orderRepository.getOrdersByUserId(userId);
+    }
+
+    public Page<Order> getMyOrdersPageable(Long userId, Pageable pageable) {
+        return orderRepository.getOrdersByUserIdPageable(userId, pageable);
     }
 
     public Integer getNumOrdersPerYear(int year) {

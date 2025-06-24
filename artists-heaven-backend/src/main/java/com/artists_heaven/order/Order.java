@@ -1,6 +1,6 @@
 package com.artists_heaven.order;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import com.artists_heaven.entities.user.User;
@@ -57,7 +57,7 @@ public class Order {
     @JsonManagedReference
     private List<OrderItem> items;
 
-    private LocalDate createdDate = LocalDate.now();
+    private LocalDateTime createdDate = LocalDateTime.now();
 
     private String email;
 

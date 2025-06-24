@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import CountStatusPieChart from '../charts/CountPieChart';
+import NonAuthorise from '../NonAuthorise';
 
 const AdminOrder = () => {
     const currentYear = new Date().getFullYear();
@@ -114,6 +115,10 @@ const AdminOrder = () => {
     const prevPage = () => {
         if (page > 0) setPage(page - 1);
     };
+
+    if (role !== 'ADMIN') {
+        return <NonAuthorise />;
+    }
 
     return (
         <div className="min-h-screen bg-gradient-to-r from-gray-300 to-white flex flex-col">

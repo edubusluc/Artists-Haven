@@ -16,7 +16,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -46,6 +45,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.artists_heaven.entities.user.User;
 import com.artists_heaven.entities.user.UserRole;
+import com.artists_heaven.images.ImageServingUtil;
 import com.artists_heaven.page.PageResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -53,7 +53,6 @@ import jakarta.transaction.Transactional;
 
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.http.HttpHeaders;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -67,6 +66,9 @@ class ProductControllerTest {
 
         @Mock
         private ProductService productService;
+
+        @Mock
+        private ImageServingUtil imageServingUtil;
 
         @InjectMocks
         private ProductController productController;
@@ -113,35 +115,20 @@ class ProductControllerTest {
         }
 
         @Test
-        @Transactional
         void testGetProductImage() throws Exception {
                 String fileName = "test.png";
                 String basePath = System.getProperty("user.dir")
                                 + "/artists-heaven-backend/src/main/resources/product_media/";
                 Path filePath = Paths.get(basePath, fileName);
 
-                // Create a dummy file for testing
-                Files.createDirectories(filePath.getParent());
-                Files.createFile(filePath);
-
                 mockMvc.perform(get("/api/product/product_media/{fileName}", fileName))
-                                .andExpect(status().isOk())
-                                .andExpect(header().string(HttpHeaders.CONTENT_TYPE, "image/png"));
+                                .andExpect(status().isOk());
 
                 // Clean up the dummy file
                 Files.deleteIfExists(filePath);
         }
 
         @Test
-        void testGetProductImageNotFound() throws Exception {
-                String fileName = "nonexistent.png";
-
-                mockMvc.perform(get("/api/product/product_media/{fileName}", fileName))
-                                .andExpect(status().isNotFound());
-        }
-
-        @Test
-        @Transactional
         void testGetAllCategories() throws Exception {
                 Set<Category> categories = new HashSet<>();
                 Category category1 = new Category();
@@ -560,4 +547,70 @@ class ProductControllerTest {
                 verify(productService, never()).searchProducts(anyString(), any(Pageable.class));
         }
 
+        @Test
+        void testUpdateProduct_Success() throws Exception {
+                Long productId = 1L;
+
+                // Mock de Product existente
+                Product existingProduct = new Product();
+                existingProduct.setId(productId);
+                existingProduct.setName("Old Name");
+
+                // DTO con los datos actualizados
+                ProductDTO productDTO = new ProductDTO();
+                productDTO.setName("Updated Product");
+                productDTO.setDescription("New description");
+
+                // Simular imágenes nuevas y a eliminar
+                MockMultipartFile newImage = new MockMultipartFile(
+                                "newImages", "new.jpg", "image/jpeg", "fake-image-content".getBytes());
+
+                MockMultipartFile removedImage = new MockMultipartFile(
+                                "removedImages", "old.jpg", "image/jpeg", "fake-old-image".getBytes());
+
+                // Serializar el DTO como JSON
+                MockMultipartFile productJson = new MockMultipartFile(
+                                "product", "", "application/json",
+                                new ObjectMapper().writeValueAsBytes(productDTO));
+
+                when(productService.findById(productId)).thenReturn(existingProduct);
+                doNothing().when(productService).updateProduct(existingProduct, List.of(removedImage),
+                                List.of(newImage), productDTO);
+
+                mockMvc.perform(multipart("/api/product/edit/{id}", productId)
+                                .file(productJson)
+                                .file(newImage)
+                                .file(removedImage)
+                                .with(request -> {
+                                        request.setMethod("PUT");
+                                        return request;
+                                })
+                                .contentType(MediaType.MULTIPART_FORM_DATA))
+                                .andExpect(status().isOk())
+                                .andExpect(content().string("Product updated successfully"));
+        }
+
+        @Test
+        void testGetSorted12Product_Success() throws Exception {
+                Product product = new Product();
+                product.setId(1L);
+                product.setName("Test Product");
+
+                when(productService.get12ProductsSortedByName()).thenReturn(List.of(product));
+
+                mockMvc.perform(get("/api/product/sorted12Product")
+                                .accept(MediaType.APPLICATION_JSON))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.size()").value(1))
+                                .andExpect(jsonPath("$[0].name").value("Test Product"));
+        }
+
+        @Test
+        void testGetSorted12Product_Failure() throws Exception {
+                when(productService.get12ProductsSortedByName()).thenThrow(new RuntimeException("Error"));
+
+                mockMvc.perform(get("/api/product/sorted12Product")
+                                .accept(MediaType.APPLICATION_JSON))
+                                .andExpect(status().isNotFound());
+        }
 }

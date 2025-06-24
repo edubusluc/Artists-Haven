@@ -16,15 +16,16 @@ import FAQ from './components/FAQ';
 import Success from './components/Success';
 
 // Components - User
-import UserList from './components/UserList';
-import UserRegister from './components/UserRegister';
-import UserLogin from './components/UserLogin';
-import UserProfile from './components/UserProfile';
-import EditProfile from './components/EditProfile';
+import UserRegister from './components/user/UserRegister';
+import UserLogin from './components/user/UserLogin';
+import UserProfile from './components/user/UserProfile';
+import EditProfile from './components/user/EditProfile';
 import EmailForm from './components/EmailForm';
+import MyOrders from './components/user/MyOrders';
+import MySpace from './components/user/MySpace';
 
 // Components - Artists
-import ArtistsRegister from './components/ArtistsRegister';
+import ArtistsRegister from './components/artist/ArtistsRegister';
 import ArtistDashboard from './components/artist/ArtistDashboard';
 import ArtistHeader from './components/artist/ArtistHeader';
 
@@ -39,17 +40,12 @@ import ProductsList from './components/product/ProductsList';
 import EditProduct from './components/product/EditProduct';
 import ProductDetails from './components/product/ProductDetails';
 import PromoteProductForm from './components/product/PromoteProductForm';
-import CreateRatingForm from './components/CreateRatingForm';
 
 // Components - Events
 import CreateEventForm from './components/Event/CreateEventForm';
 import AllEvents from './components/AllEvents';
 import EditMyEvent from './components/Event/EditMyEvent';
 import AllMyEvents from './components/Event/AllMyEvents';
-
-// Components - Orders
-import MyOrders from './components/MyOrders';
-
 
 // Components - Admin
 import AdminHeader from './components/admin/AdminHeader';
@@ -73,11 +69,11 @@ const AppRoutes = ({ role }) => (
         )
       }
     />
-    <Route path="/users" element={<UserList />} />
     <Route path="/user/register" element={<UserRegister />} />
     <Route path="/artists/register" element={<ArtistsRegister />} />
     <Route path="/auth/login" element={<UserLogin />} />
     <Route path="/users/profile" element={<UserProfile />} />
+    <Route path="/users/mySpace" element={<MySpace />} />
     <Route path="/profile/edit" element={<EditProfile />} />
     <Route path="/email" element={<EmailForm />} />
     <Route path="/verification" element={<VerificationForm />} />
@@ -86,7 +82,6 @@ const AppRoutes = ({ role }) => (
     <Route path="/product/all" element={<ProductsList />} />
     <Route path="/product/edit/:id" element={<EditProduct />} />
     <Route path="/product/details/:id" element={<ProductDetails />} />
-    <Route path="/product/newReview/:productId" element={<CreateRatingForm />} />
     <Route path="/product/promote/:id" element={<PromoteProductForm />} />
     <Route path="/event/new" element={<CreateEventForm />} />
     <Route path="/event/all-my-events" element={<AllMyEvents />} />
@@ -115,19 +110,28 @@ const App = () => {
     return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
+  const getHeader = () => {
+    switch (role) {
+      case 'ADMIN':
+        return <AdminHeader />;
+      case 'ARTIST':
+        return <ArtistHeader />;
+      default:
+        return <Header />;
+    }
+  };
+
+  const backgroundClass = role === 'ARTIST' || role === 'ADMIN' ? 'from-gray-300 to-white' : 'bg-white';
+
   return (
     <GoogleOAuthProvider clientId="1048927197271-g7tartu6gacs0jv8fgoa5braq8b2ck7p.apps.googleusercontent.com">
       <CartProvider>
         <Suspense fallback={<div className="text-white">Cargando traducciones...</div>}>
           <Router>
-            {role === 'ADMIN' ? (
-              <AdminHeader />
-            ) : role === 'ARTIST' ? (
-              <ArtistHeader />
-            ) : (
-              <Header />
-            )}
-            <AppRoutes role={role} />
+            {getHeader()}
+            <div className={`min-h-screen pt-10 bg-gradient-to-r ${backgroundClass}`}>
+              <AppRoutes role={role} />
+            </div>
           </Router>
         </Suspense>
       </CartProvider>

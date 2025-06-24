@@ -6,16 +6,12 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.UUID;
-
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
-import org.springframework.web.multipart.MultipartFile;
-
 import com.artists_heaven.entities.artist.Artist;
 import com.artists_heaven.entities.artist.ArtistRepository;
 
@@ -24,8 +20,6 @@ public class EventService {
 
     private final EventRepository eventRepository;
     private final ArtistRepository artistRepository;
-
-    private static final String UPLOAD_DIR = "artists-heaven-backend/src/main/resources/event_media/";
 
     public EventService(EventRepository eventRepository, ArtistRepository artistRepository) {
         this.eventRepository = eventRepository;
@@ -120,7 +114,7 @@ public class EventService {
             // Validate the event date
             validateEventDate(eventDTO.getDate());
 
-            //Validate the artist is verified
+            // Validate the artist is verified
             if (!artist.getIsVerificated()) {
                 throw new IllegalArgumentException("Artist is not verified");
             }
@@ -140,79 +134,6 @@ public class EventService {
         } catch (Exception e) {
             throw new IllegalArgumentException(e.getMessage());
         }
-    }
-
-    /**
-     * Saves the provided image file to the server and returns its accessible URL.
-     *
-     * @param image the image file to be saved.
-     * @return the URL of the saved image.
-     * @throws IllegalArgumentException if the file is not a valid image or cannot
-     *                                  be saved.
-     */
-    public String saveImages(MultipartFile image) {
-        String imageUrl = "";
-
-        // Get the original filename
-        String originalFilename = image.getOriginalFilename();
-
-        // Validate the filename
-        if (originalFilename == null || originalFilename.isEmpty()) {
-            throw new IllegalArgumentException("The file name is invalid.");
-        }
-
-        // Sanitize the filename to remove any invalid characters
-        originalFilename = sanitizeFilename(originalFilename);
-
-        // Generate a unique filename to prevent conflicts
-        String fileName = UUID.randomUUID().toString() + "_" + originalFilename;
-        Path targetPath = Paths.get(UPLOAD_DIR, fileName);
-
-        try {
-            // Validate the file (check if it is empty or not a valid image)
-            if (image.isEmpty() || !isValidImage(image)) {
-                throw new IllegalArgumentException("The file is not a valid image.");
-            }
-
-            // Save the image to the specified directory
-            Files.copy(image.getInputStream(), targetPath);
-
-            // Generate the URL for accessing the saved image
-            imageUrl = "/event_media/" + fileName;
-        } catch (IOException e) {
-            throw new IllegalArgumentException("Error while saving the image.", e);
-        }
-
-        return imageUrl;
-    }
-
-    /**
-     * Sanitizes the provided filename by replacing invalid characters with an
-     * underscore.
-     *
-     * @param filename the original filename to sanitize.
-     * @return a sanitized version of the filename, ensuring it only contains valid
-     *         characters.
-     */
-    private String sanitizeFilename(String filename) {
-        // Replace any character that is not a letter, number, dot, underscore, or
-        // hyphen with an underscore
-        return filename.replaceAll("[^a-zA-Z0-9\\._-]", "_");
-    }
-
-    /**
-     * Checks if the provided file is a valid image.
-     *
-     * @param image the MultipartFile to validate.
-     * @return true if the file is a JPEG or PNG image, false otherwise.
-     */
-    private boolean isValidImage(MultipartFile image) {
-        // Get the content type (MIME type) of the uploaded file
-        String contentType = image.getContentType();
-
-        // Return true if the content type is not null and matches either JPEG or PNG
-        // formats
-        return contentType != null && (contentType.equals("image/jpeg") || contentType.equals("image/png"));
     }
 
     /**

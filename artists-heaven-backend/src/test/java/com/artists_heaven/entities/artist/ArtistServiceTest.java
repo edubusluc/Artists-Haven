@@ -23,6 +23,7 @@ import com.artists_heaven.admin.MonthlySalesDTO;
 import com.artists_heaven.entities.user.User;
 import com.artists_heaven.entities.user.UserRepository;
 import com.artists_heaven.entities.user.UserRole;
+import com.artists_heaven.images.ImageServingUtil;
 import com.artists_heaven.order.Order;
 import com.artists_heaven.order.OrderItem;
 import com.artists_heaven.order.OrderStatus;
@@ -41,6 +42,9 @@ class ArtistServiceTest {
     @InjectMocks
     private ArtistService artistService;
 
+    @Mock
+    private ImageServingUtil imageServingUtil;
+
     private PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     @BeforeEach
@@ -53,13 +57,16 @@ class ArtistServiceTest {
         Artist artist = new Artist();
         artist.setEmail("test@example.com");
 
+        ArtistRegisterDTO artistRegisterDTO = new ArtistRegisterDTO();
+        artistRegisterDTO.setEmail("test@example.com");
+
         User userEmail = new User();
         userEmail.setEmail("test@example.com");
 
         when(userRepository.findByEmail("test@example.com")).thenReturn(userEmail);
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            artistService.registerArtist(artist);
+            artistService.registerArtist(artistRegisterDTO, artist);
         });
 
         assertEquals("El correo electrónico ya está registrado.", exception.getMessage());
@@ -70,11 +77,15 @@ class ArtistServiceTest {
         Artist artist = new Artist();
         artist.setArtistName("existingArtist");
 
+        ArtistRegisterDTO artistRegisterDTO = new ArtistRegisterDTO();
+        artistRegisterDTO.setEmail("test@example.com");
+        artistRegisterDTO.setArtistName("existingArtist");
+
         when(userRepository.findByEmail(anyString())).thenReturn(null);
         when(artistRepository.existsByArtistName("existingArtist")).thenReturn(true);
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            artistService.registerArtist(artist);
+            artistService.registerArtist(artistRegisterDTO, artist);
         });
 
         assertEquals("Ya existe un usuario con ese nombre registrado", exception.getMessage());
@@ -83,15 +94,17 @@ class ArtistServiceTest {
     @Test
     void testRegisterArtist_Success() {
         Artist artist = new Artist();
-        artist.setArtistName("newArtist");
-        artist.setEmail("test@example.com");
-        artist.setPassword("password");
+
+        ArtistRegisterDTO artistRegisterDTO = new ArtistRegisterDTO();
+        artistRegisterDTO.setEmail("newArtist@example.com");
+        artistRegisterDTO.setArtistName("newArtist");
+        artistRegisterDTO.setPassword("password");
 
         when(userRepository.findByEmail(anyString())).thenReturn(null);
         when(artistRepository.existsByArtistName(anyString())).thenReturn(false);
         when(artistRepository.save(any(Artist.class))).thenReturn(artist);
 
-        Artist savedArtist = artistService.registerArtist(artist);
+        Artist savedArtist = artistService.registerArtist(artistRegisterDTO, artist);
 
         assertNotNull(savedArtist);
         assertEquals("newArtist", savedArtist.getArtistName());
@@ -428,6 +441,20 @@ class ArtistServiceTest {
 
         // Verificamos el mensaje de la excepción
         assertEquals("Artist not found with id: 1", exception.getMessage());
+    }
+
+    @Test
+    void testGetValidateArtist() {
+        Artist artist = new Artist();
+        artist.setIsVerificated(true);
+
+        List<Artist> artists = Arrays.asList(artist);
+
+        when(artistRepository.findValidaAritst()).thenReturn(artists);
+        List<Artist> result = artistService.getValidArtists();
+
+        assertNotNull(result);
+        assertEquals(result.size(), 1);
     }
 
 }

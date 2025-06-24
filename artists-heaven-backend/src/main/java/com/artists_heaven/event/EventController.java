@@ -4,8 +4,8 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.artists_heaven.entities.artist.Artist;
+import com.artists_heaven.images.ImageServingUtil;
 import com.artists_heaven.page.PageResponse;
-
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -43,10 +43,15 @@ public class EventController {
 
     private final EventService eventService;
 
+    private static final String UPLOAD_DIR = "artists-heaven-backend/src/main/resources/event_media/";
+
+    private final ImageServingUtil imageServingUtil;
+
     private static final String ERROR_MESSAGE = "User is not an artist";
 
-    public EventController(EventService eventService) {
+    public EventController(EventService eventService, ImageServingUtil imageServingUtil) {
         this.eventService = eventService;
+        this.imageServingUtil = imageServingUtil;
     }
 
     @Operation(summary = "Retrieve all events", description = "Fetches a list of all events.")
@@ -77,7 +82,7 @@ public class EventController {
                 Artist artist = (Artist) principalUser;
                 eventDTO.setArtistId(artist.getId());
 
-                String imageUrls = eventService.saveImages(image);
+                String imageUrls = imageServingUtil.saveImages(image, UPLOAD_DIR, "/event_media/");
                 eventDTO.setImage(imageUrls);
 
                 Event newEvent = eventService.newEvent(eventDTO);
@@ -205,7 +210,7 @@ public class EventController {
             // If a new image is provided, delete the old image and save the new one
             if (newImage != null) {
                 eventService.deleteImages(event.getImage()); // Deleting old image
-                String imageUrl = eventService.saveImages(newImage); // Saving new image
+                String imageUrl = imageServingUtil.saveImages(newImage, UPLOAD_DIR, "/event_media/"); // Saving new image
                 eventDTO.setImage(imageUrl); // Setting the new image URL in eventDTO
             }
 

@@ -37,11 +37,11 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.web.multipart.MultipartFile;
 
 import com.artists_heaven.entities.artist.Artist;
 import com.artists_heaven.entities.user.User;
 import com.artists_heaven.entities.user.UserRole;
+import com.artists_heaven.images.ImageServingUtil;
 
 class EventControllerTest {
 
@@ -55,6 +55,11 @@ class EventControllerTest {
 
         @Mock
         private Authentication authentication;
+
+        @Mock
+        private ImageServingUtil imageServingUtil;
+
+        private static final String UPLOAD_DIR = "artists-heaven-backend/src/main/resources/event_media/";
 
         @BeforeEach
         void setUp() {
@@ -93,7 +98,7 @@ class EventControllerTest {
                 when(authentication.getPrincipal()).thenReturn(artist);
                 SecurityContextHolder.getContext().setAuthentication(authentication);
 
-                when(eventService.saveImages(image)).thenReturn("/product_media/test.jpg");
+                when(imageServingUtil.saveImages(image, UPLOAD_DIR, "/event_media/")).thenReturn("/product_media/test.jpg");
                 when(eventService.newEvent(any(EventDTO.class))).thenReturn(new Event());
 
                 MockMultipartFile eventJson = new MockMultipartFile("event", "", "application/json",
@@ -105,7 +110,7 @@ class EventControllerTest {
                                 .file(image))
                                 .andExpect(status().isCreated());
 
-                verify(eventService, times(1)).saveImages(image);
+                verify(imageServingUtil, times(1)).saveImages(image, UPLOAD_DIR, "/event_media/");
                 verify(eventService, times(1)).newEvent(any(EventDTO.class));
         }
 
@@ -133,7 +138,7 @@ class EventControllerTest {
                                 .file(image))
                                 .andExpect(status().isBadRequest());
 
-                verify(eventService, times(0)).saveImages(image);
+                verify(imageServingUtil, times(0)).saveImages(image, UPLOAD_DIR, "/event_media/");
                 verify(eventService, times(0)).newEvent(any(EventDTO.class));
                 SecurityContextHolder.clearContext();
         }
@@ -168,7 +173,7 @@ class EventControllerTest {
         void testGetAllMyEventsNotArtist() throws Exception {
                 Artist artist = new Artist();
                 artist.setId(1L);
-                
+
                 int page = 0;
                 int size = 6;
                 PageRequest pageable = PageRequest.of(page, size);
@@ -328,7 +333,7 @@ class EventControllerTest {
 
                 verify(eventService, times(1)).isArtist();
                 verify(eventService, times(1)).getEventById(1L);
-                verify(eventService, times(1)).saveImages(any(MultipartFile.class));
+                verify(imageServingUtil, times(1)).saveImages(image, UPLOAD_DIR, "/event_media/");
                 verify(eventService, times(1)).updateEvent(any(Event.class), any(EventDTO.class));
         }
 
@@ -366,7 +371,6 @@ class EventControllerTest {
                 verify(eventService, times(1)).isArtist();
                 verify(eventService, times(0)).getEventById(anyLong());
                 verify(eventService, times(0)).deleteImages(anyString());
-                verify(eventService, times(0)).saveImages(any(MultipartFile.class));
                 verify(eventService, times(0)).updateEvent(any(Event.class), any(EventDTO.class));
         }
 
@@ -406,7 +410,6 @@ class EventControllerTest {
                 verify(eventService, times(1)).isArtist();
                 verify(eventService, times(1)).getEventById(1L);
                 verify(eventService, times(0)).deleteImages(anyString());
-                verify(eventService, times(0)).saveImages(any(MultipartFile.class));
                 verify(eventService, times(0)).updateEvent(any(Event.class), any(EventDTO.class));
         }
 

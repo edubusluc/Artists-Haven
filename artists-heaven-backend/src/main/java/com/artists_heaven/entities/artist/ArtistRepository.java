@@ -59,4 +59,7 @@ public interface ArtistRepository extends JpaRepository<Artist, Long> {
       @Param("year") int year,
       @Param("status") OrderStatus status);
 
+  @Query("SELECT a from Artist a where a.isVerificated = true")
+  List<Artist> findValidaAritst();
+
 }

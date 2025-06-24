@@ -4,11 +4,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-
 import com.artists_heaven.admin.MonthlySalesDTO;
 import com.artists_heaven.entities.user.User;
 import com.artists_heaven.entities.user.UserRepository;
@@ -40,27 +38,41 @@ public class ArtistService {
      * @return the registered artist after being saved in the database
      * @throws IllegalArgumentException if the email or artist name already exists
      */
-    public Artist registerArtist(Artist artist) {
+    public Artist registerArtist(ArtistRegisterDTO request, Artist artist) {
         // Check if the email is already registered in the user repository
-        User userEmail = userRepository.findByEmail(artist.getEmail());
+        User userEmail = userRepository.findByEmail(request.getEmail());
         if (userEmail != null) {
             throw new IllegalArgumentException("El correo electrónico ya está registrado.");
         }
 
         // Check if the artist name is already in use
-        if (artistRepository.existsByArtistName(artist.getArtistName()) == true) {
+        if (artistRepository.existsByArtistName(request.getArtistName()) == true) {
             throw new IllegalArgumentException("Ya existe un usuario con ese nombre registrado");
         }
 
         // Set the username to match the artist name
-        String username = artist.getArtistName();
+        String username = request.getArtistName();
         artist.setUsername(username);
+
+        artist.setArtistName(username);
 
         // Set the role of the artist
         artist.setRole(UserRole.ARTIST);
 
         // Encrypt the artist's password for secure storage
-        artist.setPassword(passwordEncoder.encode(artist.getPassword()));
+        artist.setPassword(passwordEncoder.encode(request.getPassword()));
+
+        // Set email
+        artist.setEmail(request.getEmail());
+
+        // Set Last name
+        artist.setLastName(request.getLastName());
+
+        // Set Firts name
+        artist.setFirstName(request.getFirstName());
+
+        // set url
+        artist.setUrl(request.getUrl());
 
         // Save the artist in the database and return the saved entity
         return artistRepository.save(artist);
@@ -110,7 +122,8 @@ public class ArtistService {
 
     public Map<String, Integer> getMostCountrySold(Long id, Integer year) {
         Artist artist = findById(id);
-        List<OrderItem> ordersItemsByYear = artistRepository.getOrdersPerYear(artist.getArtistName().toUpperCase(), year);
+        List<OrderItem> ordersItemsByYear = artistRepository.getOrdersPerYear(artist.getArtistName().toUpperCase(),
+                year);
         Map<String, Integer> itemsCount = new HashMap<>();
 
         for (OrderItem orderItem : ordersItemsByYear) {
@@ -121,10 +134,11 @@ public class ArtistService {
 
     public List<MonthlySalesDTO> getMonthlySalesDataPerArtist(Long id, int year) {
         Artist artist = findById(id);
-        List<Object[]> results = artistRepository.findMonthlySalesData(artist.getArtistName().toUpperCase(), year, OrderStatus.RETURN_ACCEPTED);
+        List<Object[]> results = artistRepository.findMonthlySalesData(artist.getArtistName().toUpperCase(), year,
+                OrderStatus.RETURN_ACCEPTED);
         List<MonthlySalesDTO> monthlySalesDTOList = new ArrayList<>();
         for (Object[] result : results) {
-            Integer month = (int) result[0]; 
+            Integer month = (int) result[0];
             Long totalOrders = (Long) result[1]; // El número total de productos vendidos
 
             MonthlySalesDTO dto = new MonthlySalesDTO();
@@ -135,6 +149,11 @@ public class ArtistService {
         }
 
         return monthlySalesDTOList;
+    }
+
+    public List<Artist> getValidArtists() {
+        return artistRepository.findValidaAritst();
+
     }
 
 }

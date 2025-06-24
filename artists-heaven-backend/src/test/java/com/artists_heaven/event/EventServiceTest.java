@@ -29,7 +29,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.util.StringUtils;
 import com.artists_heaven.entities.artist.Artist;
 import com.artists_heaven.entities.artist.ArtistRepository;
-import com.artists_heaven.entities.user.UserProfileDTO;
+import com.artists_heaven.images.ImageServingUtil;
 
 class EventServiceTest {
 
@@ -49,6 +49,9 @@ class EventServiceTest {
 
     @InjectMocks
     private EventService eventService;
+
+    @Mock
+    private ImageServingUtil imageServingUtil;
 
     @BeforeEach
     void setUp() {
@@ -168,26 +171,6 @@ class EventServiceTest {
         verify(eventRepository, times(1)).save(any(Event.class));
     }
 
-    @Test
-    void testSaveImagesSuccess() {
-        String originalFilename = "test.jpg";
-        String sanitizedFilename = "test.jpg"; // Assuming sanitizeFilename does not change the name
-        String fileName = UUID.randomUUID().toString() + "_" + sanitizedFilename;
-        Path targetPath = Paths.get(UPLOAD_DIR, fileName);
-
-        MultipartFile newMultipartFile = new MockMultipartFile("file", originalFilename, "image/jpeg",
-                new byte[] { 1, 2, 3, 4 });
-
-        // Mock the static method Files.copy
-        try (MockedStatic<Files> mockedFiles = mockStatic(Files.class)) {
-            mockedFiles.when(() -> Files.copy(any(InputStream.class), eq(targetPath))).thenAnswer(invocation -> null);
-
-            String imageUrl = eventService.saveImages(newMultipartFile);
-
-            assertTrue(imageUrl.contains("/event_media/"));
-            assertTrue(imageUrl.contains(sanitizedFilename));
-        }
-    }
 
     @Test
     void testDeleteEventSuccess() {

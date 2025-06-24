@@ -1,10 +1,13 @@
 package com.artists_heaven.order;
 
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.artists_heaven.entities.user.User;
 import com.artists_heaven.entities.user.UserRole;
+import com.artists_heaven.product.Product;
+import com.artists_heaven.product.ProductService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -15,8 +18,16 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.persistence.EntityNotFoundException;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -30,23 +41,64 @@ public class OrderController {
 
     private final OrderService orderService;
 
-    public OrderController(OrderService orderService) {
+    private final ProductService productService;
+
+    public OrderController(OrderService orderService, ProductService productService) {
         this.orderService = orderService;
+        this.productService = productService;
     }
 
     @GetMapping("/myOrders")
-    @Operation(summary = "Get current user's orders", description = "Returns a list of orders placed by the authenticated user. Requires authentication.", security = @SecurityRequirement(name = "bearerAuth"))
+    @Operation(summary = "Get current user's orders with pagination", description = "Returns a paginated list of orders placed by the authenticated user. Requires authentication.", security = @SecurityRequirement(name = "bearerAuth"))
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved list of orders", content = @Content(mediaType = "application/json", schema = @Schema(implementation = Order.class))),
+            @ApiResponse(responseCode = "200", description = "Successfully retrieved list of orders", content = @Content(mediaType = "application/json")),
             @ApiResponse(responseCode = "400", description = "Bad request, unable to retrieve orders", content = @Content),
             @ApiResponse(responseCode = "401", description = "Unauthorized, authentication required", content = @Content)
     })
-    public ResponseEntity<List<Order>> getMyOrders() {
+    public ResponseEntity<Map<String, Object>> getMyOrders(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "3") int size) {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             User user = (User) authentication.getPrincipal();
-            List<Order> orders = orderService.getMyOrders(user.getId());
-            return ResponseEntity.ok(orders);
+
+            // Paginación: devuelve Page<Order>
+            Pageable pageable = PageRequest.of(page, size, Sort.by("createdDate").descending());
+            Page<Order> orderPage = orderService.getMyOrdersPageable(user.getId(), pageable);
+
+            // Extraer pedidos de la página
+            List<Order> orders = orderPage.getContent();
+
+            // Obtener IDs de productos relacionados
+            Set<Long> productIds = orders.stream()
+                    .flatMap(order -> order.getItems().stream())
+                    .map(OrderItem::getProductId)
+                    .collect(Collectors.toSet());
+
+            // Obtener productos
+            List<Product> products = productService.findAllByIds(productIds);
+
+            // Asociar imagen principal
+            Map<Long, String> productImages = products.stream()
+                    .filter(p -> p.getImages() != null && !p.getImages().isEmpty())
+                    .collect(Collectors.toMap(
+                            Product::getId,
+                            p -> p.getImages().get(0)));
+
+            // Convertir a DTO
+            List<OrderDetailsUserDTO> orderDetailsList = orders.stream()
+                    .map(OrderDetailsUserDTO::new)
+                    .toList();
+
+            // Armar respuesta
+            Map<String, Object> response = new HashMap<>();
+            response.put("orders", orderDetailsList);
+            response.put("productImages", productImages);
+            response.put("currentPage", orderPage.getNumber());
+            response.put("totalPages", orderPage.getTotalPages());
+            response.put("totalItems", orderPage.getTotalElements());
+
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.badRequest().build();
         }

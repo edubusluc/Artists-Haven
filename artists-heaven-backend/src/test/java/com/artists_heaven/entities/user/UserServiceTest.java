@@ -7,6 +7,7 @@ import static org.mockito.Mockito.*;
 
 import java.security.Principal;
 import java.util.List;
+import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -120,9 +121,12 @@ class UserServiceTest {
         UserProfileDTO userProfileDTO = new UserProfileDTO();
         userProfileDTO.setFirstName("NewFirstName");
         userProfileDTO.setLastName("NewLastName");
+        userProfileDTO.setId(1L);
 
         Principal principal = mock(Authentication.class);
         when(((Authentication) principal).getPrincipal()).thenReturn(user);
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
 
         userService.updateUserProfile(userProfileDTO, principal);
 
@@ -141,9 +145,11 @@ class UserServiceTest {
         userProfileDTO.setFirstName("NewFirstName");
         userProfileDTO.setLastName("NewLastName");
         userProfileDTO.setArtistName("NewArtistName");
+        userProfileDTO.setId(1L);
 
         Principal principal = mock(Authentication.class);
         when(((Authentication) principal).getPrincipal()).thenReturn(artist);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(artist));
 
         userService.updateUserProfile(userProfileDTO, principal);
 

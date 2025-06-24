@@ -1,17 +1,25 @@
 package com.artists_heaven.order;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
@@ -21,6 +29,8 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import com.artists_heaven.entities.user.User;
 import com.artists_heaven.entities.user.UserRole;
+import com.artists_heaven.product.Product;
+import com.artists_heaven.product.ProductService;
 
 import jakarta.persistence.EntityNotFoundException;
 
@@ -30,6 +40,9 @@ class OrderControllerTest {
 
     @Mock
     private OrderService orderService;
+
+    @Mock
+    private ProductService productService;
 
     @InjectMocks
     private OrderController orderController;
@@ -42,25 +55,42 @@ class OrderControllerTest {
 
     @Test
     void testGetMyOrders_Success() throws Exception {
-        Order order = new Order();
-        order.setId(1L);
-        List<Order> orders = List.of(order);
-
         User user = new User();
         user.setId(1L);
 
+        OrderItem item = new OrderItem();
+        item.setProductId(123L);
+
+        Order order = new Order();
+        order.setId(1L);
+        order.setCreatedDate(LocalDateTime.now());
+        order.setUser(user);
+        order.setItems(List.of(item));
+
+        PageRequest pageable = PageRequest.of(0, 3);
+        Page<Order> orderPage = new PageImpl<>(List.of(order), pageable, 1);
+
+        Product product = new Product();
+        product.setId(123L);
+        product.setImages(List.of("img.jpg"));
+
+        // Mock Auth
         Authentication authentication = mock(Authentication.class);
         when(authentication.getPrincipal()).thenReturn(user);
         SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
-        when(orderService.getMyOrders(1L)).thenReturn(orders);
+        // Mock services
+        when(orderService.getMyOrdersPageable(eq(1L), any(Pageable.class))).thenReturn(orderPage);
+        when(productService.findAllByIds(Set.of(123L))).thenReturn(List.of(product));
 
         mockMvc.perform(get("/api/orders/myOrders")
+                .param("page", "0")
+                .param("size", "3")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].id").value(1L));
+                .andExpect(jsonPath("$.orders[0].id").value(1));
     }
 
     @Test

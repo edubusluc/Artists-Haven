@@ -1,8 +1,11 @@
 package com.artists_heaven.product;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import org.hibernate.annotations.CreationTimestamp;
 
 import com.artists_heaven.rating.Rating;
 
@@ -58,5 +61,8 @@ public class Product {
     private Boolean on_Promotion = false;
 
     private Integer discount = 0;
+
+    @CreationTimestamp
+    private Date createdDate;
 
 }

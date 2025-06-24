@@ -1,6 +1,6 @@
 package com.artists_heaven.order;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -50,7 +50,7 @@ public class OrderDetailsDTO {
     private List<OrderItem> items;
 
     @Schema(description = "Date when the order was created", example = "2025-06-15", type = "string", format = "date")
-    private LocalDate createdDate;
+    private LocalDateTime createdDate;
 
     @Schema(description = "Email associated with the order", example = "customer@example.com")
     private String email;

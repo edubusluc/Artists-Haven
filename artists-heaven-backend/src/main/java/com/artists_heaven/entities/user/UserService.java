@@ -77,11 +77,21 @@ public class UserService {
      */
     public void updateUserProfile(UserProfileDTO userProfileDTO, Principal principal) {
         // Extract the authenticated user
-        User user = extractAuthenticatedUser(principal);
+        User user = getUserById(userProfileDTO.getId());
 
         // Update the user's first and last name
         user.setFirstName(userProfileDTO.getFirstName());
         user.setLastName(userProfileDTO.getLastName());
+        
+        user.setUsername(userProfileDTO.getUsername());
+
+        user.setEmail(userProfileDTO.getEmail());
+        user.setPhone(userProfileDTO.getPhone());
+        user.setCity(userProfileDTO.getCity());
+        user.setAddress(userProfileDTO.getAddress());
+        user.setPostalCode(userProfileDTO.getPostalCode());
+        user.setCountry(userProfileDTO.getCountry());
+        
 
         // If the user is an artist, update the artist name if it's provided
         if (user instanceof Artist artist && userProfileDTO.getArtistName() != null) {
