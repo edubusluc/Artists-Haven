@@ -9,7 +9,7 @@ const en = {
   "AddToShoppingCard": "Añadir a la cesta",
   "NotAvailable": "Producto no disponible",
   "AvailableSizes": "Tallas disponibles",
-  "ShoppingCart":"Resumen del Carrito",
+  "ShoppingCart":"Resumen de la Cesta",
   "AddAProductToShopping": "¡Añada algún producto a su carrito!",
 };
 export default en;
