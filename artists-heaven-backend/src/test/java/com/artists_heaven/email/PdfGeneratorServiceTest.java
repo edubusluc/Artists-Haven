@@ -11,7 +11,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 
@@ -42,7 +42,7 @@ class PdfGeneratorServiceTest {
     void testSetUp() {
         order = new Order();
         order.setId(1L);
-        order.setCreatedDate(LocalDate.now());
+        order.setCreatedDate(LocalDateTime.now());
 
         Product product = new Product();
         product.setId(1l);

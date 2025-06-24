@@ -564,4 +564,27 @@ class ProductServiceTest {
         assertEquals("Product 1", result.getContent().get(0).getName());
     }
 
+    @Test
+    void testGet12ProductsSortedByName() {
+        Product product = new Product();
+        product.setName("Product 1");
+
+        when(productRepository.find12ProductsSortedByName()).thenReturn(List.of(product));
+        List<Product> products = productService.get12ProductsSortedByName();
+        assertNotNull(products);
+    }
+
+    @Test
+    void testFindAllByIds() {
+        Product product = new Product();
+        product.setName("Product 1");
+
+        List<Product> products = new ArrayList<>();
+        when(productRepository.findAllById(Set.of(1L))).thenReturn(products);
+
+        List<Product> result = productService.findAllByIds(Set.of(1L));
+        assertNotNull(result);
+
+    }
+
 }
