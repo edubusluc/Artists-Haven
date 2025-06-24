@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import twitter from '../util-image/twitter.png';
 import instagram from '../util-image/instagram.png';
 import tiktok from '../util-image/tiktok.png';
+import { Link } from 'react-router-dom';
 
 const Footer = () => {
   // Estado para controlar ancho de pantalla
@@ -104,14 +105,18 @@ const Footer = () => {
           marginTop: '1.5rem',
           display: 'flex',
           flexDirection: 'column',
-          justifyContent: 'flex-start',
           gap: '0.5rem',
-          alignItems: isMobile ? 'center' : 'flex-start',
+
         }}
       >
-        <p className="custom-font-footer" style={{ color: 'black', textAlign: isMobile ? 'center' : 'left' }}>
-          ARTISTS' - HEAVEN
-        </p>
+        <div className='flex justify-between'>
+          <p className="custom-font-footer" style={{ color: 'black', textAlign: isMobile ? 'center' : 'left', fontSize: '20px' }}>
+            ARTISTS' - HEAVEN
+          </p>
+          <Link to="/FAQ">
+            <p className="custom-font-footer" style={{ color: 'black', textAlign: isMobile ? 'center' : 'right', fontSize: '20px' }}>FAQ</p>
+          </Link>
+        </div>
         <div style={{ display: 'flex', gap: '1rem', justifyContent: isMobile ? 'center' : 'flex-start' }}>
           <img src={twitter} alt="twitter" style={{ height: '32px', cursor: 'pointer' }} />
           <a href="https://www.tiktok.com/@thisis.argentina?lang=es" target="_blank" rel="noopener noreferrer">
