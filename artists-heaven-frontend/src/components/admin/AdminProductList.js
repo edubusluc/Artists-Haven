@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faShirt, faCheck, faXmark, faRectangleAd } from '@fortawesome/free-solid-svg-icons';
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import NonAuthorise from '../NonAuthorise';
 
 const AdminProductList = () => {
     const [products, setProducts] = useState([]);
@@ -139,6 +140,10 @@ const AdminProductList = () => {
             alert(`Error: ${error.message}`);
         }
     };
+
+    if (role !== 'ADMIN') {
+        return <NonAuthorise />;
+    }
 
     return (
         <>

@@ -5,9 +5,6 @@ import { Link } from "react-router-dom";
 import { useTranslation } from 'react-i18next';
 import Logout from "../Logout";
 
-
-
-
 const AdminHeader = () => {
     const [shoppingCart, setShoppingCart] = useState({ items: [] });
     const [isDropdownVisible, setDropdownVisible] = useState(false);
@@ -26,16 +23,6 @@ const AdminHeader = () => {
 
     const handleMouseLeave = () => {
         setDropdownVisible(false);
-    };
-
-    const calculateTotalPrice = () => {
-        let total = 0;
-        if (shoppingCart && shoppingCart.items) {
-            shoppingCart.items.forEach((item) => {
-                total += item.product.price * item.quantity;
-            });
-        }
-        return total;
     };
 
     const links = [
