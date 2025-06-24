@@ -250,7 +250,8 @@ public class PaymentGatewayService {
 
         // If the user is authenticated and is an instance of User, add their details to
         // the session.
-        if (authentication != null && authentication.getPrincipal() instanceof User user) {
+        // If the user is authenticated by Google, they will be treated as an anonymous user because they don't have an address
+        if (authentication != null && authentication.getPrincipal() instanceof User user && user.getAddress() != null) {
             // Set the user's email for the Stripe session.
             params.setCustomerEmail(user.getEmail());
             // Add the user's shipping address to the session (if available).
