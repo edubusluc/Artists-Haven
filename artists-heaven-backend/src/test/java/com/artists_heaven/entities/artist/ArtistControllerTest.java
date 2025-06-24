@@ -4,32 +4,37 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.Files;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.http.HttpHeaders;
+
 
 import com.artists_heaven.admin.MonthlySalesDTO;
 import com.artists_heaven.entities.user.UserRepository;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 class ArtistControllerTest {
 
@@ -44,8 +49,6 @@ class ArtistControllerTest {
     @InjectMocks
     private ArtistController artistController;
 
-    private ObjectMapper objectMapper = new ObjectMapper();
-
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
@@ -55,43 +58,56 @@ class ArtistControllerTest {
 
     @Test
     void testRegisterArtist() throws Exception {
-        // Crear un objeto Artist para enviar como payload
+        // Crear un objeto DTO simulado
+        ArtistRegisterDTO artistRegisterDTO = new ArtistRegisterDTO();
+        artistRegisterDTO.setFirstName("John");
+        artistRegisterDTO.setLastName("Doe");
+        artistRegisterDTO.setEmail("johndoe@example.com");
+        artistRegisterDTO.setPassword("password123");
+        artistRegisterDTO.setArtistName("John's Art");
+        artistRegisterDTO.setUrl("http://example.com");
+
+        // Simular imagen enviada como archivo
+        MockMultipartFile image = new MockMultipartFile("image", "photo.jpg", "image/jpeg",
+                "fake image content".getBytes());
+
+        // Configurar mocks
         Artist artist = new Artist();
-        artist.setFirstName("John");
-        artist.setLastName("Doe");
-        artist.setUsername("johndoe");
-        artist.setEmail("johndoe@example.com");
-        artist.setPassword("password123");
-        artist.setArtistName("John's Art");
-        artist.setUrl("http://example.com");
+        artist.setMainViewPhoto("mianViewPhoto.jpg");
 
-        // Configurar el servicio mock para devolver el artista al registrarse
-        Mockito.when(artistService.registerArtist(Mockito.any(Artist.class))).thenReturn(artist);
+        when(artistService.saveImages(any())).thenReturn("mianViewPhoto.jpg");
+        when(artistService.registerArtist(any(), any())).thenReturn(artist);
 
-        // Realizar la solicitud POST y verificar la respuesta
-        mockMvc.perform(MockMvcRequestBuilders.post("/api/artists/register")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(artist)))
-                .andExpect(MockMvcResultMatchers.status().isCreated())
-                .andExpect(MockMvcResultMatchers.jsonPath("$.firstName").value("John"))
-                .andExpect(MockMvcResultMatchers.jsonPath("$.lastName").value("Doe"));
+        // Ejecutar solicitud como multipart
+        mockMvc.perform(multipart("/api/artists/register")
+                .file(image)
+                .param("firstName", artistRegisterDTO.getFirstName())
+                .param("lastName", artistRegisterDTO.getLastName())
+                .param("email", artistRegisterDTO.getEmail())
+                .param("password", artistRegisterDTO.getPassword())
+                .param("artistName", artistRegisterDTO.getArtistName())
+                .param("url", artistRegisterDTO.getUrl()))
+                .andExpect(status().isCreated()); // tu controller retorna HttpStatus.CREATED
     }
 
     @Test
     void testRegisterArtistSuccessBadRequest() throws Exception {
-        Artist artist = new Artist();
-        artist.setEmail("invalid-email@example.com");
-        artist.setArtistName("Invalid Artist");
-        artist.setFirstName("Invalid");
-        artist.setLastName("Artist");
-        artist.setUrl("invalid-artist.com");
-        artist.setPassword("password");
-        when(artistService.registerArtist(any(Artist.class)))
+        // Simular archivo enviado
+        MockMultipartFile image = new MockMultipartFile("image", "photo.jpg", "image/jpeg", "img".getBytes());
+
+        // Simular que el servicio lanza excepción por datos inválidos
+        when(artistService.saveImages(any())).thenReturn("photo.jpg");
+        when(artistService.registerArtist(any(), any()))
                 .thenThrow(new IllegalArgumentException("Invalid user data"));
 
-        mockMvc.perform(post("/api/artists/register")
-                .contentType("application/json")
-                .content(objectMapper.writeValueAsString(artist)))
+        mockMvc.perform(multipart("/api/artists/register")
+                .file(image)
+                .param("email", "invalid-email@example.com")
+                .param("artistName", "Invalid Artist")
+                .param("firstName", "Invalid")
+                .param("lastName", "Artist")
+                .param("url", "invalid-artist.com")
+                .param("password", "password"))
                 .andExpect(status().isBadRequest());
     }
 
@@ -186,6 +202,57 @@ class ArtistControllerTest {
                 .param("year", "2024")
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void testGetArtistMainView_Success() throws Exception {
+        // Crear artista simulado
+        Artist artist = new Artist();
+        artist.setId(1L);
+        artist.setArtistName("Test Artist");
+
+        List<Artist> mockArtists = List.of(artist);
+        when(artistService.getValidArtists()).thenReturn(mockArtists);
+
+        mockMvc.perform(get("/api/artists/main"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].name").value("Test Artist"));
+    }
+
+    @Test
+    void testGetArtistMainView_Failure() throws Exception {
+        when(artistService.getValidArtists()).thenThrow(new RuntimeException("Something went wrong"));
+
+        mockMvc.perform(get("/api/artists/main"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void testGetProductImage_Success() throws Exception {
+        String testFileName = "test-image.png";
+
+        // Crear archivo temporal simulado en la ruta real
+        String basePath = System.getProperty("user.dir")
+                + "/artists-heaven-backend/src/main/resources/mainArtist_media/";
+        Files.createDirectories(Paths.get(basePath)); // por si no existe
+
+        Path imagePath = Paths.get(basePath + testFileName);
+        Files.write(imagePath, new byte[] { (byte) 137, 80, 78, 71 }); // PNG signature
+
+        mockMvc.perform(get("/api/artists/mainArtist_media/" + testFileName))
+                .andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.CONTENT_TYPE, "image/png"));
+
+        // Limpieza
+        Files.deleteIfExists(imagePath);
+    }
+
+    @Test
+    void testGetProductImage_NotFound() throws Exception {
+        String nonExistentFile = "non-existent.png";
+
+        mockMvc.perform(get("/api/artists/mainArtist_media/" + nonExistentFile))
+                .andExpect(status().isNotFound());
     }
 
 }
