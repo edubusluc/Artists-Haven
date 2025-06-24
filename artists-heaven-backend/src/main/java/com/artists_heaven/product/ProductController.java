@@ -5,10 +5,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
-
 import com.artists_heaven.entities.user.User;
 import com.artists_heaven.page.PageResponse;
-
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -275,6 +273,25 @@ public class ProductController {
         // service
         List<Product> promotedProducts = productService.getAllPromotedProducts();
         return ResponseEntity.ok(promotedProducts);
+    }
+
+    @GetMapping("sorted12Product")
+    public ResponseEntity<List<ProductDTO>> getSorted12Product() {
+        try {
+            List<Product> product12 = productService.get12ProductsSortedByName();
+            List<ProductDTO> product12DTO = product12.stream()
+                    .map(this::mapToProductDTO)
+                    .toList();
+            return ResponseEntity.ok(product12DTO);
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(null);
+        }
+    }
+
+    private ProductDTO mapToProductDTO(Product product) {
+        return new ProductDTO(product);
     }
 
 }

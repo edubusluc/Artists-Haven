@@ -307,4 +307,12 @@ public class ProductService {
         return productRepository.findByName(searchTerm, pageable);
     }
 
+    public List<Product> get12ProductsSortedByName() {
+        return productRepository.find12ProductsSortedByName();
+    }
+
+    public List<Product> findAllByIds(Set<Long> productIds) {
+        return productRepository.findAllById(productIds);
+    }
+
 }
