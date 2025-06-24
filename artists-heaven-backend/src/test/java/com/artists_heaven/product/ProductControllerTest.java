@@ -560,4 +560,47 @@ class ProductControllerTest {
                 verify(productService, never()).searchProducts(anyString(), any(Pageable.class));
         }
 
+        @Test
+        void testUpdateProduct_Success() throws Exception {
+                Long productId = 1L;
+
+                // Mock de Product existente
+                Product existingProduct = new Product();
+                existingProduct.setId(productId);
+                existingProduct.setName("Old Name");
+
+                // DTO con los datos actualizados
+                ProductDTO productDTO = new ProductDTO();
+                productDTO.setName("Updated Product");
+                productDTO.setDescription("New description");
+
+                // Simular imágenes nuevas y a eliminar
+                MockMultipartFile newImage = new MockMultipartFile(
+                                "newImages", "new.jpg", "image/jpeg", "fake-image-content".getBytes());
+
+                MockMultipartFile removedImage = new MockMultipartFile(
+                                "removedImages", "old.jpg", "image/jpeg", "fake-old-image".getBytes());
+
+                // Serializar el DTO como JSON
+                MockMultipartFile productJson = new MockMultipartFile(
+                                "product", "", "application/json",
+                                new ObjectMapper().writeValueAsBytes(productDTO));
+
+                when(productService.findById(productId)).thenReturn(existingProduct);
+                doNothing().when(productService).updateProduct(existingProduct, List.of(removedImage),
+                                List.of(newImage), productDTO);
+
+                mockMvc.perform(multipart("/api/product/edit/{id}", productId)
+                                .file(productJson)
+                                .file(newImage)
+                                .file(removedImage)
+                                .with(request -> {
+                                        request.setMethod("PUT");
+                                        return request;
+                                })
+                                .contentType(MediaType.MULTIPART_FORM_DATA))
+                                .andExpect(status().isOk())
+                                .andExpect(content().string("Product updated successfully"));
+        }
+
 }
