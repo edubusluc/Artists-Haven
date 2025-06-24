@@ -15,6 +15,10 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import jakarta.persistence.EntityNotFoundException;
 
@@ -87,6 +91,20 @@ class OrderServiceTest {
 
         // Verificamos el mensaje de la excepción
         assertEquals("Order not found with id: " + orderId, exception.getMessage());
+    }
+
+    @Test
+    void testGetMyOrdersPageable() {
+        Order order = new Order();
+        List<Order> orders = List.of(order);
+
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<Order> page = new PageImpl<>(orders, pageable, orders.size());
+
+        when(orderRepository.getOrdersByUserIdPageable(1L, pageable)).thenReturn(page);
+        Page<Order> result = orderService.getMyOrdersPageable(1l, pageable);
+        assertNotNull(result);
+
     }
 
 }
