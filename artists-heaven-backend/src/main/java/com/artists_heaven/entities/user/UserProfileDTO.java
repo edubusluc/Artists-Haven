@@ -70,6 +70,12 @@ public class UserProfileDTO {
     @Schema(description = "City of residence", example = "Paris")
     private String city;
 
+    private String postalCode;
+
+    private String country;
+
+    private String phone;
+
     /**
      * Default constructor for serialization/deserialization.
      */
@@ -91,5 +97,8 @@ public class UserProfileDTO {
         this.address = user.getAddress();
         this.city = user.getCity();
         this.role = user.getRole().name();
+        this.postalCode = user.getPostalCode();
+        this.country = user.getCountry();
+        this.phone = user.getPhone();
     }
 }

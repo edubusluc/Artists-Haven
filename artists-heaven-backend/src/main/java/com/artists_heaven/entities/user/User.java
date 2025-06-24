@@ -65,21 +65,16 @@ public class User implements UserDetails {
     @NotBlank
     private String password;
 
-    @NotBlank
     @Size(min = 10, max = 15, message = "El número debe tener entre 10 y 15 dígitos")
     @Digits(integer = 15, fraction = 0, message = "El número debe contener solo dígitos")
     private String phone;
 
-    @NotBlank
     private String address;
 
-    @NotBlank
     private String postalCode;
 
-    @NotBlank
     private String city;
 
-    @NotBlank  
     private String country;
 
     @Enumerated(EnumType.STRING)
