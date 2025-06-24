@@ -7,15 +7,10 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
 
-/**
- * Data Transfer Object representing the full details of an order,
- * including customer information, shipping details, order status, and items.
- */
 @Getter
 @Setter
-@Schema(name = "OrderDetailsDTO", description = "Detailed representation of an order, including items, user, address, and payment info.")
-public class OrderDetailsDTO {
-
+@Schema
+public class OrderDetailsUserDTO {
     @Schema(description = "Unique internal ID of the order", example = "123")
     private Long id;
 
@@ -58,15 +53,12 @@ public class OrderDetailsDTO {
     @Schema(description = "Phone number provided for the order", example = "+1-555-123-4567")
     private String phone;
 
-    @Schema(description = "Stripe or payment gateway intent/ID for this order", example = "pi_3NMFAI2eZvKYlo2CgE")
-    private String paymentIntent;
-
     /**
-     * Constructs an OrderDetailsDTO from an Order entity.
+     * Constructs an OrderDetailsUserDTO from an Order entity.
      *
      * @param order The Order entity containing all the necessary data.
      */
-    public OrderDetailsDTO(Order order) {
+    public OrderDetailsUserDTO(Order order) {
         this.id = order.getId();
         this.identifier = order.getIdentifier();
         this.totalPrice = order.getTotalPrice();
@@ -81,6 +73,6 @@ public class OrderDetailsDTO {
         this.createdDate = order.getCreatedDate();
         this.email = order.getEmail();
         this.phone = order.getPhone();
-        this.paymentIntent = order.getPaymentIntent();
     }
+
 }
