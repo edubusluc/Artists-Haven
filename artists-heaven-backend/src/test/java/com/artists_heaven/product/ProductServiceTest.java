@@ -587,4 +587,23 @@ class ProductServiceTest {
 
     }
 
+    @Test
+    void testMapProductToProductDTO() {
+        Product product = new Product();
+        product.setId(1L);
+        product.setName("Test Product");
+        product.setDescription("Test Description");
+        product.setPrice(100.0f);
+        product.setAvailable(true);
+        product.setOn_Promotion(false);
+        product.setDiscount(0);
+        product.setSize(new HashMap<>());
+        product.setCategories(new HashSet<>());
+        product.setImages(new ArrayList<>());
+
+        ProductDTO productDTO = new ProductDTO(product);
+        assertNotNull(productDTO);
+
+    }
+
 }

@@ -4,6 +4,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -19,6 +20,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
@@ -41,6 +43,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -603,4 +606,27 @@ class ProductControllerTest {
                                 .andExpect(content().string("Product updated successfully"));
         }
 
+        @Test
+        void testGetSorted12Product_Success() throws Exception {
+                Product product = new Product();
+                product.setId(1L);
+                product.setName("Test Product");
+
+                when(productService.get12ProductsSortedByName()).thenReturn(List.of(product));
+
+                mockMvc.perform(get("/api/product/sorted12Product")
+                                .accept(MediaType.APPLICATION_JSON))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.size()").value(1))
+                                .andExpect(jsonPath("$[0].name").value("Test Product"));
+        }
+
+        @Test
+        void testGetSorted12Product_Failure() throws Exception {
+                when(productService.get12ProductsSortedByName()).thenThrow(new RuntimeException("Error"));
+
+                mockMvc.perform(get("/api/product/sorted12Product")
+                                .accept(MediaType.APPLICATION_JSON))
+                                .andExpect(status().isNotFound());
+        }
 }
