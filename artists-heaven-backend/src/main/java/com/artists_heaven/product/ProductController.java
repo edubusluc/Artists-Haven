@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import com.artists_heaven.entities.user.User;
+import com.artists_heaven.images.ImageServingUtil;
 import com.artists_heaven.page.PageResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -15,13 +16,10 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 
-import java.nio.file.Paths;
-import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
 
 import org.springframework.data.domain.Page;
-import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -33,7 +31,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.RequestBody;
 
 @RestController
@@ -71,27 +68,15 @@ public class ProductController {
     }
 
     @GetMapping("/product_media/{fileName:.+}")
-    @Operation(summary = "Retrieve product image by file name", description = "Returns the product image file corresponding to the given file name. "
-            +
-            "Supports serving PNG images stored in the product_media directory.")
+    @Operation(summary = "Retrieve product image by file name", description = "Returns the product image file corresponding to the given file name. Supports serving PNG images stored in the product_media directory.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Image file successfully retrieved", content = @Content(mediaType = "image/png")),
             @ApiResponse(responseCode = "404", description = "Image file not found", content = @Content)
     })
     public ResponseEntity<Resource> getProductImage(
-            @Parameter(description = "Name of the image file to retrieve, including extension (e.g., 'product1.png')", required = true) @PathVariable String fileName) {
-
+            @Parameter(description = "File name including extension", required = true) @PathVariable String fileName) {
         String basePath = System.getProperty("user.dir") + "/artists-heaven-backend/src/main/resources/product_media/";
-        Path filePath = Paths.get(basePath, fileName);
-        Resource resource = new FileSystemResource(filePath.toFile());
-
-        if (!resource.exists()) {
-            return ResponseEntity.notFound().build();
-        }
-
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_TYPE, "image/png")
-                .body(resource);
+        return ImageServingUtil.serveImage(basePath, fileName);
     }
 
     @GetMapping("/categories")
