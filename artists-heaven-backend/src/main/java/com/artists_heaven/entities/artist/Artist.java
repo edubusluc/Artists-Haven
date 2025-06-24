@@ -7,6 +7,7 @@ import com.artists_heaven.entities.user.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.DiscriminatorValue;
 import jakarta.persistence.Entity;
+import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -25,4 +26,9 @@ public class Artist extends User {
 
     @Column(name = "is_verificated")
     private Boolean isVerificated = false;
+
+    @NotNull
+    private String mainViewPhoto;
+
+
 }
