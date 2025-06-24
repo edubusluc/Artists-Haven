@@ -7,8 +7,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
-
 
 import java.util.Arrays;
 import java.util.List;
@@ -30,229 +28,225 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.http.HttpHeaders;
-
 
 import com.artists_heaven.admin.MonthlySalesDTO;
 import com.artists_heaven.entities.user.UserRepository;
+import com.artists_heaven.images.ImageServingUtil;
 
 class ArtistControllerTest {
 
-    private MockMvc mockMvc;
+        private MockMvc mockMvc;
 
-    @Mock
-    private ArtistService artistService;
+        @Mock
+        private ArtistService artistService;
 
-    @Mock
-    private UserRepository userRepository;
+        @Mock
+        private UserRepository userRepository;
 
-    @InjectMocks
-    private ArtistController artistController;
+        @Mock
+        private ImageServingUtil imageServingUtil;
 
-    @BeforeEach
-    void setUp() {
-        MockitoAnnotations.openMocks(this);
+        @InjectMocks
+        private ArtistController artistController;
 
-        mockMvc = MockMvcBuilders.standaloneSetup(artistController).build();
-    }
+        @BeforeEach
+        void setUp() {
+                MockitoAnnotations.openMocks(this);
 
-    @Test
-    void testRegisterArtist() throws Exception {
-        // Crear un objeto DTO simulado
-        ArtistRegisterDTO artistRegisterDTO = new ArtistRegisterDTO();
-        artistRegisterDTO.setFirstName("John");
-        artistRegisterDTO.setLastName("Doe");
-        artistRegisterDTO.setEmail("johndoe@example.com");
-        artistRegisterDTO.setPassword("password123");
-        artistRegisterDTO.setArtistName("John's Art");
-        artistRegisterDTO.setUrl("http://example.com");
+                mockMvc = MockMvcBuilders.standaloneSetup(artistController).build();
+        }
 
-        // Simular imagen enviada como archivo
-        MockMultipartFile image = new MockMultipartFile("image", "photo.jpg", "image/jpeg",
-                "fake image content".getBytes());
+        @Test
+        void testRegisterArtist() throws Exception {
+                // Crear un objeto DTO simulado
+                ArtistRegisterDTO artistRegisterDTO = new ArtistRegisterDTO();
+                artistRegisterDTO.setFirstName("John");
+                artistRegisterDTO.setLastName("Doe");
+                artistRegisterDTO.setEmail("johndoe@example.com");
+                artistRegisterDTO.setPassword("password123");
+                artistRegisterDTO.setArtistName("John's Art");
+                artistRegisterDTO.setUrl("http://example.com");
 
-        // Configurar mocks
-        Artist artist = new Artist();
-        artist.setMainViewPhoto("mianViewPhoto.jpg");
+                // Simular imagen enviada como archivo
+                MockMultipartFile image = new MockMultipartFile("image", "photo.jpg", "image/jpeg",
+                                "fake image content".getBytes());
 
-        when(artistService.saveImages(any())).thenReturn("mianViewPhoto.jpg");
-        when(artistService.registerArtist(any(), any())).thenReturn(artist);
+                // Configurar mocks
+                Artist artist = new Artist();
+                artist.setMainViewPhoto("mianViewPhoto.jpg");
 
-        // Ejecutar solicitud como multipart
-        mockMvc.perform(multipart("/api/artists/register")
-                .file(image)
-                .param("firstName", artistRegisterDTO.getFirstName())
-                .param("lastName", artistRegisterDTO.getLastName())
-                .param("email", artistRegisterDTO.getEmail())
-                .param("password", artistRegisterDTO.getPassword())
-                .param("artistName", artistRegisterDTO.getArtistName())
-                .param("url", artistRegisterDTO.getUrl()))
-                .andExpect(status().isCreated()); // tu controller retorna HttpStatus.CREATED
-    }
+                when(imageServingUtil.saveImages(image, "artists-heaven-backend/src/main/resources/mainArtist_media/", "/mainArtist_media/"))
+                                .thenReturn("mianViewPhoto.jpg");
+                when(artistService.registerArtist(any(), any())).thenReturn(artist);
 
-    @Test
-    void testRegisterArtistSuccessBadRequest() throws Exception {
-        // Simular archivo enviado
-        MockMultipartFile image = new MockMultipartFile("image", "photo.jpg", "image/jpeg", "img".getBytes());
+                // Ejecutar solicitud como multipart
+                mockMvc.perform(multipart("/api/artists/register")
+                                .file(image)
+                                .param("firstName", artistRegisterDTO.getFirstName())
+                                .param("lastName", artistRegisterDTO.getLastName())
+                                .param("email", artistRegisterDTO.getEmail())
+                                .param("password", artistRegisterDTO.getPassword())
+                                .param("artistName", artistRegisterDTO.getArtistName())
+                                .param("url", artistRegisterDTO.getUrl()))
+                                .andExpect(status().isCreated());
+        }
 
-        // Simular que el servicio lanza excepción por datos inválidos
-        when(artistService.saveImages(any())).thenReturn("photo.jpg");
-        when(artistService.registerArtist(any(), any()))
-                .thenThrow(new IllegalArgumentException("Invalid user data"));
+        @Test
+        void testRegisterArtistSuccessBadRequest() throws Exception {
+                // Simular archivo enviado
+                MockMultipartFile image = new MockMultipartFile("image", "photo.jpg", "image/jpeg", "img".getBytes());
 
-        mockMvc.perform(multipart("/api/artists/register")
-                .file(image)
-                .param("email", "invalid-email@example.com")
-                .param("artistName", "Invalid Artist")
-                .param("firstName", "Invalid")
-                .param("lastName", "Artist")
-                .param("url", "invalid-artist.com")
-                .param("password", "password"))
-                .andExpect(status().isBadRequest());
-    }
+                // Simular que el servicio lanza excepción por datos inválidos
+                when(imageServingUtil.saveImages(image, "artists-heaven-backend/src/main/resources/mainArtist_media/", "/mainArtist_media/"))
+                                .thenReturn("photo.jpg");
+                when(artistService.registerArtist(any(), any()))
+                                .thenThrow(new IllegalArgumentException("Invalid user data"));
 
-    @Test
-    void testGetArtistDashboard_success() throws Exception {
-        // Simulamos los servicios
-        Artist artist = new Artist();
-        artist.setId(1L);
+                mockMvc.perform(multipart("/api/artists/register")
+                                .file(image)
+                                .param("email", "invalid-email@example.com")
+                                .param("artistName", "Invalid Artist")
+                                .param("firstName", "Invalid")
+                                .param("lastName", "Artist")
+                                .param("url", "invalid-artist.com")
+                                .param("password", "password"))
+                                .andExpect(status().isBadRequest());
+        }
 
-        Authentication authentication = mock(Authentication.class);
-        when(authentication.getPrincipal()).thenReturn(artist);
-        SecurityContext securityContext = mock(SecurityContext.class);
-        when(securityContext.getAuthentication()).thenReturn(authentication);
-        SecurityContextHolder.setContext(securityContext);
+        @Test
+        void testGetArtistDashboard_success() throws Exception {
+                // Simulamos los servicios
+                Artist artist = new Artist();
+                artist.setId(1L);
 
-        when(artistService.isArtistVerificated(1L)).thenReturn("Verified");
-        when(artistService.getFutureEvents(1L, 2023)).thenReturn(1);
-        when(artistService.getPastEvents(1L, 2023)).thenReturn(1);
-        when(artistService.getOrderItemCount(1L, 2023)).thenReturn(Map.of("Item1", 5));
-        when(artistService.getMostCountrySold(1L, 2023)).thenReturn(Map.of("USA", 10));
+                Authentication authentication = mock(Authentication.class);
+                when(authentication.getPrincipal()).thenReturn(artist);
+                SecurityContext securityContext = mock(SecurityContext.class);
+                when(securityContext.getAuthentication()).thenReturn(authentication);
+                SecurityContextHolder.setContext(securityContext);
 
-        // Llamamos a la API y verificamos que la respuesta sea 200 OK y que el
-        // contenido sea el esperado
-        mockMvc.perform(get("/api/artists/dashboard")
-                .param("year", "2023")
-                .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.isVerificated").value("Verified"))
-                .andExpect(jsonPath("$.futureEvents").value(1))
-                .andExpect(jsonPath("$.pastEvents").value(1))
-                .andExpect(jsonPath("$.orderItemCount['Item1']").value(5))
-                .andExpect(jsonPath("$.mostCountrySold['USA']").value(10));
-    }
+                when(artistService.isArtistVerificated(1L)).thenReturn("Verified");
+                when(artistService.getFutureEvents(1L, 2023)).thenReturn(1);
+                when(artistService.getPastEvents(1L, 2023)).thenReturn(1);
+                when(artistService.getOrderItemCount(1L, 2023)).thenReturn(Map.of("Item1", 5));
+                when(artistService.getMostCountrySold(1L, 2023)).thenReturn(Map.of("USA", 10));
 
-    @Test
-    void testGetArtistDashboard_errorHandling() throws Exception {
-        // Simulamos los servicios, pero esta vez lanzamos una excepción en uno de ellos
-        when(artistService.isArtistVerificated(1L)).thenThrow(new RuntimeException("Error fetching verification"));
+                // Llamamos a la API y verificamos que la respuesta sea 200 OK y que el
+                // contenido sea el esperado
+                mockMvc.perform(get("/api/artists/dashboard")
+                                .param("year", "2023")
+                                .contentType(MediaType.APPLICATION_JSON))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.isVerificated").value("Verified"))
+                                .andExpect(jsonPath("$.futureEvents").value(1))
+                                .andExpect(jsonPath("$.pastEvents").value(1))
+                                .andExpect(jsonPath("$.orderItemCount['Item1']").value(5))
+                                .andExpect(jsonPath("$.mostCountrySold['USA']").value(10));
+        }
 
-        mockMvc.perform(get("/api/artists/dashboard")
-                .param("year", "2023")
-                .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isBadRequest());
-    }
+        @Test
+        void testGetArtistDashboard_errorHandling() throws Exception {
+                // Simulamos los servicios, pero esta vez lanzamos una excepción en uno de ellos
+                when(artistService.isArtistVerificated(1L))
+                                .thenThrow(new RuntimeException("Error fetching verification"));
 
-    @Test
-    void testGetMonthlySalesData_success() throws Exception {
-        // Simulamos la autenticación del usuario
-        Authentication authentication = mock(Authentication.class);
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-        Artist artist = new Artist();
-        artist.setId(1L);
-        when(authentication.getPrincipal()).thenReturn(artist);
+                mockMvc.perform(get("/api/artists/dashboard")
+                                .param("year", "2023")
+                                .contentType(MediaType.APPLICATION_JSON))
+                                .andExpect(status().isBadRequest());
+        }
 
-        // Simulamos las respuestas del servicio
-        MonthlySalesDTO dto1 = new MonthlySalesDTO(); // Enero, 100 ventas
-        dto1.setMonth(1);
-        dto1.setTotalOrders(100L);
-        MonthlySalesDTO dto2 = new MonthlySalesDTO(); // Enero, 100 ventas
-        dto2.setMonth(2);
-        dto2.setTotalOrders(200L);
-        List<MonthlySalesDTO> monthlySalesData = Arrays.asList(dto1, dto2);
+        @Test
+        void testGetMonthlySalesData_success() throws Exception {
+                // Simulamos la autenticación del usuario
+                Authentication authentication = mock(Authentication.class);
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+                Artist artist = new Artist();
+                artist.setId(1L);
+                when(authentication.getPrincipal()).thenReturn(artist);
 
-        when(artistService.getMonthlySalesDataPerArtist(1L, 2024)).thenReturn(monthlySalesData);
+                // Simulamos las respuestas del servicio
+                MonthlySalesDTO dto1 = new MonthlySalesDTO(); // Enero, 100 ventas
+                dto1.setMonth(1);
+                dto1.setTotalOrders(100L);
+                MonthlySalesDTO dto2 = new MonthlySalesDTO(); // Enero, 100 ventas
+                dto2.setMonth(2);
+                dto2.setTotalOrders(200L);
+                List<MonthlySalesDTO> monthlySalesData = Arrays.asList(dto1, dto2);
 
-        // Llamamos a la API y verificamos que la respuesta sea 200 OK
-        mockMvc.perform(get("/api/artists/sales/monthly")
-                .param("year", "2024")
-                .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].month").value(1))
-                .andExpect(jsonPath("$[0].totalOrders").value(100))
-                .andExpect(jsonPath("$[1].month").value(2))
-                .andExpect(jsonPath("$[1].totalOrders").value(200));
-    }
+                when(artistService.getMonthlySalesDataPerArtist(1L, 2024)).thenReturn(monthlySalesData);
 
-    @Test
-    void testGetMonthlySalesData_errorHandling() throws Exception {
-        // Simulamos la autenticación del usuario
-        Authentication authentication = mock(Authentication.class);
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-        Artist artist = new Artist();
-        artist.setId(1L);
-        when(authentication.getPrincipal()).thenReturn(artist);
+                // Llamamos a la API y verificamos que la respuesta sea 200 OK
+                mockMvc.perform(get("/api/artists/sales/monthly")
+                                .param("year", "2024")
+                                .contentType(MediaType.APPLICATION_JSON))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$[0].month").value(1))
+                                .andExpect(jsonPath("$[0].totalOrders").value(100))
+                                .andExpect(jsonPath("$[1].month").value(2))
+                                .andExpect(jsonPath("$[1].totalOrders").value(200));
+        }
 
-        // Simulamos que el servicio lance una excepción
-        when(artistService.getMonthlySalesDataPerArtist(1L, 2024))
-                .thenThrow(new RuntimeException("Error fetching sales data"));
+        @Test
+        void testGetMonthlySalesData_errorHandling() throws Exception {
+                // Simulamos la autenticación del usuario
+                Authentication authentication = mock(Authentication.class);
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+                Artist artist = new Artist();
+                artist.setId(1L);
+                when(authentication.getPrincipal()).thenReturn(artist);
 
-        // Llamamos a la API y verificamos que la respuesta sea 400 Bad Request
-        mockMvc.perform(get("/api/artists/sales/monthly")
-                .param("year", "2024")
-                .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isBadRequest());
-    }
+                // Simulamos que el servicio lance una excepción
+                when(artistService.getMonthlySalesDataPerArtist(1L, 2024))
+                                .thenThrow(new RuntimeException("Error fetching sales data"));
 
-    @Test
-    void testGetArtistMainView_Success() throws Exception {
-        // Crear artista simulado
-        Artist artist = new Artist();
-        artist.setId(1L);
-        artist.setArtistName("Test Artist");
+                // Llamamos a la API y verificamos que la respuesta sea 400 Bad Request
+                mockMvc.perform(get("/api/artists/sales/monthly")
+                                .param("year", "2024")
+                                .contentType(MediaType.APPLICATION_JSON))
+                                .andExpect(status().isBadRequest());
+        }
 
-        List<Artist> mockArtists = List.of(artist);
-        when(artistService.getValidArtists()).thenReturn(mockArtists);
+        @Test
+        void testGetArtistMainView_Success() throws Exception {
+                // Crear artista simulado
+                Artist artist = new Artist();
+                artist.setId(1L);
+                artist.setArtistName("Test Artist");
 
-        mockMvc.perform(get("/api/artists/main"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].name").value("Test Artist"));
-    }
+                List<Artist> mockArtists = List.of(artist);
+                when(artistService.getValidArtists()).thenReturn(mockArtists);
 
-    @Test
-    void testGetArtistMainView_Failure() throws Exception {
-        when(artistService.getValidArtists()).thenThrow(new RuntimeException("Something went wrong"));
+                mockMvc.perform(get("/api/artists/main"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$[0].name").value("Test Artist"));
+        }
 
-        mockMvc.perform(get("/api/artists/main"))
-                .andExpect(status().isBadRequest());
-    }
+        @Test
+        void testGetArtistMainView_Failure() throws Exception {
+                when(artistService.getValidArtists()).thenThrow(new RuntimeException("Something went wrong"));
 
-    @Test
-    void testGetProductImage_Success() throws Exception {
-        String testFileName = "test-image.png";
+                mockMvc.perform(get("/api/artists/main"))
+                                .andExpect(status().isBadRequest());
+        }
 
-        // Crear archivo temporal simulado en la ruta real
-        String basePath = System.getProperty("user.dir")
-                + "/artists-heaven-backend/src/main/resources/mainArtist_media/";
-        Files.createDirectories(Paths.get(basePath)); // por si no existe
+        @Test
+        void testGetProductImage_Success() throws Exception {
+                String testFileName = "test-image.png";
 
-        Path imagePath = Paths.get(basePath + testFileName);
-        Files.write(imagePath, new byte[] { (byte) 137, 80, 78, 71 }); // PNG signature
+                // Crear archivo temporal simulado en la ruta real
+                String basePath = System.getProperty("user.dir")
+                                + "/artists-heaven-backend/src/main/resources/mainArtist_media/";
+                Files.createDirectories(Paths.get(basePath));
 
-        mockMvc.perform(get("/api/artists/mainArtist_media/" + testFileName))
-                .andExpect(status().isOk())
-                .andExpect(header().string(HttpHeaders.CONTENT_TYPE, "image/png"));
+                Path imagePath = Paths.get(basePath + testFileName);
+                Files.write(imagePath, new byte[] { (byte) 137, 80, 78, 71 });
 
-        // Limpieza
-        Files.deleteIfExists(imagePath);
-    }
+                mockMvc.perform(get("/api/artists/mainArtist_media/" + testFileName))
+                                .andExpect(status().isOk());
 
-    @Test
-    void testGetProductImage_NotFound() throws Exception {
-        String nonExistentFile = "non-existent.png";
-
-        mockMvc.perform(get("/api/artists/mainArtist_media/" + nonExistentFile))
-                .andExpect(status().isNotFound());
-    }
+                // Limpieza
+                Files.deleteIfExists(imagePath);
+        }
 
 }

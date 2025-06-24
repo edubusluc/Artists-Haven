@@ -39,8 +39,11 @@ public class ProductController {
 
     private final ProductService productService;
 
-    public ProductController(ProductService productService) {
+    private final ImageServingUtil imageServingUtil;
+
+    public ProductController(ProductService productService, ImageServingUtil imageServingUtil) {
         this.productService = productService;
+        this.imageServingUtil = imageServingUtil;
     }
 
     @GetMapping("/allProducts")
@@ -76,7 +79,7 @@ public class ProductController {
     public ResponseEntity<Resource> getProductImage(
             @Parameter(description = "File name including extension", required = true) @PathVariable String fileName) {
         String basePath = System.getProperty("user.dir") + "/artists-heaven-backend/src/main/resources/product_media/";
-        return ImageServingUtil.serveImage(basePath, fileName);
+        return imageServingUtil.serveImage(basePath, fileName);
     }
 
     @GetMapping("/categories")

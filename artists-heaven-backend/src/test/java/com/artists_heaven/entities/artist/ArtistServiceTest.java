@@ -3,7 +3,6 @@ package com.artists_heaven.entities.artist;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 import java.util.Arrays;
@@ -16,7 +15,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.MockedStatic;
 import org.mockito.MockitoAnnotations;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -25,18 +23,11 @@ import com.artists_heaven.admin.MonthlySalesDTO;
 import com.artists_heaven.entities.user.User;
 import com.artists_heaven.entities.user.UserRepository;
 import com.artists_heaven.entities.user.UserRole;
+import com.artists_heaven.images.ImageServingUtil;
 import com.artists_heaven.order.Order;
 import com.artists_heaven.order.OrderItem;
 import com.artists_heaven.order.OrderStatus;
 import com.artists_heaven.verification.VerificationStatus;
-
-import java.util.UUID;
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import org.springframework.web.multipart.MultipartFile;
-import org.springframework.mock.web.MockMultipartFile;
 
 import jakarta.persistence.EntityNotFoundException;
 
@@ -51,9 +42,10 @@ class ArtistServiceTest {
     @InjectMocks
     private ArtistService artistService;
 
-    private PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    @Mock
+    private ImageServingUtil imageServingUtil;
 
-    private static final String UPLOAD_DIR = "artists-heaven-backend/src/main/resources/mainArtist_media/";
+    private PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     @BeforeEach
     void setUp() {
@@ -464,50 +456,5 @@ class ArtistServiceTest {
         assertNotNull(result);
         assertEquals(result.size(), 1);
     }
-
-    @Test
-    void testSaveImagesSuccess() {
-        String originalFilename = "test.jpg";
-        String sanitizedFilename = "test.jpg";
-        String fileName = UUID.randomUUID().toString() + "_" + sanitizedFilename;
-        Path targetPath = Paths.get(UPLOAD_DIR, fileName);
-
-        MultipartFile newMultipartFile = new MockMultipartFile("file", originalFilename, "image/jpeg",
-                new byte[] { 1, 2, 3, 4 });
-
-        // Mock the static method Files.copy
-        try (MockedStatic<Files> mockedFiles = mockStatic(Files.class)) {
-            mockedFiles.when(() -> Files.copy(any(InputStream.class), eq(targetPath))).thenAnswer(invocation -> null);
-
-            String imageUrl = artistService.saveImages(newMultipartFile);
-            System.out.println(imageUrl);
-
-            assertTrue(imageUrl.contains("/mainArtist_media/"));
-            assertTrue(imageUrl.contains(sanitizedFilename));
-        }
-    }
-
-    @Test
-    void testSaveImagesInvalidFilename() {
-        MultipartFile file = new MockMultipartFile("file", "", "image/jpeg", new byte[] { 1, 2, 3 });
-
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            artistService.saveImages(file);
-        });
-
-        assertEquals("The file name is invalid.", exception.getMessage());
-    }
-
-    @Test
-    void testSaveImagesInvalidImage() {
-        MultipartFile file = new MockMultipartFile("file", "bad.jpg", "image/jpeg", new byte[0]);
-
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            artistService.saveImages(file);
-        });
-
-        assertEquals("The file is not a valid image.", exception.getMessage());
-    }
-
 
 }

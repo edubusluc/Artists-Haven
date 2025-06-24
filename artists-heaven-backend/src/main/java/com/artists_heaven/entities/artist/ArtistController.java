@@ -27,15 +27,20 @@ public class ArtistController {
 
     private final ArtistService artistService;
 
-    public ArtistController(ArtistService artistService) {
+    private static final String UPLOAD_DIR = "artists-heaven-backend/src/main/resources/mainArtist_media/";
+
+    private final ImageServingUtil imageServingUtil;
+
+    public ArtistController(ArtistService artistService, ImageServingUtil imageServingUtil) {
         this.artistService = artistService;
+        this.imageServingUtil = imageServingUtil;
     }
 
     @PostMapping(value = "/register", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Artist> registerArtist(@ModelAttribute ArtistRegisterDTO request) {
 
         try {
-            String imageUrl = artistService.saveImages(request.getImage());
+            String imageUrl = imageServingUtil.saveImages(request.getImage(), UPLOAD_DIR, "/mainArtist_media/");
             Artist registeredArtist = new Artist();
             registeredArtist.setMainViewPhoto(imageUrl);
 
@@ -108,7 +113,7 @@ public class ArtistController {
             @Parameter(description = "File name including extension", required = true) @PathVariable String fileName) {
         String basePath = System.getProperty("user.dir")
                 + "/artists-heaven-backend/src/main/resources/mainArtist_media/";
-        return ImageServingUtil.serveImage(basePath, fileName);
+        return imageServingUtil.serveImage(basePath, fileName);
     }
 
 }

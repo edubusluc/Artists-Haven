@@ -1,20 +1,12 @@
 package com.artists_heaven.entities.artist;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
-
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
-
 import com.artists_heaven.admin.MonthlySalesDTO;
 import com.artists_heaven.entities.user.User;
 import com.artists_heaven.entities.user.UserRepository;
@@ -31,8 +23,6 @@ public class ArtistService {
     private final ArtistRepository artistRepository;
 
     private final UserRepository userRepository;
-
-     private static final String UPLOAD_DIR = "artists-heaven-backend/src/main/resources/mainArtist_media/";
 
     public ArtistService(ArtistRepository artistRepository, UserRepository userRepository) {
         this.artistRepository = artistRepository;
@@ -72,16 +62,16 @@ public class ArtistService {
         // Encrypt the artist's password for secure storage
         artist.setPassword(passwordEncoder.encode(request.getPassword()));
 
-        //Set email
+        // Set email
         artist.setEmail(request.getEmail());
 
-        //Set Last name
+        // Set Last name
         artist.setLastName(request.getLastName());
 
-        //Set Firts name
+        // Set Firts name
         artist.setFirstName(request.getFirstName());
 
-        //set url
+        // set url
         artist.setUrl(request.getUrl());
 
         // Save the artist in the database and return the saved entity
@@ -164,71 +154,6 @@ public class ArtistService {
     public List<Artist> getValidArtists() {
         return artistRepository.findValidaAritst();
 
-    }
-
-    public String saveImages(MultipartFile image) {
-        String imageUrl = "";
-
-        // Get the original filename
-        String originalFilename = image.getOriginalFilename();
-
-        // Validate the filename
-        if (originalFilename == null || originalFilename.isEmpty()) {
-            throw new IllegalArgumentException("The file name is invalid.");
-        }
-
-        // Sanitize the filename to remove any invalid characters
-        originalFilename = sanitizeFilename(originalFilename);
-
-        // Generate a unique filename to prevent conflicts
-        String fileName = UUID.randomUUID().toString() + "_" + originalFilename;
-        Path targetPath = Paths.get(UPLOAD_DIR, fileName);
-
-        try {
-            // Validate the file (check if it is empty or not a valid image)
-            if (image.isEmpty() || !isValidImage(image)) {
-                throw new IllegalArgumentException("The file is not a valid image.");
-            }
-
-            // Save the image to the specified directory
-            Files.copy(image.getInputStream(), targetPath);
-
-            // Generate the URL for accessing the saved image
-            imageUrl = "/mainArtist_media/" + fileName;
-        } catch (IOException e) {
-            throw new IllegalArgumentException("Error while saving the image.", e);
-        }
-
-        return imageUrl;
-    }
-
-    /**
-     * Sanitizes the provided filename by replacing invalid characters with an
-     * underscore.
-     *
-     * @param filename the original filename to sanitize.
-     * @return a sanitized version of the filename, ensuring it only contains valid
-     *         characters.
-     */
-    private String sanitizeFilename(String filename) {
-        // Replace any character that is not a letter, number, dot, underscore, or
-        // hyphen with an underscore
-        return filename.replaceAll("[^a-zA-Z0-9\\._-]", "_");
-    }
-
-    /**
-     * Checks if the provided file is a valid image.
-     *
-     * @param image the MultipartFile to validate.
-     * @return true if the file is a JPEG or PNG image, false otherwise.
-     */
-    private boolean isValidImage(MultipartFile image) {
-        // Get the content type (MIME type) of the uploaded file
-        String contentType = image.getContentType();
-
-        // Return true if the content type is not null and matches either JPEG or PNG
-        // formats
-        return contentType != null && (contentType.equals("image/jpeg") || contentType.equals("image/png"));
     }
 
 }

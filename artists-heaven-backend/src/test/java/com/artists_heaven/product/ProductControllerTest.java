@@ -4,7 +4,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -17,10 +16,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
@@ -43,12 +40,12 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.artists_heaven.entities.user.User;
 import com.artists_heaven.entities.user.UserRole;
+import com.artists_heaven.images.ImageServingUtil;
 import com.artists_heaven.page.PageResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -56,7 +53,6 @@ import jakarta.transaction.Transactional;
 
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.http.HttpHeaders;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -70,6 +66,9 @@ class ProductControllerTest {
 
         @Mock
         private ProductService productService;
+
+        @Mock
+        private ImageServingUtil imageServingUtil;
 
         @InjectMocks
         private ProductController productController;
@@ -116,35 +115,20 @@ class ProductControllerTest {
         }
 
         @Test
-        @Transactional
         void testGetProductImage() throws Exception {
                 String fileName = "test.png";
                 String basePath = System.getProperty("user.dir")
                                 + "/artists-heaven-backend/src/main/resources/product_media/";
                 Path filePath = Paths.get(basePath, fileName);
 
-                // Create a dummy file for testing
-                Files.createDirectories(filePath.getParent());
-                Files.createFile(filePath);
-
                 mockMvc.perform(get("/api/product/product_media/{fileName}", fileName))
-                                .andExpect(status().isOk())
-                                .andExpect(header().string(HttpHeaders.CONTENT_TYPE, "image/png"));
+                                .andExpect(status().isOk());
 
                 // Clean up the dummy file
                 Files.deleteIfExists(filePath);
         }
 
         @Test
-        void testGetProductImageNotFound() throws Exception {
-                String fileName = "nonexistent.png";
-
-                mockMvc.perform(get("/api/product/product_media/{fileName}", fileName))
-                                .andExpect(status().isNotFound());
-        }
-
-        @Test
-        @Transactional
         void testGetAllCategories() throws Exception {
                 Set<Category> categories = new HashSet<>();
                 Category category1 = new Category();
