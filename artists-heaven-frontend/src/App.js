@@ -29,6 +29,9 @@ import ArtistsRegister from './components/artist/ArtistsRegister';
 import ArtistDashboard from './components/artist/ArtistDashboard';
 import ArtistHeader from './components/artist/ArtistHeader';
 
+// Components - Orders
+import OrderAnonymous from './components/order/OrderAnonymous';
+
 
 // Components - Verification
 import VerificationForm from './components/artist/VerificationForm';
@@ -88,6 +91,7 @@ const AppRoutes = ({ role }) => (
     <Route path="/event/all-events" element={<AllEvents />} />
     <Route path="/event/edit/:id" element={<EditMyEvent />} />
     <Route path="/orders/myOrders" element={<MyOrders />} />
+    <Route path="/orders/by-identifier" element={<OrderAnonymous />} />
     <Route path="/FAQ" element={<FAQ />} />
     <Route path="/success" element={<Success />} />
     <Route path="/admin/products/store" element={<AdminProductList />} />

@@ -1,155 +1,109 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from "react-router";
+import { useEffect, useState, useCallback, Suspense, lazy } from 'react';
 import { Link } from 'react-router-dom';
 import Footer from './Footer';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import 'swiper/css';
 import { Autoplay } from 'swiper/modules';
-import TshirtViewer from './TshirtViewer';
-import { Suspense } from 'react';
 
+const TshirtViewer = lazy(() => import('./TshirtViewer'));
 
 const HomePage = () => {
-  const rol = localStorage.getItem('role');
   const [activeSection, setActiveSection] = useState('intro');
   const [product12, setProducts12] = useState([]);
   const [artists, setArtists] = useState([]);
 
-  useEffect(() => {
-    fecth12Products();
-    fetchMainArtists();
-    const sections = document.querySelectorAll('section');
-    const observerOptions = {
-      root: null,
-      rootMargin: '0px',
-      threshold: 0.6, // 60% visible
-    };
-
-    const observerCallback = (entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          const classList = entry.target.classList;
-          if (classList.contains('section-1')) setActiveSection('intro');
-          if (classList.contains('section-2')) setActiveSection('shop');
-          if (classList.contains('section-3')) setActiveSection('artistes');
-          if (classList.contains('section-4')) setActiveSection('quize');
-        }
-      });
-    };
-
-    const observer = new IntersectionObserver(observerCallback, observerOptions);
-    sections.forEach((section) => observer.observe(section));
-
-    return () => {
-      sections.forEach((section) => observer.unobserve(section));
-    };
-  }, []);
-
-  const fecth12Products = async () => {
+  const fetch12Products = useCallback(async () => {
     try {
-      const response = await fetch('/api/product/sorted12Product', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Error al obtener los productos promocionados');
-      }
+      const response = await fetch('/api/product/sorted12Product');
+      if (!response.ok) throw new Error('Error al obtener los productos');
       const data = await response.json();
       setProducts12(data);
     } catch (error) {
       console.error(error.message);
     }
-  };
+  }, []);
 
-  const fetchMainArtists = async () => {
+  const fetchMainArtists = useCallback(async () => {
     try {
-      const response = await fetch('/api/artists/main', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Error al obtener los artistas');
-      }
+      const response = await fetch('/api/artists/main');
+      if (!response.ok) throw new Error('Error al obtener los artistas');
       const data = await response.json();
       setArtists(data);
     } catch (error) {
       console.error(error.message);
     }
-  };
+  }, []);
 
-  console.log(artists);
+  useEffect(() => {
+    fetch12Products();
+    fetchMainArtists();
 
-  const ProductCard = ({ product }) => {
-    const [isHovered, setIsHovered] = useState(false);
+    const sections = document.querySelectorAll('section');
+    const observerOptions = { root: null, rootMargin: '0px', threshold: 0.6 };
 
-    return (
-      <div
-        className="w-full"
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-      >
-        <div
-          className="relative w-full overflow-hiddens h-[300px] md:h-[600px] flex items-center justify-center"
-          style={{
-            backgroundColor: '#f7f7f7',
-          }}
-        >
-          {/* Imagen original */}
+    const observerCallback = (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          const cls = entry.target.classList;
+          if (cls.contains('section-1')) setActiveSection('intro');
+          if (cls.contains('section-2')) setActiveSection('shop');
+          if (cls.contains('section-3')) setActiveSection('artistes');
+          if (cls.contains('section-4')) setActiveSection('quize');
+        }
+      });
+    };
+
+    const observer = new IntersectionObserver(observerCallback, observerOptions);
+    sections.forEach((s) => observer.observe(s));
+    return () => sections.forEach((s) => observer.unobserve(s));
+  }, [fetch12Products, fetchMainArtists]);
+
+  const ProductCard = ({ product }) => (
+    <div className="w-full group">
+      <div className="relative w-full h-[300px] md:h-[600px] flex items-center justify-center bg-gray-100 overflow-hidden">
+        <img
+          src={`/api/product${product.images[0]}`}
+          alt={product.name}
+          loading="lazy"
+          className="absolute object-contain transition-all duration-500 ease-in-out group-hover:opacity-0 group-hover:scale-95"
+        />
+        {product.images[1] && (
           <img
-            src={`/api/product${product.images[0]}`}
-            alt={product.name}
-            className={`absolute w-auto h-auto object-contain transition-all duration-400 ease-in-out transform
-            ${isHovered ? 'opacity-0 scale-90 blur-sm' : 'opacity-100 scale-100'}`}
+            src={`/api/product${product.images[1]}`}
+            alt={`${product.name} hover`}
+            loading="lazy"
+            className="absolute object-contain opacity-0 transition-all duration-500 ease-in-out group-hover:opacity-100 group-hover:scale-100"
           />
-
-          {/* Imagen hover */}
-          {product.images[1] && (
-            <img
-              src={`/api/product${product.images[1]}`}
-              alt={`${product.name} hover`}
-              className={`absolute w-auto h-auto object-contain transition-all duration-400 ease-in-out transform
-              ${isHovered ? 'opacity-100 scale-100 blur-0' : 'opacity-0 scale-90'}`}
-            />
-          )}
-        </div>
-
-        <div className="mt-3 text-left">
-          <p className="custom-font-shop-regular" style={{ color: 'black' }}>{product.name}</p>
-          {product.onPromotion && product.discount > 0 ? (
-            <div className="flex items-center gap-2">
-              <span className="custom-font-shop-regular line-through" style={{ color: '#909497', fontSize: '15px' }}>{(product.price / ((100 - product.discount) / 100)).toFixed(2)}€</span>
-              <span className="custom-font-shop-regular" style={{ color: 'red' }}>
-                {product.price.toFixed(2)}€
-              </span>
-            </div>
-          ) : (
-            <span className="custom-font-shop-regular" style={{ color: '#909497', fontSize: '15px' }}>{product.price.toFixed(2)}€</span>
-          )}
-        </div>
+        )}
       </div>
-    );
-  };
+      <div className="mt-3 text-left">
+        <p className="custom-font-shop-regular" style={{ color: 'black' }}>{product.name}</p>
+        {product.onPromotion && product.discount > 0 ? (
+          <div className="flex items-center gap-2">
+            <span className="custom-font-shop-regular line-through" style={{ color: '#909497', fontSize: '15px' }}>{(product.price / ((100 - product.discount) / 100)).toFixed(2)}€</span>
+            <span className="custom-font-shop-regular" style={{ color: 'red' }}>
+              {product.price.toFixed(2)}€
+            </span>
+          </div>
+        ) : (
+          <span className="custom-font-shop-regular" style={{ color: '#909497', fontSize: '15px' }}>{product.price.toFixed(2)}€</span>
+        )}
+      </div>
+    </div>
+  );
 
   return (
     <>
       <div className="p-6 bg-white">
-        {/* CAMISETA 3D */}
-        <Suspense fallback={<span>Cargando camiseta...</span>}>
+        <Suspense fallback={<div className="text-center">Cargando camiseta...</div>}>
           <TshirtViewer />
         </Suspense>
 
-        {/* Título y subtítulo */}
-        <div className='flex justify-between mt-10'>
-          <p className="custom-font-shop" style={{ fontSize: '25px', color: '#909497', fontSize: '40px' }}>BEST SELLERS NEW ACCESSORIES</p>
+        <div className="flex justify-between mt-10">
+          <p className="custom-font-shop text-gray-500 text-4xl">BEST SELLERS NEW ACCESSORIES</p>
           <p>Ver todo</p>
         </div>
-        {/* Grid de productos */}
+
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1 w-full">
           {product12.map((product, index) => (
             <Link to={`/product/details/${product.id}`} key={index}>
@@ -160,41 +114,31 @@ const HomePage = () => {
           ))}
         </div>
 
-        {/* Sección de Artistas con carrusel */}
         <div className="mt-12 space-y-4">
           <p className="text-lg font-medium text-gray-700">Artistas</p>
           <Swiper
             modules={[Autoplay]}
             spaceBetween={20}
             slidesPerView={1.2}
-            loop={true}
-            autoplay={{
-              delay: 3000,
-              disableOnInteraction: false,
-            }}
+            loop
+            autoplay={{ delay: 3000, disableOnInteraction: false }}
             breakpoints={{
-              640: {
-                slidesPerView: 2,
-              },
-              768: {
-                slidesPerView: 3,
-              },
-              1024: {
-                slidesPerView: 4,
-              },
+              640: { slidesPerView: 2 },
+              768: { slidesPerView: 3 },
+              1024: { slidesPerView: 4 },
             }}
             className="w-full"
           >
             {artists.map((artist, index) => (
-
               <SwiperSlide key={index}>
                 <div className="group relative w-full h-[600px] md:h-[800px] overflow-hidden shadow-lg">
                   <img
                     src={`/api/artists/${artist.mainPhoto}`}
                     alt={artist.name}
-                    className="w-full h-full object-cover z-0 transform transition duration-500 ease-in-out group-hover:scale-110"
+                    loading="lazy"
+                    className="w-full h-full object-cover transform transition duration-500 ease-in-out group-hover:scale-110"
                   />
-                  <div className="absolute bottom-0 right-0 z-10 flex items-end justify-end h-full w-full pr-2 pb-2">
+                  <div className="absolute bottom-0 right-0 flex items-end justify-end h-full w-full pr-2 pb-2">
                     <p
                       className="custom-font-shop text-white font-bold"
                       style={{
@@ -212,14 +156,9 @@ const HomePage = () => {
                   </div>
                 </div>
               </SwiperSlide>
-
             ))}
-
-
           </Swiper>
         </div>
-
-
       </div>
       <Footer />
     </>
