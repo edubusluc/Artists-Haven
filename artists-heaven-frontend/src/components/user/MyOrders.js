@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import ReturnRequestModal from "./ReturnRequestModal";
 
 const MyOrders = () => {
     const [orders, setOrders] = useState([]);
@@ -11,6 +11,9 @@ const MyOrders = () => {
     const [hasMore, setHasMore] = useState(false);
     const size = 3;
 
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedOrderId, setSelectedOrderId] = useState(null);
+
     const orderSteps = ["PAID", "IN_PREPARATION", "SENT", "DELIVERED"];
 
     const OrderProgressBar = ({ status }) => {
@@ -18,6 +21,14 @@ const MyOrders = () => {
             return (
                 <div className="p-4 border border-red-300 bg-red-50 rounded-lg text-red-600 text-center font-semibold">
                     ❌ Order has been canceled.
+                </div>
+            );
+        }
+
+        if (status === "RETURN_REQUEST") {
+            return (
+                <div className="p-4 border border-yellow-300 bg-yellow-50 rounded-lg text-yellow-600 text-center font-semibold">
+                    Return of the order has been requested
                 </div>
             );
         }
@@ -87,8 +98,6 @@ const MyOrders = () => {
         );
     };
 
-
-
     const fetchOrders = () => {
         if (!authToken) {
             setError("User is not authenticated.");
@@ -129,6 +138,66 @@ const MyOrders = () => {
         if (hasMore) setPage(page + 1);
     };
 
+    const handleOpenModal = (orderId) => {
+        setSelectedOrderId(orderId);
+        setIsModalOpen(true);
+    };
+
+    const handleCloseModal = () => {
+        setIsModalOpen(false);
+        setSelectedOrderId(null);
+    };
+
+
+    const handleSubmitReason = (reason) => {
+        fetch(`/api/returns/create`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${authToken}`,
+            },
+            body: JSON.stringify({
+                orderId: selectedOrderId,
+                reason: reason,
+            }),
+        })
+            .then((res) => {
+                if (!res.ok) throw new Error("Failed to create return request");
+                return res.text();
+            })
+            .then((msg) => {
+                alert(msg);
+                handleCloseModal();
+                fetchOrders();
+            })
+            .catch((err) => alert(err.message));
+    };
+
+    const handleDownloadLabel = async (orderId) => {
+
+        const response = await fetch(`/api/returns/${orderId}/label`, {
+            method: "GET",
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${authToken}`,
+            },
+        });
+
+        if (!response.ok) {
+            alert("Error downloading return label");
+            return;
+        }
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `RETURN_LABEL_${orderId}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+    };
+
     if (loading) return <p className="text-gray-600">Loading your orders...</p>;
 
     if (error)
@@ -141,17 +210,30 @@ const MyOrders = () => {
             </div>
         );
 
+    console.log(orders)
+
     return (
         <div className="space-y-6">
             {orders.map((order) => (
                 <div key={order.id} className="bg-white p-6 rounded-xl shadow flex flex-col gap-4">
                     {order.status === "DELIVERED" && (
                         <div className="text-right">
-                            <Link to={`/orders/return/${order.id}`}>
-                                <button className="w-full md:w-auto bg-yellow-400 text-black font-semibold py-2 px-6 rounded-md shadow-md transition hover:bg-yellow-500">
-                                    Solicitar Devolución
-                                </button>
-                            </Link>
+                            <button
+                                onClick={() => handleOpenModal(order.id)}
+                                className="w-full md:w-auto bg-yellow-400 text-black font-semibold py-2 px-6 rounded-md shadow-md transition hover:bg-yellow-500"
+                            >
+                                Solicitar Devolución
+                            </button>
+                        </div>
+                    )}
+                    {order.status === "RETURN_REQUEST" && (
+                        <div className="text-right">
+                            <button
+                                onClick={() => handleDownloadLabel(order.id)}
+                                className="w-full md:w-auto bg-yellow-400 text-black font-semibold py-2 px-6 rounded-md shadow-md transition hover:bg-yellow-500"
+                            >
+                                📄 Descargar Etiqueta de Devolución
+                            </button>
                         </div>
                     )}
                     <OrderProgressBar status={order.status} />
@@ -162,7 +244,7 @@ const MyOrders = () => {
                         </div>
                         <div className="text-right">
                             <p className="text-sm text-gray-500">Total:</p>
-                            <p className="text-lg font-bold text-green-600">${order.totalPrice.toFixed(2)}</p>
+                            <p className="text-lg font-bold text-green-600">€{order.totalPrice.toFixed(2)}</p>
                         </div>
                     </div>
 
@@ -189,7 +271,7 @@ const MyOrders = () => {
                                         <p>Size: {item.size}</p>
                                         <p>Qty: {item.quantity}</p>
                                         <p className="text-green-700 font-semibold">
-                                            ${item.price.toFixed(2)}
+                                            €{item.price.toFixed(2)}
                                         </p>
                                     </div>
                                 </div>
@@ -216,6 +298,12 @@ const MyOrders = () => {
                     Next ➡
                 </button>
             </div>
+
+            <ReturnRequestModal
+                isOpen={isModalOpen}
+                onClose={handleCloseModal}
+                onSubmit={handleSubmitReason}
+            />
         </div>
     );
 };

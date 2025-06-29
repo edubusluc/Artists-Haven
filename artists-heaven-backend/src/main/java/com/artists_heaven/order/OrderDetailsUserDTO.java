@@ -11,6 +11,8 @@ public class OrderDetailsUserDTO extends OrderDetailsDTO {
     public OrderDetailsUserDTO(Order order) {
         super(order);
         this.setPaymentIntent(null);
+        this.setEmail(null);
+        
     }
 
 }

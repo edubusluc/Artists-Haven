@@ -1,22 +1,23 @@
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, useGLTF } from '@react-three/drei';
-import { Suspense, useEffect, useRef } from 'react';
+import { Suspense, useEffect, useRef, useMemo } from 'react';
 import bgMainShop from '../util-image/bgMainShop.png';
 
 const TshirtModel = () => {
   const { scene } = useGLTF('/models/tshirt.glb');
+  useMemo(() => {
+    scene.traverse((child) => {
+      if (child.isMesh) {
+        child.castShadow = true;
+        child.receiveShadow = true;
+      }
+    });
+  }, [scene]);
   const modelRef = useRef();
 
-  useFrame(() => {
+  useFrame((state, delta) => {
     if (modelRef.current) {
-      modelRef.current.rotation.y += 0.002;
-    }
-  });
-
-  scene.traverse((child) => {
-    if (child.isMesh) {
-      child.castShadow = true;
-      child.receiveShadow = true;
+      modelRef.current.rotation.y += delta * 0.5;
     }
   });
 
@@ -55,7 +56,7 @@ const TshirtViewer = () => {
         <Suspense fallback={null}>
           <TshirtModel />
         </Suspense>
-        <OrbitControls enablePan enableZoom={false} enableRotate />
+        <OrbitControls enableZoom={false} enablePan={false} enableRotate />
       </Canvas>
 
       {/* Texto por delante */}

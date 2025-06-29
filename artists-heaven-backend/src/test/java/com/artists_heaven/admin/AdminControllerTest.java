@@ -357,6 +357,7 @@ class AdminControllerTest {
                 Order order = new Order();
                 order.setId(1L);
                 order.setStatus(OrderStatus.PAID);
+                order.setIdentifier(10L);
 
                 Page<Order> orderPage = new PageImpl<>(List.of(order), pageable, 1);
 

@@ -66,6 +66,7 @@ class OrderControllerTest {
         order.setCreatedDate(LocalDateTime.now());
         order.setUser(user);
         order.setItems(List.of(item));
+        order.setIdentifier(10L);
 
         PageRequest pageable = PageRequest.of(0, 3);
         Page<Order> orderPage = new PageImpl<>(List.of(order), pageable, 1);
@@ -119,6 +120,7 @@ class OrderControllerTest {
         Order order = new Order();
         order.setId(orderId);
         order.setUser(user); // Usuario de la orden
+        order.setIdentifier(10L);
 
         // Simula que el servicio devuelve la orden
         Authentication authentication = mock(Authentication.class);
@@ -148,6 +150,7 @@ class OrderControllerTest {
         Order order = new Order();
         order.setId(orderId);
         order.setUser(user); // Usuario de la orden
+        order.setIdentifier(10L);
 
         // Simula que el servicio devuelve la orden
         when(orderService.findOrderById(orderId)).thenReturn(order);

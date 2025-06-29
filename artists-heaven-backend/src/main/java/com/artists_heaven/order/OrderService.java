@@ -33,13 +33,17 @@ public class OrderService {
         return orderRepository.getIncomePerYear(year);
     }
 
-    public void saveOrder(Order order) {
+    public void save(Order order) {
         orderRepository.save(order);
     }
 
     public Order findOrderById(Long id) {
         return orderRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Order not found with id: " + id));
+    }
+
+    public Order getOrderByIdentifier(Long identifier) {
+        return orderRepository.findOrderByIdentifier(identifier);
     }
 
 }

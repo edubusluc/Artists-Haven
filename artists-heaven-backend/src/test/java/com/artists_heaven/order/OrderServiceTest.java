@@ -1,6 +1,7 @@
 package com.artists_heaven.order;
 
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.times;
@@ -71,7 +72,7 @@ class OrderServiceTest {
         order.setId(1L);
         order.setStatus(OrderStatus.PAID);
 
-        orderService.saveOrder(order);
+        orderService.save(order);
 
         verify(orderRepository, times(1)).save(order);
     }
@@ -105,6 +106,20 @@ class OrderServiceTest {
         Page<Order> result = orderService.getMyOrdersPageable(1l, pageable);
         assertNotNull(result);
 
+    }
+
+    @Test
+    void testGetIrderByIdentifier() {
+        Order order = new Order();
+        order.setId(1L);
+        order.setIdentifier(10L);
+
+        when(orderRepository.findOrderByIdentifier(10L)).thenReturn(order);
+
+        Order result = orderService.getOrderByIdentifier(10L);
+
+        assertNotNull(result);
+        assertTrue(result.getIdentifier() == 10L);
     }
 
 }

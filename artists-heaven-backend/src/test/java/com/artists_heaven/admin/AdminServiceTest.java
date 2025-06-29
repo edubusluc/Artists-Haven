@@ -269,7 +269,7 @@ class AdminServiceTest {
         adminService.updateOrderStatus(orderId, newStatus);
 
         assertEquals(newStatus, order.getStatus());
-        verify(orderService, times(1)).saveOrder(order);
+        verify(orderService, times(1)).save(order);
     }
 
     @Test
