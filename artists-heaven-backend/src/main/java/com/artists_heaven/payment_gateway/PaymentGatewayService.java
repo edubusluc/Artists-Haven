@@ -250,7 +250,8 @@ public class PaymentGatewayService {
 
         // If the user is authenticated and is an instance of User, add their details to
         // the session.
-        // If the user is authenticated by Google, they will be treated as an anonymous user because they don't have an address
+        // If the user is authenticated by Google, they will be treated as an anonymous
+        // user because they don't have an address
         if (authentication != null && authentication.getPrincipal() instanceof User user && user.getAddress() != null) {
             // Set the user's email for the Stripe session.
             params.setCustomerEmail(user.getEmail());
@@ -472,7 +473,6 @@ public class PaymentGatewayService {
         // Create a list to hold the order items.
         List<OrderItem> items = new ArrayList<>();
 
-
         List<String> fields = session.getCustomFields().stream()
                 .map(field -> field.getText().getValue())
                 .toList();
@@ -485,7 +485,6 @@ public class PaymentGatewayService {
         String phone = session.getCustomerDetails().getPhone();
         String email = session.getCustomerDetails().getEmail();
         String country = getCountryName(session.getCustomerDetails().getAddress().getCountry());
-
 
         // Set the country name based on the country code.
 
@@ -566,7 +565,9 @@ public class PaymentGatewayService {
             String addressLine2, String postalCode, String country, String phone, String email) {
 
         // Set a unique identifier for the order using a UUID.
-        order.setIdentifier(UUID.randomUUID().getMostSignificantBits());
+        long id = UUID.randomUUID().getMostSignificantBits();
+        id = Math.abs(id);
+        order.setIdentifier(id);
         // Set the order status to 'PAID'.
         order.setStatus(OrderStatus.PAID);
         // Set the shipping address details.
@@ -582,8 +583,8 @@ public class PaymentGatewayService {
         }
 
         orderRepository.save(order);
-            // Save the order to the repository.
-            
+        // Save the order to the repository.
+
     }
 
     /**
