@@ -20,7 +20,7 @@ public class OrderDetailsDTO {
     private Long id;
 
     @Schema(description = "Public identifier of the order (e.g., shown to user)", example = "202406150001")
-    private Long identifier;
+    private String identifier;
 
     @Schema(description = "Total price of the order", example = "149.99")
     private Float totalPrice;
@@ -68,7 +68,7 @@ public class OrderDetailsDTO {
      */
     public OrderDetailsDTO(Order order) {
         this.id = order.getId();
-        this.identifier = order.getIdentifier();
+        this.identifier = order.getIdentifier().toString();
         this.totalPrice = order.getTotalPrice();
         this.status = order.getStatus();
         this.addressLine1 = order.getAddressLine1();

@@ -10,7 +10,7 @@ import org.springframework.data.repository.query.Param;
 
 public interface OrderRepository extends JpaRepository<Order, Long> {
 
-    @Query("SELECT o FROM Order o WHERE o.user.id = :userId ORDER BY o.createdDate desc")
+    @Query("SELECT o FROM Order o WHERE o.user.id = :userId ORDER BY o.lastUpdateDateTime asc")
     Page<Order> getOrdersByUserIdPageable(@Param("userId") Long userId, Pageable pageable);
 
     @Query("SELECT o FROM Order o WHERE o.user.id = :userId")
@@ -21,5 +21,8 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     @Query("SELECT SUM(o.totalPrice) FROM Order o WHERE EXTRACT(YEAR FROM o.createdDate) = :year")
     Double getIncomePerYear(@Param("year") int year);
+
+    @Query("SELECT o FROM Order o where o.identifier = :identifier")
+    Order findOrderByIdentifier(Long identifier);
 
 }

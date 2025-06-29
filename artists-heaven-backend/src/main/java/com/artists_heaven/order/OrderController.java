@@ -63,27 +63,15 @@ public class OrderController {
             User user = (User) authentication.getPrincipal();
 
             // Paginación: devuelve Page<Order>
-            Pageable pageable = PageRequest.of(page, size, Sort.by("createdDate").descending());
+            Sort sort = Sort.by(Sort.Order.desc("lastUpdateDateTime").nullsLast());
+            Pageable pageable = PageRequest.of(page, size, sort);
+
             Page<Order> orderPage = orderService.getMyOrdersPageable(user.getId(), pageable);
 
             // Extraer pedidos de la página
             List<Order> orders = orderPage.getContent();
 
-            // Obtener IDs de productos relacionados
-            Set<Long> productIds = orders.stream()
-                    .flatMap(order -> order.getItems().stream())
-                    .map(OrderItem::getProductId)
-                    .collect(Collectors.toSet());
-
-            // Obtener productos
-            List<Product> products = productService.findAllByIds(productIds);
-
-            // Asociar imagen principal
-            Map<Long, String> productImages = products.stream()
-                    .filter(p -> p.getImages() != null && !p.getImages().isEmpty())
-                    .collect(Collectors.toMap(
-                            Product::getId,
-                            p -> p.getImages().get(0)));
+            Map<Long, String> productImages = getProductsImages(orders);
 
             // Convertir a DTO
             List<OrderDetailsUserDTO> orderDetailsList = orders.stream()
@@ -144,6 +132,48 @@ public class OrderController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
+    }
+
+    @GetMapping("/by-identifier")
+    public ResponseEntity<Map<String, Object>> getOrderByIdentifier(@RequestParam Long identifier) {
+        try {
+            Order order = orderService.getOrderByIdentifier(identifier);
+            if (order == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+            }
+            Map<Long, String> productImages = getProductsImages(List.of(order));
+
+            OrderDetailsUserDTO orderDetailsUserDTO = new OrderDetailsUserDTO(order);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("orders", orderDetailsUserDTO);
+            response.put("productImages", productImages);
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    private Map<Long, String> getProductsImages(List<Order> orders) {
+        // Obtener IDs de productos relacionados
+        Set<Long> productIds = orders.stream()
+                .flatMap(order -> order.getItems().stream())
+                .map(OrderItem::getProductId)
+                .collect(Collectors.toSet());
+
+        // Obtener productos
+        List<Product> products = productService.findAllByIds(productIds);
+
+        // Asociar imagen principal
+        Map<Long, String> productImages = products.stream()
+                .filter(p -> p.getImages() != null && !p.getImages().isEmpty())
+                .collect(Collectors.toMap(
+                        Product::getId,
+                        p -> p.getImages().get(0)));
+
+        return productImages;
     }
 
 }

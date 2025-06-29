@@ -152,7 +152,7 @@ public class AdminService {
     public void updateOrderStatus(Long id, OrderStatus orderStatus) {
         Order order = orderService.findOrderById(id);
         order.setStatus(orderStatus);
-        orderService.saveOrder(order);
+        orderService.save(order);
     }
 
 }

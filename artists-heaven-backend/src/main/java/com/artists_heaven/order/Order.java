@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import com.artists_heaven.entities.user.User;
+import com.artists_heaven.returns.Return;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 import jakarta.persistence.CascadeType;
@@ -15,6 +16,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -64,6 +66,11 @@ public class Order {
     private String phone;
 
     private String paymentIntent;
+
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private Return returnRequest;
+
+    private LocalDateTime lastUpdateDateTime = LocalDateTime.now();
 
     public Order() {
         // No-argument constructor required by JPA for entity instantiation via
