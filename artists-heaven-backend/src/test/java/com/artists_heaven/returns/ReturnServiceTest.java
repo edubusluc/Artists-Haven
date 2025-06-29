@@ -5,17 +5,22 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.LocalDateTime;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import com.artists_heaven.entities.user.User;
 import com.artists_heaven.order.Order;
@@ -116,6 +121,55 @@ class ReturnServiceTest {
 
         assertNotNull(pdf);
         assertTrue(pdf.length > 0);
+    }
+
+    @Test
+    void testCreateReturnForOrder_EmailMismatchAndUnauthenticated() {
+        Order order = new Order();
+        order.setEmail("order@example.com");
+        order.setCreatedDate(LocalDateTime.now().minusDays(10));
+
+        Authentication authentication = mock(Authentication.class);
+        when(authentication.getPrincipal()).thenReturn("anonymousUser");
+        SecurityContext securityContext = mock(SecurityContext.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        SecurityContextHolder.setContext(securityContext);
+
+        IllegalStateException exception = assertThrows(IllegalStateException.class, () -> {
+            returnService.createReturnForOrder(order, "Razón inválida", "user@otrodominio.com");
+        });
+
+        assertEquals("Email inválido", exception.getMessage());
+    }
+
+    @Test
+    void testCreateReturnForOrder_AuthenticatedUserWithDifferentEmail() {
+        User user = new User();
+        user.setFirstName("Carlos");
+        user.setLastName("López");
+
+        Order order = new Order();
+        order.setEmail("order@example.com");
+        order.setCreatedDate(LocalDateTime.now().minusDays(10));
+        order.setUser(user);
+
+        Authentication authentication = mock(Authentication.class);
+        when(authentication.isAuthenticated()).thenReturn(true);
+        when(authentication.getPrincipal()).thenReturn(user);
+
+        SecurityContext securityContext = mock(SecurityContext.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        SecurityContextHolder.setContext(securityContext);
+
+        returnService.createReturnForOrder(order, "Razón válida", "otro@example.com");
+
+        verify(returnRepository, times(1)).save(any(Return.class));
+        verify(orderService, times(1)).save(order);
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
     }
 
 }

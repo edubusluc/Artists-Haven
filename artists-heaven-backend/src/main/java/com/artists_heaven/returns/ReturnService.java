@@ -131,7 +131,7 @@ public class ReturnService {
             document.add(note);
 
         } catch (Exception e) {
-            e.printStackTrace();
+            throw new RuntimeException("No se ha podido generar la etiqueta de devolución", e);
         } finally {
             document.close();
         }
