@@ -2,6 +2,7 @@ package com.artists_heaven.admin;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
@@ -46,6 +47,7 @@ import com.artists_heaven.order.OrderDetailsDTO;
 import com.artists_heaven.order.OrderService;
 import com.artists_heaven.order.OrderStatus;
 import com.artists_heaven.page.PageResponse;
+import com.artists_heaven.product.Category;
 import com.artists_heaven.product.CategoryRepository;
 import com.artists_heaven.product.Product;
 import com.artists_heaven.product.ProductService;
@@ -53,6 +55,7 @@ import com.artists_heaven.verification.Verification;
 import com.artists_heaven.verification.VerificationRepository;
 import com.artists_heaven.verification.VerificationService;
 import com.artists_heaven.verification.VerificationStatus;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import jakarta.persistence.EntityNotFoundException;
 
@@ -62,6 +65,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.hamcrest.Matchers.containsString;
 
 class AdminControllerTest {
 
@@ -96,6 +100,8 @@ class AdminControllerTest {
         private AdminController adminController;
 
         private MockMvc mockMvc;
+
+        private ObjectMapper objectMapper = new ObjectMapper();
 
         @BeforeEach
         void setUp() {
@@ -543,6 +549,79 @@ class AdminControllerTest {
                 mockMvc.perform(post("/api/admin/{productId}/enable", productId))
                                 .andExpect(status().isBadRequest())
                                 .andExpect(status().reason("Product is already enabled"));
+        }
+
+        @Test
+        void testGetAllCategories() throws Exception {
+                Category category1 = new Category();
+                category1.setName("Summer");
+                category1.setId(1L);
+                Category category2 = new Category();
+                category2.setName("Winter");
+                category2.setId(2L);
+
+                List<Category> categoires = List.of(category1, category2);
+                when(productService.findAllCategories()).thenReturn(categoires);
+
+                mockMvc.perform(get("/api/admin/allCategories"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.size()").value(2))
+                                .andExpect(jsonPath("$[0].id").value(1L))
+                                .andExpect(jsonPath("$[0].name").value("Summer"))
+                                .andExpect(jsonPath("$[1].id").value(2L))
+                                .andExpect(jsonPath("$[1].name").value("Winter"));
+        }
+
+        @Test
+        void testCreateCategory_Success() throws Exception {
+                CategoryDTO categoryDTO = new CategoryDTO(null, " New Category ");
+
+                mockMvc.perform(post("/api/admin/newCategory")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(categoryDTO)))
+                                .andExpect(status().isCreated())
+                                .andExpect(jsonPath("$.message").value("Category created successfully"));
+        }
+
+        @Test
+        void testCreateCategory_Error() throws Exception {
+                CategoryDTO categoryDTO = new CategoryDTO(null, "Duplicate");
+
+                doThrow(new RuntimeException("Already exists")).when(productService).saveCategory("Duplicate");
+
+                mockMvc.perform(post("/api/admin/newCategory")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(categoryDTO)))
+                                .andExpect(status().isBadRequest())
+                                .andExpect(status().reason(containsString("Error creating category: Already exists")));
+        }
+
+        @Test
+        void testEditCategory_Success() throws Exception {
+                CategoryDTO categoryDTO = new CategoryDTO(1L, " Edited Category ");
+
+                doNothing().when(productService).editCategory(any(CategoryDTO.class));
+
+                mockMvc.perform(post("/api/admin/editCategory")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(categoryDTO)))
+                                .andExpect(status().isCreated())
+                                .andExpect(jsonPath("$.message").value("Category edited successfully"));
+        }
+
+        @Test
+        void testEditCategory_Error() throws Exception {
+                CategoryDTO categoryDTO = new CategoryDTO(99L, "Nonexistent");
+
+                doThrow(new RuntimeException("Category not found")).when(productService)
+                                .editCategory(any(CategoryDTO.class));
+
+                mockMvc.perform(post("/api/admin/editCategory")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(categoryDTO)))
+                                .andExpect(status().isBadRequest())
+                                .andExpect(status()
+                                                .reason(containsString("Error creating category: Category not found")));
         }
 
 }
