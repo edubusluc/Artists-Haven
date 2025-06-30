@@ -40,7 +40,7 @@ public class ArtistController {
     public ResponseEntity<Artist> registerArtist(@ModelAttribute ArtistRegisterDTO request) {
 
         try {
-            String imageUrl = imageServingUtil.saveImages(request.getImage(), UPLOAD_DIR, "/mainArtist_media/");
+            String imageUrl = imageServingUtil.saveImages(request.getImage(), UPLOAD_DIR, "/mainArtist_media/", false);
             Artist registeredArtist = new Artist();
             registeredArtist.setMainViewPhoto(imageUrl);
 

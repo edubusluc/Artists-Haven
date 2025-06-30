@@ -205,6 +205,30 @@ const AdminClient = () => {
             });
     };
 
+    const refuseArtist = (verificationId) => {
+        if (role !== "ADMIN") {
+            return;
+        }
+        fetch(`/api/admin/${verificationId}/refuse`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+        })
+            .then(response => {
+                if (response.ok) {
+                    window.location.reload()
+                } else {
+                    console.log('Error al rechazar la verificación del artista');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+    };
+
+
     useEffect(() => {
         window.scrollTo(0, 0);
     }, [page]);
@@ -240,6 +264,8 @@ const AdminClient = () => {
     if (role !== 'ADMIN') {
         return <NonAuthorise />;
     }
+
+    console.log(verifications)
 
     return (
         <div className="min-h-screen bg-gradient-to-r from-gray-300 to-white flex flex-col">
@@ -331,7 +357,7 @@ const AdminClient = () => {
                                         <th className="px-4 py-3 text-left">Video</th>
                                         <th className="px-4 py-3 text-left">Fecha</th>
                                         <th className="px-4 py-3 text-left">Estado</th>
-                                        <th className="px-4 py-3 text-left">Acciones</th>
+                                        <th className="px-4 py-3 text-center">Acciones</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-200">
@@ -349,22 +375,35 @@ const AdminClient = () => {
                                             </td>
                                             <td className="px-4 py-3">
                                                 <span className={`px-2 py-1 rounded text-xs font-semibold
-                                ${verification.status === 'PENDING'
+    ${verification.status === 'PENDING'
                                                         ? 'bg-yellow-100 text-yellow-700'
-                                                        : 'bg-green-100 text-green-700'}`}>
+                                                        : verification.status === 'REJECTED'
+                                                            ? 'bg-red-100 text-red-700'
+                                                            : 'bg-green-100 text-green-700'
+                                                    }`}>
                                                     {verification.status}
                                                 </span>
                                             </td>
-                                            <td className="px-4 py-3">
-                                                {!verification.artist?.isVerificated ? (
-                                                    <button
-                                                        onClick={() => verifyArtist(verification.artist.id, verification.id)}
-                                                        className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 transition"
-                                                    >
-                                                        Verificar
-                                                    </button>
+                                            <td className="px-4 py-3 text-center">
+                                                {verification.status == 'PENDING' ? (
+                                                    <>
+                                                        <button
+                                                            onClick={() => verifyArtist(verification.artist.id, verification.id)}
+                                                            className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 transition mr-2"
+                                                        >
+                                                            Verificar
+                                                        </button>
+                                                        {verification.status === 'PENDING' && (
+                                                            <button
+                                                                onClick={() => refuseArtist(verification.id)}
+                                                                className="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600 transition"
+                                                            >
+                                                                Rechazar
+                                                            </button>
+                                                        )}
+                                                    </>
                                                 ) : (
-                                                    <span className="text-gray-500 italic text-sm">Ya verificado</span>
+                                                    <span className="text-gray-500 italic text-sm">Sin acciones pendientes</span>
                                                 )}
                                             </td>
                                         </tr>
