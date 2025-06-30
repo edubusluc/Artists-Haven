@@ -66,7 +66,7 @@ const AdminHeader = () => {
                 }}
             >
 
-                <FontAwesomeIcon icon={faBars} size="xl" />
+                <FontAwesomeIcon icon={faBars}/>
             </div>
             <p className="custom-font-shop custom-font-shop-black">ARTISTS HEAVEN</p>
             {isSidebarVisible && (

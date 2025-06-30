@@ -59,8 +59,6 @@ const ArtistDashboard = () => {
         };
     }, [authToken, year]);
 
-    console.log(data)
-
     const MetricCard = ({ icon, value, title, iconColor, bgColor, bgColorCard, textColor }) => (
         <div
             className={`flex-1 shadow-lg rounded-lg p-4 m-2 flex items-center 
