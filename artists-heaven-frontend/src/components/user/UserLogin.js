@@ -49,7 +49,6 @@ const UserLogin = () => {
     };
 
     const handleGoogleLoginSuccess = async (response) => {
-        console.log('Google login successful:', response);
         const googleToken = response.credential;
 
         try {
