@@ -1,134 +1,99 @@
-import Footer from '../Footer';
+import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faShirt, faCheck, faXmark, faRectangleAd } from '@fortawesome/free-solid-svg-icons';
-import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { getAllCategories, getProductManagement, getAllProducts, toggleProductAvailability, demoteProduct, createCategory, editCategory } from '../../services/adminServices';
+
+import Footer from '../Footer';
 import NonAuthorise from '../NonAuthorise';
 
 const AdminProductList = () => {
     const [products, setProducts] = useState([]);
+    const [categories, setCategories] = useState([]);
+    const [categoryToEdit, setCategoryToEdit] = useState(null);
     const [productManagement, setProductManagement] = useState({
         totalProducts: 0,
         notAvailableProducts: 0,
         availableProducts: 0,
         promotedProducts: 0
     });
+
     const role = localStorage.getItem("role");
     const authToken = localStorage.getItem("authToken");
+    const [categoryName, setCategoryName] = useState('');
+    const [showModal, setShowModal] = useState(false);
 
+    const [searchTerm, setSearchTerm] = useState("");
     const [page, setPage] = useState(0);
     const [totalPages, setTotalPages] = useState(1);
     const pageSize = 6;
 
-    const [searchTerm, setSearchTerm] = useState("");
+    // ---------------- EFECTOS ----------------
 
     useEffect(() => {
         setPage(0);
     }, [searchTerm]);
 
+    // Obtener categorías
     useEffect(() => {
         if (!authToken || role !== 'ADMIN') return;
 
-        const controller = new AbortController();
-
-        const fetchData = async () => {
+        const fetchCategories = async () => {
             try {
-                const productManagementResponse = await fetch(`/api/admin/product-management`, {
-                    method: "GET",
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`,
-                    },
-                    signal: controller.signal,
-                });
-                if (!productManagementResponse.ok) throw new Error('Error al obtener datos');
-                const dataProductManagement = await productManagementResponse.json();
-                setProductManagement(dataProductManagement);
+                const data = await getAllCategories(authToken);
+                setCategories(data);
             } catch (error) {
-                if (error.name !== 'AbortError') {
-                    console.error(error);
-                }
+                console.error(error.message);
             }
         };
-        fetchData();
-        return () => {
-            controller.abort();
-        }
+
+        fetchCategories();
     }, [authToken, role]);
 
+    // Obtener métricas
     useEffect(() => {
-        const controller = new AbortController();
-        const delayDebounce = setTimeout(() => {
-            if (!authToken || role !== 'ADMIN') return;
+        if (!authToken || role !== 'ADMIN') return;
 
-            const fetchData = async () => {
+        const fetchProductManagement = async () => {
+            try {
+                const data = await getProductManagement(authToken);
+                setProductManagement(data);
+            } catch (error) {
+                console.error(error.message);
+            }
+        };
+
+        fetchProductManagement();
+    }, [authToken, role]);
+
+    // Obtener productos
+    useEffect(() => {
+        if (!authToken || role !== 'ADMIN') return;
+
+        const debounce = setTimeout(() => {
+            const fetchProducts = async () => {
                 try {
-                    const query = searchTerm ? `&search=${encodeURIComponent(searchTerm)}` : "";
-                    const response = await fetch(`/api/product/allProducts?page=${page}&size=${pageSize}${query}`, {
-                        headers: { 'Authorization': `Bearer ${authToken}` },
-                        signal: controller.signal
-                    });
-                    const data = await response.json();
+                    const data = await getAllProducts(authToken, page, pageSize, searchTerm);
                     setProducts(data.content);
                     setTotalPages(data.totalPages);
                 } catch (error) {
-                    if (error.name !== 'AbortError') console.error(error);
+                    console.error(error.message);
                 }
             };
 
-            fetchData();
+            fetchProducts();
         }, 400);
 
         return () => {
-            clearTimeout(delayDebounce);
-            controller.abort();
+            clearTimeout(debounce);
         };
     }, [searchTerm, page, authToken, role]);
 
-    const handleToggleAvailability = (id, shouldEnable) => {
-        if (role !== "ADMIN") return;
-
-        const endpoint = shouldEnable ? 'enable' : 'disable';
-
-        fetch(`/api/admin/${id}/${endpoint}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${authToken}`
-            },
-            body: JSON.stringify({ id }),
-        })
-            .then(response => {
-                if (response.ok) {
-                    window.location.reload();
-                } else {
-                    console.error(`Error al ${shouldEnable ? 'habilitar' : 'deshabilitar'} el producto`);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-            });
-    };
-
-
-
-    // Desplazar hacia arriba cuando cambie la página
     useEffect(() => {
-        window.scrollTo(0, 0); // Esto desplazará la página hacia arriba cuando cambie el número de página
+        window.scrollTo(0, 0);
     }, [page]);
 
-    const MetricCard = React.memo(({ icon, value, title, iconColor, bgColor }) => {
-        return (
-            <div className="flex-1 w-auto bg-white shadow-lg rounded-lg p-4 m-2 flex items-center">
-                <div className={`flex items-center justify-center mr-4 w-12 h-12 rounded-full ${bgColor}`}>
-                    <FontAwesomeIcon icon={icon} className={`${iconColor} text-xl`} />
-                </div>
-                <div>
-                    <p className="text-3xl font-bold text-indigo-600 truncate">{value}</p>
-                    <p className="text-sm font-semibold text-gray-400 truncate">{title}</p>
-                </div>
-            </div>
-        );
-    });
+    const handleSearchChange = (e) => setSearchTerm(e.target.value);
 
     const nextPage = () => {
         if (page < totalPages - 1) setPage(page + 1);
@@ -138,37 +103,61 @@ const AdminProductList = () => {
         if (page > 0) setPage(page - 1);
     };
 
-    const handleSearchChange = (event) => {
-        setSearchTerm(event.target.value);
+    const handleToggleAvailability = (id, shouldEnable) => {
+        if (role !== "ADMIN") return;
+
+        toggleProductAvailability(authToken, id, shouldEnable)
+            .then(() => window.location.reload())
+            .catch((err) => console.error('Error:', err));
     };
 
     const handleDemoteProduct = async (e, id) => {
         e.preventDefault();
         try {
-            const response = await fetch(`/api/product/demote/${id}`, {
-                method: 'PUT',
-                headers: {
-                    'Authorization': `Bearer ${authToken}`
-                },
-            });
-
-            const message = await response.text();
-
-            if (!response.ok) {
-                alert(`Error: ${message}`);
-            } else {
-                alert(message);
-                window.location.reload();
-            }
-
+            const message = await demoteProduct(authToken, id);
+            alert(message);
+            window.location.reload();
         } catch (error) {
             alert(`Error: ${error.message}`);
         }
     };
 
-    if (role !== 'ADMIN') {
-        return <NonAuthorise />;
-    }
+    const handleCreateCategory = async (e) => {
+        e.preventDefault();
+        try {
+            await createCategory(authToken, categoryName);
+            alert('Category created successfully!');
+            window.location.reload();
+        } catch (error) {
+            alert(`Error creating category: ${error.message}`);
+        }
+    };
+
+    const handleEditCategory = async (e, categoryId) => {
+        e.preventDefault();
+        try {
+            await editCategory(authToken, categoryId, categoryName);
+            alert('Categoría editada con éxito!');
+            window.location.reload();
+        } catch (error) {
+            alert(`Error al editar la categoría: ${error.message}`);
+        }
+    };
+
+
+    const MetricCard = React.memo(({ icon, value, title, iconColor, bgColor }) => (
+        <div className="flex-1 bg-white shadow-lg rounded-lg p-4 m-2 flex items-center">
+            <div className={`mr-4 w-12 h-12 rounded-full flex items-center justify-center ${bgColor}`}>
+                <FontAwesomeIcon icon={icon} className={`${iconColor} text-xl`} />
+            </div>
+            <div>
+                <p className="text-3xl font-bold text-indigo-600 truncate">{value}</p>
+                <p className="text-sm font-semibold text-gray-400 truncate">{title}</p>
+            </div>
+        </div>
+    ));
+
+    if (role !== 'ADMIN') return <NonAuthorise />;
 
     return (
         <>
@@ -276,14 +265,14 @@ const AdminProductList = () => {
                                             {/* Botón de habilitar/deshabilitar */}
                                             {product.available ? (
                                                 <button
-                                                    onClick={() => handleToggleAvailability(product.id,false)}
+                                                    onClick={() => handleToggleAvailability(product.id, false)}
                                                     className="w-full bg-red-500 text-white py-2 px-4 rounded-lg text-xs font-bold transition-all hover:bg-gray-600"
                                                 >
                                                     Deshabilitar
                                                 </button>
                                             ) : (
                                                 <button
-                                                    onClick={() => handleToggleAvailability(product.id,true)}
+                                                    onClick={() => handleToggleAvailability(product.id, true)}
                                                     className="w-full bg-indigo-500 text-white py-2 px-4 rounded-lg text-xs font-bold transition-all hover:bg-indigo-600"
                                                 >
                                                     Habilitar
@@ -319,11 +308,100 @@ const AdminProductList = () => {
                         </div>
 
                         <div className="bg-gray-50 p-4 rounded-lg">
-                            <p className="text-gray-700 font-semibold">Devoluciones Pendientes</p>
+                            <div className="flex flex-col md:flex-row md:justify-between items-center gap-4 m-4">
+                                <p className="custom-font-footer-black text-xl md:text-2xl font-bold text-center md:text-left">
+                                    Gestión de Etiquetas
+                                </p>
+                                <button
+                                    onClick={() => setShowModal(true)}  // Abre el modal
+                                    className="w-full md:w-auto bg-yellow-400 text-black font-semibold py-2 px-6 rounded-md shadow-md transition duration-300 ease-in-out hover:bg-yellow-500 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-yellow-300"
+                                >
+                                    Crear nueva etiqueta
+                                </button>
+                            </div>
+                            <table className="min-w-full divide-y divide-gray-200 text-sm">
+                                <thead className="bg-gray-100 text-gray-600 uppercase text-xs">
+                                    <tr>
+                                        <th className="px-4 py-3 text-left">ID</th>
+                                        <th className="px-4 py-3 text-left">Nombre</th>
+                                        <th className="px-4 py-3 text-center">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-200">
+                                    {categories.length > 0 ? categories.map((category) => (
+                                        <tr key={category.id}>
+                                            <td className="px-4 py-3">{category.id}</td>
+                                            <td className="px-4 py-3">{category.name}</td>
+                                            <td className="px-4 py-3 text-center">
+                                                <Link
+                                                    to="#"
+                                                    onClick={() => {
+                                                        setCategoryToEdit(category);
+                                                        setCategoryName(category.name);
+                                                        setShowModal(true);
+                                                    }}
+                                                    className="text-blue-500 hover:text-blue-700 mr-3">
+                                                    Editar
+                                                </Link>
+                                            </td>
+                                        </tr>
+                                    )) : (
+                                        <tr>
+                                            <td colSpan="3" className="text-center px-4 py-3 text-gray-500">
+                                                No hay categorías disponibles.
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
             </div>
+            {/* Modal para crear categoría */}
+            {showModal && (
+                <div className="fixed inset-0 flex justify-center items-center bg-gray-500 bg-opacity-50 z-50">
+                    <div className="bg-white p-6 rounded-lg shadow-lg w-96">
+                        <h2 className="text-xl font-bold mb-4">
+                            {categoryToEdit ? 'Editar categoría' : 'Crear nueva categoría'}
+                        </h2>
+                        <form
+                            onSubmit={(e) =>
+                                categoryToEdit
+                                    ? handleEditCategory(e, categoryToEdit.id)
+                                    : handleCreateCategory(e)
+                            }
+                        >
+                            <input
+                                type="text"
+                                placeholder="Nombre de la categoría"
+                                value={categoryName}
+                                onChange={(e) => setCategoryName(e.target.value)}
+                                className="p-3 border border-gray-300 rounded-lg w-full mb-4 text-sm"
+                            />
+                            <div className="flex justify-between">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setShowModal(false);
+                                        setCategoryToEdit(null);
+                                        setCategoryName('');
+                                    }}
+                                    className="px-4 py-2 bg-gray-300 text-black rounded-lg"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="px-4 py-2 bg-blue-500 text-white rounded-lg"
+                                >
+                                    {categoryToEdit ? 'Guardar cambios' : 'Crear categoría'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
             <Footer />
         </>
     );
