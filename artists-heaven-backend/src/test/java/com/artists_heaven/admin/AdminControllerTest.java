@@ -47,6 +47,8 @@ import com.artists_heaven.order.OrderService;
 import com.artists_heaven.order.OrderStatus;
 import com.artists_heaven.page.PageResponse;
 import com.artists_heaven.product.CategoryRepository;
+import com.artists_heaven.product.Product;
+import com.artists_heaven.product.ProductService;
 import com.artists_heaven.verification.Verification;
 import com.artists_heaven.verification.VerificationRepository;
 import com.artists_heaven.verification.VerificationService;
@@ -86,6 +88,9 @@ class AdminControllerTest {
 
         @Mock
         private VerificationService verificationService;
+
+        @Mock
+        private ProductService productService;
 
         @InjectMocks
         private AdminController adminController;
@@ -466,6 +471,78 @@ class AdminControllerTest {
                 mockMvc.perform(post("/api/admin/1/refuse"))
                                 .andExpect(status().isNotFound())
                                 .andExpect(status().reason("Verification not found"));
+        }
+
+        @Test
+        void disableProduct_ReturnsOk_WhenSuccessful() throws Exception {
+                Long productId = 1L;
+
+                // When & Then
+                mockMvc.perform(post("/api/admin/{productId}/disable", productId))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.message").value("Product disabled successfully"));
+
+                verify(productService).disableProduct(productId);
+        }
+
+        @Test
+        void disableProduct_ReturnsNotFound_WhenProductNotFound() throws Exception {
+                Long productId = 1L;
+                doThrow(new EntityNotFoundException("Product not found")).when(productService)
+                                .disableProduct(productId);
+
+                mockMvc.perform(post("/api/admin/{productId}/disable", productId))
+                                .andExpect(status().isNotFound())
+                                .andExpect(status().reason("Product not found"));
+        }
+
+        @Test
+        void disableProduct_ReturnsBadRequest_WhenProductIsAlreadyDisabled() throws Exception {
+                Long productId = 1L;
+                doThrow(new IllegalArgumentException("Product is already disabled")).when(productService)
+                                .disableProduct(productId);
+
+                mockMvc.perform(post("/api/admin/{productId}/disable", productId))
+                                .andExpect(status().isBadRequest())
+                                .andExpect(status().reason("Product is already disabled"));
+        }
+
+        @Test
+        void enableProduct_ReturnsOk_WhenSuccessful() throws Exception {
+                Long productId = 1L;
+
+                Product product = new Product();
+                product.setId(productId);
+                product.setName("Test Product");
+                product.setAvailable(false);
+
+                // When & Then
+                mockMvc.perform(post("/api/admin/{productId}/enable", productId))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.message").value("Product enabled successfully"));
+
+                verify(productService).enableProduct(productId);
+        }
+
+        @Test
+        void enableProduct_ReturnsNotFound_WhenProductNotFound() throws Exception {
+                Long productId = 1L;
+                doThrow(new EntityNotFoundException("Product not found")).when(productService).enableProduct(productId);
+
+                mockMvc.perform(post("/api/admin/{productId}/enable", productId))
+                                .andExpect(status().isNotFound())
+                                .andExpect(status().reason("Product not found"));
+        }
+
+        @Test
+        void enableProduct_ReturnsBadRequest_WhenProductIsAlreadyEnabled() throws Exception {
+                Long productId = 1L;
+                doThrow(new IllegalArgumentException("Product is already enabled")).when(productService)
+                                .enableProduct(productId);
+
+                mockMvc.perform(post("/api/admin/{productId}/enable", productId))
+                                .andExpect(status().isBadRequest())
+                                .andExpect(status().reason("Product is already enabled"));
         }
 
 }

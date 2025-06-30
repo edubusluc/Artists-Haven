@@ -315,4 +315,21 @@ public class ProductService {
         return productRepository.findAllById(productIds);
     }
 
+    public void disableProduct(Long productId) {
+        setProductAvailability(productId, false, "Product is already disabled");
+    }
+
+    public void enableProduct(Long productId) {
+        setProductAvailability(productId, true, "Product is already enabled");
+    }
+
+    private void setProductAvailability(Long productId, boolean availability, String errorMessage) {
+        Product product = findById(productId);
+        if (product.getAvailable() == availability) {
+            throw new IllegalArgumentException(errorMessage);
+        }
+        product.setAvailable(availability);
+        productRepository.save(product);
+    }
+
 }

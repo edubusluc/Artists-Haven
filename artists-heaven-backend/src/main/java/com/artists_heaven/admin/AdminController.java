@@ -15,6 +15,7 @@ import com.artists_heaven.order.OrderStatus;
 import com.artists_heaven.page.PageResponse;
 import com.artists_heaven.product.Category;
 import com.artists_heaven.product.CategoryRepository;
+import com.artists_heaven.product.ProductService;
 import com.artists_heaven.verification.VerificationStatus;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -68,9 +69,12 @@ public class AdminController {
 
     private final VerificationService verificationService;
 
+    private final ProductService productService;
+
     public AdminController(ArtistRepository artistRepository, VerificationRepository verificationRepository,
             OrderService orderService, EmailSenderService emailSenderService, AdminService adminService,
-            CategoryRepository categoryRepository, VerificationService verificationService) {
+            CategoryRepository categoryRepository, VerificationService verificationService,
+            ProductService productService) {
         this.orderService = orderService;
         this.emailSenderService = emailSenderService;
         this.artistRepository = artistRepository;
@@ -78,6 +82,7 @@ public class AdminController {
         this.adminService = adminService;
         this.categoryRepository = categoryRepository;
         this.verificationService = verificationService;
+        this.productService = productService;
     }
 
     @Operation(summary = "Validate artist account", description = "This endpoint marks an artist as verified, creates a new category using the artist's name, and updates the verification request status to 'ACCEPTED'.")
@@ -292,6 +297,30 @@ public class AdminController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("An error occurred while updating the order status.");
+        }
+    }
+
+    @PostMapping("/{productId}/disable")
+    public ResponseEntity<Map<String, String>> disableProduct(@PathVariable Long productId) {
+        try {
+            productService.disableProduct(productId);
+            return ResponseEntity.ok(Map.of("message", "Product disabled successfully"));
+        } catch (EntityNotFoundException e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found");
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        }
+    }
+
+    @PostMapping("/{productId}/enable")
+    public ResponseEntity<Map<String, String>> enableProduct(@PathVariable Long productId) {
+        try {
+            productService.enableProduct(productId);
+            return ResponseEntity.ok(Map.of("message", "Product enabled successfully"));
+        } catch (EntityNotFoundException e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found");
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
         }
     }
 

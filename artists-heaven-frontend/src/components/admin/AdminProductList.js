@@ -84,7 +84,32 @@ const AdminProductList = () => {
         };
     }, [searchTerm, page, authToken, role]);
 
-    console.log(products)
+    const handleToggleAvailability = (id, shouldEnable) => {
+        if (role !== "ADMIN") return;
+
+        const endpoint = shouldEnable ? 'enable' : 'disable';
+
+        fetch(`/api/admin/${id}/${endpoint}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify({ id }),
+        })
+            .then(response => {
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    console.error(`Error al ${shouldEnable ? 'habilitar' : 'deshabilitar'} el producto`);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+    };
+
+
 
     // Desplazar hacia arriba cuando cambie la página
     useEffect(() => {
@@ -231,7 +256,7 @@ const AdminProductList = () => {
                                             )}
                                         </Link>
                                         {/* Botón de promoción/despromoción */}
-                                        <div className='mt-2 flex text-center'>
+                                        <div className='mt-2 flex flex-col gap-2 text-center'>
                                             {product.on_Promotion ? (
                                                 <button
                                                     onClick={(e) => handleDemoteProduct(e, product.id)}
@@ -246,6 +271,23 @@ const AdminProductList = () => {
                                                 >
                                                     Promocionar
                                                 </Link>
+                                            )}
+
+                                            {/* Botón de habilitar/deshabilitar */}
+                                            {product.available ? (
+                                                <button
+                                                    onClick={() => handleToggleAvailability(product.id,false)}
+                                                    className="w-full bg-red-500 text-white py-2 px-4 rounded-lg text-xs font-bold transition-all hover:bg-gray-600"
+                                                >
+                                                    Deshabilitar
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    onClick={() => handleToggleAvailability(product.id,true)}
+                                                    className="w-full bg-indigo-500 text-white py-2 px-4 rounded-lg text-xs font-bold transition-all hover:bg-indigo-600"
+                                                >
+                                                    Habilitar
+                                                </button>
                                             )}
                                         </div>
                                     </div>

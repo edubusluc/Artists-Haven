@@ -606,4 +606,28 @@ class ProductServiceTest {
 
     }
 
+    @Test
+    void testDisableProduct() {
+        Product product = new Product();
+        product.setId(1L);
+        product.setAvailable(true);
+
+        when(productRepository.findById(1l)).thenReturn(Optional.of(product));
+
+        productService.disableProduct(1l);
+        assertTrue(product.getAvailable() == false);
+    }
+
+    @Test
+    void testEnableProduct() {
+        Product product = new Product();
+        product.setId(1L);
+        product.setAvailable(false);
+
+        when(productRepository.findById(1l)).thenReturn(Optional.of(product));
+
+        productService.enableProduct(1l);
+        assertTrue(product.getAvailable() == true);
+    }
+
 }
