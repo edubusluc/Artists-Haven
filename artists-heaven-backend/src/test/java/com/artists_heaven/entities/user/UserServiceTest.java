@@ -9,12 +9,14 @@ import java.security.Principal;
 import java.util.List;
 import java.util.Optional;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.artists_heaven.entities.artist.Artist;
@@ -97,9 +99,12 @@ class UserServiceTest {
 
     @Test
     void testGetUserProfileException() {
-        Authentication authentication = mock(Authentication.class); when(authentication.getPrincipal()).thenReturn(null);
-         Exception exception = assertThrows(IllegalArgumentException.class, () -> { userService.getUserProfile(authentication); }); 
-        assertEquals("Usuario no autenticado", exception.getMessage()); 
+        Authentication authentication = mock(Authentication.class);
+        when(authentication.getPrincipal()).thenReturn(null);
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            userService.getUserProfile(authentication);
+        });
+        assertEquals("Usuario no autenticado", exception.getMessage());
     }
 
     @Test
@@ -157,5 +162,10 @@ class UserServiceTest {
         assertEquals("NewLastName", artist.getLastName());
         assertEquals("NewArtistName", artist.getArtistName());
         verify(userRepository, times(1)).save(artist);
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
     }
 }

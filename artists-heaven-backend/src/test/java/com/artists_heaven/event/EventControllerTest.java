@@ -20,6 +20,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -98,7 +99,8 @@ class EventControllerTest {
                 when(authentication.getPrincipal()).thenReturn(artist);
                 SecurityContextHolder.getContext().setAuthentication(authentication);
 
-                when(imageServingUtil.saveImages(image, UPLOAD_DIR, "/event_media/")).thenReturn("/product_media/test.jpg");
+                when(imageServingUtil.saveImages(image, UPLOAD_DIR, "/event_media/", false))
+                                .thenReturn("/product_media/test.jpg");
                 when(eventService.newEvent(any(EventDTO.class))).thenReturn(new Event());
 
                 MockMultipartFile eventJson = new MockMultipartFile("event", "", "application/json",
@@ -110,7 +112,7 @@ class EventControllerTest {
                                 .file(image))
                                 .andExpect(status().isCreated());
 
-                verify(imageServingUtil, times(1)).saveImages(image, UPLOAD_DIR, "/event_media/");
+                verify(imageServingUtil, times(1)).saveImages(image, UPLOAD_DIR, "/event_media/", false);
                 verify(eventService, times(1)).newEvent(any(EventDTO.class));
         }
 
@@ -138,7 +140,7 @@ class EventControllerTest {
                                 .file(image))
                                 .andExpect(status().isBadRequest());
 
-                verify(imageServingUtil, times(0)).saveImages(image, UPLOAD_DIR, "/event_media/");
+                verify(imageServingUtil, times(0)).saveImages(image, UPLOAD_DIR, "/event_media/", false);
                 verify(eventService, times(0)).newEvent(any(EventDTO.class));
                 SecurityContextHolder.clearContext();
         }
@@ -333,7 +335,7 @@ class EventControllerTest {
 
                 verify(eventService, times(1)).isArtist();
                 verify(eventService, times(1)).getEventById(1L);
-                verify(imageServingUtil, times(1)).saveImages(image, UPLOAD_DIR, "/event_media/");
+                verify(imageServingUtil, times(1)).saveImages(image, UPLOAD_DIR, "/event_media/", false);
                 verify(eventService, times(1)).updateEvent(any(Event.class), any(EventDTO.class));
         }
 
@@ -440,6 +442,11 @@ class EventControllerTest {
 
                 mockMvc.perform(get("/api/event/event_media/" + fileName))
                                 .andExpect(status().isNotFound());
+        }
+
+        @AfterEach
+        void tearDown() {
+                SecurityContextHolder.clearContext();
         }
 
 }

@@ -16,6 +16,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -409,6 +410,11 @@ class ShoppingCartControllerTest {
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(request)))
                                 .andExpect(status().isInternalServerError()); // 500
+        }
+
+        @AfterEach
+        void tearDown() {
+                SecurityContextHolder.clearContext();
         }
 
 }

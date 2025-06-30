@@ -61,7 +61,7 @@ class ImageServingUtilTest {
                 "image", "photo.png", "image/png", content);
 
         // Act
-        String imageUrl = imageServingUtil.saveImages(multipartFile, basePath, "/imageUrlCode/");
+        String imageUrl = imageServingUtil.saveImages(multipartFile, basePath, "/imageUrlCode/",false);
 
         // Assert
         assertNotNull(imageUrl);
@@ -78,7 +78,7 @@ class ImageServingUtilTest {
 
         // Act + Assert
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-                () -> imageServingUtil.saveImages(file, basePath, "/imageUrlCode/"));
+                () -> imageServingUtil.saveImages(file, basePath, "/imageUrlCode/",false));
 
         assertTrue(ex.getMessage().contains("not a valid image"));
     }
@@ -91,7 +91,7 @@ class ImageServingUtilTest {
 
         // Act + Assert
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-                () -> imageServingUtil.saveImages(file, basePath, "/imageUrlCode/"));
+                () -> imageServingUtil.saveImages(file, basePath, "/imageUrlCode/",false));
 
         assertTrue(ex.getMessage().contains("not a valid image"));
     }
@@ -104,7 +104,7 @@ class ImageServingUtilTest {
 
         // Act + Assert
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-                () -> imageServingUtil.saveImages(file, basePath, "/imageUrlCode/"));
+                () -> imageServingUtil.saveImages(file, basePath, "/imageUrlCode/",false));
 
         assertTrue(ex.getMessage().contains("file name is invalid"));
     }

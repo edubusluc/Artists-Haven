@@ -10,12 +10,15 @@ import static org.mockito.Mockito.when;
 import static org.mockito.ArgumentMatchers.any;
 
 import java.util.Map;
+
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.artists_heaven.configuration.JwtTokenProvider;
@@ -142,5 +145,10 @@ class AuthServiceTest {
     void testMapRoleToAuthority_Admin() throws Exception {
         String authority = (String) mapRoleToAuthorityMethod.invoke(authService, UserRole.ADMIN);
         assertEquals("ROLE_ADMIN", authority);
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
     }
 }
