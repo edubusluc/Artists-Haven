@@ -7,24 +7,33 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import org.springframework.util.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
+
+import com.artists_heaven.admin.CategoryDTO;
+
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.data.domain.Page;
 import java.util.UUID;
 
 @Service
 public class ProductService {
 
+    private final CategoryRepository categoryRepository;
+
     private final ProductRepository productRepository;
     private static final String UPLOAD_DIR = "artists-heaven-backend/src/main/resources/product_media/";
     private static final Path TARGET_PATH = new File(UPLOAD_DIR).toPath().normalize();
 
-    public ProductService(ProductRepository productRepository) {
+    public ProductService(ProductRepository productRepository, CategoryRepository categoryRepository) {
         this.productRepository = productRepository;
+        this.categoryRepository = categoryRepository;
     }
 
     /**
@@ -330,6 +339,37 @@ public class ProductService {
         }
         product.setAvailable(availability);
         productRepository.save(product);
+    }
+
+    public List<Category> findAllCategories() {
+        return categoryRepository.findAll();
+    }
+
+    public void saveCategory(String name) {
+        // Verificar si la categoría ya existe
+        if (categoryRepository.existsByName(name)) {
+            // Lanzar una excepción si la categoría ya existe
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Category with the name '" + name + "' already exists.");
+        }
+
+        // Si no existe, proceder a crear la nueva categoría
+        Category newCategory = new Category();
+        newCategory.setName(name);
+
+        // Guardar la nueva categoría en la base de datos
+        categoryRepository.save(newCategory);
+    }
+
+    public void editCategory(CategoryDTO categoryDTO) {
+        Optional<Category> optionalCategory = categoryRepository.findById(categoryDTO.getId());
+        if(!optionalCategory.isPresent()){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Category with the id '" + categoryDTO.getId() + "' not exists.");
+        }
+        Category category = optionalCategory.get();
+        category.setName(categoryDTO.getName().replaceAll("\\s+", ""));
+        categoryRepository.save(category);
     }
 
 }
