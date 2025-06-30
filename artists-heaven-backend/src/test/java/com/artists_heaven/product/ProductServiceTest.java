@@ -23,6 +23,9 @@ import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
+
+import com.artists_heaven.admin.CategoryDTO;
 
 import jakarta.transaction.Transactional;
 
@@ -38,17 +41,22 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 
 class ProductServiceTest {
 
     @Mock
     private ProductRepository productRepository;
+
+    @Mock
+    private CategoryRepository categoryRepository;
 
     @InjectMocks
     private ProductService productService;
@@ -628,6 +636,74 @@ class ProductServiceTest {
 
         productService.enableProduct(1l);
         assertTrue(product.getAvailable() == true);
+    }
+
+    @Test
+    void testFinAllCategories() {
+        Category category = new Category();
+        List<Category> categories = List.of(category);
+
+        when(categoryRepository.findAll()).thenReturn(categories);
+        List<Category> result = productService.findAllCategories();
+
+        assertNotNull(result);
+    }
+
+    @Test
+    void saveCategory_PositiveTest() {
+        // Arrange
+        String categoryName = "NewCategory";
+
+        // Simular que la categoría no existe
+        when(categoryRepository.existsByName(categoryName)).thenReturn(false);
+
+        // Simular la categoría guardada
+        Category savedCategory = new Category();
+        savedCategory.setName(categoryName);
+
+        // No es necesario simular el resultado de save() si no se verifica su retorno
+
+        // Act
+        productService.saveCategory(categoryName);
+
+        // Assert
+        verify(categoryRepository).existsByName(categoryName); // Se verifica existencia
+        verify(categoryRepository).save(argThat(category -> category.getName().equals(categoryName))); // Se guarda
+                                                                                                       // correctamente
+    }
+
+    @Test
+    void testEditCategory() {
+        // Arrange
+        CategoryDTO categoryDTO = new CategoryDTO(1L, "Category Test");
+        Category category = new Category();
+        category.setId(1L);
+        category.setName("OLD_NAME");
+
+        when(categoryRepository.findById(1L)).thenReturn(Optional.of(category));
+
+        // Act
+        productService.editCategory(categoryDTO);
+
+        // Assert
+        assertEquals("CategoryTest", category.getName());
+        verify(categoryRepository).save(category);
+    }
+
+    @Test
+    void testEditCategory_CategoryNotFound() {
+        // Arrange
+        CategoryDTO categoryDTO = new CategoryDTO(1L, "Category Test");
+
+        when(categoryRepository.findById(1L)).thenReturn(Optional.empty());
+
+        // Act & Assert
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> {
+            productService.editCategory(categoryDTO);
+        });
+
+        assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
+        assertTrue(exception.getReason().contains("Category with the id '1' not exists."));
     }
 
 }

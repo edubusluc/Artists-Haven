@@ -76,7 +76,10 @@ public class SecurityConfiguration {
             "/api/admin/users",
             "/api/admin/orders",
             "/api/admin/updateStatus",
-            "/api/admin/orderDetails/{id}"
+            "/api/admin/orderDetails/{id}",
+            "/api/admin/allCategories",
+            "/api/admin/newCategory",
+            "/api/admin/editCategory",
     };
 
     // Endpoints accessible only by ARTIST users

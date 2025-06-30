@@ -88,7 +88,6 @@ const VerificationList = () => {
                     setUsers(users.map(user =>
                         user.id === id ? { ...user, role: "ARTIST" } : user
                     ));
-                    console.log("Artitsa verificado")
                     window.location.reload()
                 } else {
                     console.log('Error al verificar al artista');

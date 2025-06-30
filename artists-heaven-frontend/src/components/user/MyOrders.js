@@ -210,8 +210,6 @@ const MyOrders = () => {
             </div>
         );
 
-    console.log(orders)
-
     return (
         <div className="space-y-6">
             {orders.map((order) => (

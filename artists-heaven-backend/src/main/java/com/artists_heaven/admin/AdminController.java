@@ -32,8 +32,11 @@ import com.artists_heaven.verification.VerificationRepository;
 import com.artists_heaven.verification.VerificationService;
 
 import java.nio.file.Paths;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import java.nio.file.Path;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
@@ -321,6 +324,49 @@ public class AdminController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found");
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        }
+    }
+
+    @GetMapping("allCategories")
+    public ResponseEntity<List<CategoryDTO>> getAllCategories() {
+        try {
+            List<Category> categories = productService.findAllCategories();
+            List<CategoryDTO> result = categories.stream()
+                    .sorted(Comparator.comparing(Category::getId))
+                    .map(cat -> new CategoryDTO(cat.getId(), cat.getName()))
+                    .collect(Collectors.toList());
+
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        }
+    }
+
+    @PostMapping("newCategory")
+    public ResponseEntity<Map<String, String>> createCategory(@RequestBody CategoryDTO categoryDTO) {
+        try {
+            productService.saveCategory(categoryDTO.getName().replaceAll("\\s+", ""));
+
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Category created successfully");
+
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Error creating category: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("editCategory")
+    public ResponseEntity<Map<String, String>> editCategory(@RequestBody CategoryDTO categoryDTO) {
+        try {
+            productService.editCategory(categoryDTO);
+
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Category edited successfully");
+
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Error creating category: " + e.getMessage());
         }
     }
 

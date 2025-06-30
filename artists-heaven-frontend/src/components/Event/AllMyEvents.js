@@ -124,8 +124,6 @@ const AllMyEvents = () => {
         return <NonAuthorise />;
     }
 
-    console.log(role)
-
     return (
         <>
             <div className="min-h-screen bg-gradient-to-r from-gray-300 to-white flex flex-col">

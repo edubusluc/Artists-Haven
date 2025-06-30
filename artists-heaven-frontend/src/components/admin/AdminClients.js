@@ -259,13 +259,9 @@ const AdminClient = () => {
         );
     });
 
-    console.log(data.userDetails);
-
     if (role !== 'ADMIN') {
         return <NonAuthorise />;
     }
-
-    console.log(verifications)
 
     return (
         <div className="min-h-screen bg-gradient-to-r from-gray-300 to-white flex flex-col">

@@ -27,8 +27,6 @@ const OrderAnonymous = () => {
         return <div className="p-8 text-center text-gray-500">Loading order details...</div>;
     }
 
-    console.log(order);
-
     const OrderProgressBar = ({ status }) => {
         if (status === "CANCELED") {
             return (
