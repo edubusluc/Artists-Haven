@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.nio.file.Paths;
+import java.time.LocalDateTime;
 import java.nio.file.Path;
 import java.nio.file.Files;
 
@@ -21,6 +22,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.http.MediaType;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -47,6 +49,7 @@ import com.artists_heaven.page.PageResponse;
 import com.artists_heaven.product.CategoryRepository;
 import com.artists_heaven.verification.Verification;
 import com.artists_heaven.verification.VerificationRepository;
+import com.artists_heaven.verification.VerificationService;
 import com.artists_heaven.verification.VerificationStatus;
 
 import jakarta.persistence.EntityNotFoundException;
@@ -80,7 +83,10 @@ class AdminControllerTest {
 
         @Mock
         private CategoryRepository categoryRepository;
-        
+
+        @Mock
+        private VerificationService verificationService;
+
         @InjectMocks
         private AdminController adminController;
 
@@ -184,14 +190,16 @@ class AdminControllerTest {
                 Verification verification1 = new Verification();
                 verification1.setId(1L);
                 verification1.setStatus(VerificationStatus.PENDING);
+                verification1.setDate(LocalDateTime.now());
 
                 Verification verification2 = new Verification();
                 verification2.setId(2L);
                 verification2.setStatus(VerificationStatus.PENDING);
+                verification2.setDate(LocalDateTime.now());
 
                 List<Verification> verificationList = Arrays.asList(verification1, verification2);
 
-                when(verificationRepository.findAll()).thenReturn(verificationList);
+                when(verificationRepository.findAll(Sort.by(Sort.Direction.DESC, "date"))).thenReturn(verificationList);
 
                 // Act & Assert
                 mockMvc.perform(get("/api/admin/verification/pending"))
@@ -439,4 +447,25 @@ class AdminControllerTest {
                                                                                                                     // de
                                                                                                                     // error
         }
+
+        @Test
+        void refuseVerification_shouldReturnOk_whenVerificationExists() throws Exception {
+                Long verificationId = 1L;
+
+                mockMvc.perform(post("/api/admin/" + verificationId + "/refuse"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.message").value("Verification refused successfully"));
+        }
+
+        @Test
+        void refuseVerification_shouldReturnNotFound_whenVerificationDoesNotExist() throws Exception {
+                Long verificationId = 1L;
+                doThrow(new EntityNotFoundException("Verification not found"))
+                                .when(verificationService).refuseVerification(verificationId);
+
+                mockMvc.perform(post("/api/admin/1/refuse"))
+                                .andExpect(status().isNotFound())
+                                .andExpect(status().reason("Verification not found"));
+        }
+
 }

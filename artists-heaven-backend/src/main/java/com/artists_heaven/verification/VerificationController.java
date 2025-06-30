@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import com.artists_heaven.email.EmailSenderService;
 import com.artists_heaven.entities.artist.Artist;
+import com.artists_heaven.images.ImageServingUtil;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -25,11 +27,17 @@ public class VerificationController {
 
     private final VerificationService verificationService;
 
+    private final ImageServingUtil imageServingUtil;
+
     private final String ERROR = "error";
 
-    public VerificationController(EmailSenderService emailSenderService, VerificationService verificationService) {
+    private final String UPLOAD_DIR = "artists-heaven-backend/src/main/resources/verification_media";
+
+    public VerificationController(EmailSenderService emailSenderService, VerificationService verificationService,
+            ImageServingUtil imageServingUtil) {
         this.emailSenderService = emailSenderService;
         this.verificationService = verificationService;
+        this.imageServingUtil = imageServingUtil;
     }
 
     @PostMapping("/send")
@@ -63,7 +71,7 @@ public class VerificationController {
             }
 
             // Save the video file and create the verification request
-            String videoUrl = verificationService.saveFile(video);
+            String videoUrl = imageServingUtil.saveImages(video, UPLOAD_DIR, "/verification_media/", true);
             verificationService.createVerification(artist, videoUrl);
 
             // Send verification email

@@ -16,6 +16,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.Files;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -75,7 +76,8 @@ class ArtistControllerTest {
                 Artist artist = new Artist();
                 artist.setMainViewPhoto("mianViewPhoto.jpg");
 
-                when(imageServingUtil.saveImages(image, "artists-heaven-backend/src/main/resources/mainArtist_media/", "/mainArtist_media/"))
+                when(imageServingUtil.saveImages(image, "artists-heaven-backend/src/main/resources/mainArtist_media/",
+                                "/mainArtist_media/", false))
                                 .thenReturn("mianViewPhoto.jpg");
                 when(artistService.registerArtist(any(), any())).thenReturn(artist);
 
@@ -97,7 +99,8 @@ class ArtistControllerTest {
                 MockMultipartFile image = new MockMultipartFile("image", "photo.jpg", "image/jpeg", "img".getBytes());
 
                 // Simular que el servicio lanza excepción por datos inválidos
-                when(imageServingUtil.saveImages(image, "artists-heaven-backend/src/main/resources/mainArtist_media/", "/mainArtist_media/"))
+                when(imageServingUtil.saveImages(image, "artists-heaven-backend/src/main/resources/mainArtist_media/",
+                                "/mainArtist_media/", false))
                                 .thenReturn("photo.jpg");
                 when(artistService.registerArtist(any(), any()))
                                 .thenThrow(new IllegalArgumentException("Invalid user data"));
@@ -247,6 +250,11 @@ class ArtistControllerTest {
 
                 // Limpieza
                 Files.deleteIfExists(imagePath);
+        }
+
+        @AfterEach
+        void tearDown() {
+                SecurityContextHolder.clearContext();
         }
 
 }

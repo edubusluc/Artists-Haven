@@ -82,7 +82,7 @@ public class EventController {
                 Artist artist = (Artist) principalUser;
                 eventDTO.setArtistId(artist.getId());
 
-                String imageUrls = imageServingUtil.saveImages(image, UPLOAD_DIR, "/event_media/");
+                String imageUrls = imageServingUtil.saveImages(image, UPLOAD_DIR, "/event_media/", false);
                 eventDTO.setImage(imageUrls);
 
                 Event newEvent = eventService.newEvent(eventDTO);
@@ -210,7 +210,7 @@ public class EventController {
             // If a new image is provided, delete the old image and save the new one
             if (newImage != null) {
                 eventService.deleteImages(event.getImage()); // Deleting old image
-                String imageUrl = imageServingUtil.saveImages(newImage, UPLOAD_DIR, "/event_media/"); // Saving new image
+                String imageUrl = imageServingUtil.saveImages(newImage, UPLOAD_DIR, "/event_media/", false); // Saving new image
                 eventDTO.setImage(imageUrl); // Setting the new image URL in eventDTO
             }
 

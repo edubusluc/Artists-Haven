@@ -16,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.multipart.MultipartFile;
 import com.artists_heaven.email.EmailSenderService;
 import com.artists_heaven.entities.artist.Artist;
+import com.artists_heaven.images.ImageServingUtil;
 
 class VerificationControllerTest {
 
@@ -25,8 +26,13 @@ class VerificationControllerTest {
     @Mock
     private VerificationService verificationService;
 
+    @Mock
+    private ImageServingUtil imageServingUtil;
+
     @InjectMocks
     private VerificationController verificationController;
+
+    private final String UPLOAD_DIR = "artists-heaven-backend/src/main/resources/verification_media";
 
     @BeforeEach
     void setUp() {
@@ -87,7 +93,7 @@ class VerificationControllerTest {
         when(verificationService.validateArtist(email)).thenReturn(artist);
         when(verificationService.isArtistEligibleForVerification(artist)).thenReturn(true);
         when(verificationService.hasPendingVerification(artist)).thenReturn(false);
-        when(verificationService.saveFile(video)).thenReturn(videoUrl);
+        when(imageServingUtil.saveImages(video, UPLOAD_DIR, "/verification_media/", true)).thenReturn(videoUrl);
 
         ResponseEntity<Map<String, Object>> response = verificationController.sendValidation(email, video);
 

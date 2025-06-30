@@ -33,6 +33,7 @@ import java.nio.file.Paths;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -612,5 +613,10 @@ class ProductControllerTest {
                 mockMvc.perform(get("/api/product/sorted12Product")
                                 .accept(MediaType.APPLICATION_JSON))
                                 .andExpect(status().isNotFound());
+        }
+
+        @AfterEach
+        void tearDown() {
+                SecurityContextHolder.clearContext();
         }
 }

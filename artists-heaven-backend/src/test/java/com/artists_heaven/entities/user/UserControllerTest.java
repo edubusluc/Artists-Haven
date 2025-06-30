@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.security.Principal;
 import java.util.Collections;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -21,6 +22,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import com.artists_heaven.entities.artist.Artist;
 
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 class UserControllerTest {
 
@@ -134,6 +136,11 @@ class UserControllerTest {
                 mockMvc.perform(get("/api/users/profile").principal(principal))
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$.email").value("artist@email.com"));
+        }
+
+        @AfterEach
+        void tearDown() {
+                SecurityContextHolder.clearContext();
         }
 
 }

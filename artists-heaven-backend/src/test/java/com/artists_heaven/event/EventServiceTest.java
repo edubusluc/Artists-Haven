@@ -3,26 +3,23 @@ package com.artists_heaven.event;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.multipart.MultipartFile;
@@ -32,8 +29,6 @@ import com.artists_heaven.entities.artist.ArtistRepository;
 import com.artists_heaven.images.ImageServingUtil;
 
 class EventServiceTest {
-
-    private static final String UPLOAD_DIR = "artists-heaven-backend/src/main/resources/event_media/";
 
     @Mock
     private EventRepository eventRepository;
@@ -170,7 +165,6 @@ class EventServiceTest {
         assertNotNull(event);
         verify(eventRepository, times(1)).save(any(Event.class));
     }
-
 
     @Test
     void testDeleteEventSuccess() {
@@ -355,5 +349,10 @@ class EventServiceTest {
 
         assertEquals("Event date cannot be in the past", exception.getMessage());
         verify(eventRepository, times(0)).save(event);
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
     }
 }

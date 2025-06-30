@@ -33,6 +33,8 @@ const SalesChart = ({ year }) => {
             });
     }, [year, authToken]);
 
+    console.log(salesData)
+
     return (
         <ResponsiveContainer width="100%" height={400}>
             <AreaChart data={salesData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
@@ -52,7 +54,7 @@ const SalesChart = ({ year }) => {
                 <Tooltip />
                 <Legend />
                 <Area type="monotone" dataKey="totalOrders" name="Ventas Realizadas" stroke="#8884d8" fillOpacity={1} fill="url(#colorOrders)" />
-                {role === 'ADMIN' && (
+                {role === 'admin' && (
                     <Area
                         type="monotone"
                         dataKey="totalRevenue"

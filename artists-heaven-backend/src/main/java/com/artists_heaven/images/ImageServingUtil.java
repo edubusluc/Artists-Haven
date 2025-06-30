@@ -32,11 +32,11 @@ public class ImageServingUtil {
                 .body(resource);
     }
 
-    public String saveImages(MultipartFile image, String uploadDir, String imageUrlCode) {
-        String imageUrl = "";
+    public String saveImages(MultipartFile file, String uploadDir, String mediaUrlCode, boolean allowVideo) {
+        String mediaUrl = "";
 
         // Get the original filename
-        String originalFilename = image.getOriginalFilename();
+        String originalFilename = file.getOriginalFilename();
 
         // Validate the filename
         if (originalFilename == null || originalFilename.isEmpty()) {
@@ -51,21 +51,17 @@ public class ImageServingUtil {
         Path targetPath = Paths.get(uploadDir, fileName);
 
         try {
-            // Validate the file (check if it is empty or not a valid image)
-            if (image.isEmpty() || !isValidImage(image)) {
-                throw new IllegalArgumentException("The file is not a valid image.");
+            if (file.isEmpty() || !isValidMedia(file, allowVideo)) {
+                throw new IllegalArgumentException("The file is not a valid image or video.");
             }
 
-            // Save the image to the specified directory
-            Files.copy(image.getInputStream(), targetPath);
-
-            // Generate the URL for accessing the saved image
-            imageUrl = imageUrlCode + fileName;
+            Files.copy(file.getInputStream(), targetPath);
+            mediaUrl = mediaUrlCode + fileName;
         } catch (IOException e) {
-            throw new IllegalArgumentException("Error while saving the image.", e);
+            throw new IllegalArgumentException("Error while saving the file.", e);
         }
 
-        return imageUrl;
+        return mediaUrl;
     }
 
     /**
@@ -88,13 +84,20 @@ public class ImageServingUtil {
      * @param image the MultipartFile to validate.
      * @return true if the file is a JPEG or PNG image, false otherwise.
      */
-    private static boolean isValidImage(MultipartFile image) {
-        // Get the content type (MIME type) of the uploaded file
-        String contentType = image.getContentType();
+    private static boolean isValidMedia(MultipartFile file, boolean allowVideo) {
+        String contentType = file.getContentType();
+        if (contentType == null)
+            return false;
 
-        // Return true if the content type is not null and matches either JPEG or PNG
-        // formats
-        return contentType != null && (contentType.equals("image/jpeg") || contentType.equals("image/png"));
+        if (contentType.equals("image/jpeg") || contentType.equals("image/png")) {
+            return true;
+        }
+
+        if (allowVideo) {
+            return contentType.equals("video/mp4") || contentType.equals("video/quicktime");
+        }
+
+        return false;
     }
 
 }

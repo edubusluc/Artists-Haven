@@ -28,6 +28,7 @@ import jakarta.persistence.EntityNotFoundException;
 
 import com.artists_heaven.verification.Verification;
 import com.artists_heaven.verification.VerificationRepository;
+import com.artists_heaven.verification.VerificationService;
 
 import java.nio.file.Paths;
 import java.util.List;
@@ -36,6 +37,7 @@ import java.nio.file.Path;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.HttpHeaders;
 
@@ -64,15 +66,18 @@ public class AdminController {
 
     private final CategoryRepository categoryRepository;
 
+    private final VerificationService verificationService;
+
     public AdminController(ArtistRepository artistRepository, VerificationRepository verificationRepository,
             OrderService orderService, EmailSenderService emailSenderService, AdminService adminService,
-            CategoryRepository categoryRepository) {
+            CategoryRepository categoryRepository, VerificationService verificationService) {
         this.orderService = orderService;
         this.emailSenderService = emailSenderService;
         this.artistRepository = artistRepository;
         this.verificationRepository = verificationRepository;
         this.adminService = adminService;
         this.categoryRepository = categoryRepository;
+        this.verificationService = verificationService;
     }
 
     @Operation(summary = "Validate artist account", description = "This endpoint marks an artist as verified, creates a new category using the artist's name, and updates the verification request status to 'ACCEPTED'.")
@@ -116,13 +121,23 @@ public class AdminController {
         return ResponseEntity.ok(Map.of("message", "Artist verified successfully"));
     }
 
+    @PostMapping("/{verificationId}/refuse")
+    public ResponseEntity<Map<String, String>> refuseVerification(@PathVariable Long verificationId) {
+        try {
+            verificationService.refuseVerification(verificationId);
+            return ResponseEntity.ok(Map.of("message", "Verification refused successfully"));
+        } catch (EntityNotFoundException e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Verification not found");
+        }
+    }
+
     @Operation(summary = "Get all pending verifications", description = "Returns a list of all verification requests, regardless of their status. You may want to filter by 'PENDING' on the client side.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "List of verification requests retrieved successfully", content = @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = Verification.class))))
     })
     @GetMapping("/verification/pending")
     public ResponseEntity<List<Verification>> getAllValidation() {
-        List<Verification> verificationList = verificationRepository.findAll();
+        List<Verification> verificationList = verificationRepository.findAll(Sort.by(Sort.Direction.DESC, "date"));
         return ResponseEntity.ok(verificationList);
     }
 
