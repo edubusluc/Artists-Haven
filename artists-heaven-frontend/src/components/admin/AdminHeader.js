@@ -137,7 +137,7 @@ const AdminHeader = () => {
                     display: "inline-block",
                 }}
             >
-                <FontAwesomeIcon icon={faUser} size="xl" />
+                <FontAwesomeIcon icon={faUser} />
             </div>
 
 
