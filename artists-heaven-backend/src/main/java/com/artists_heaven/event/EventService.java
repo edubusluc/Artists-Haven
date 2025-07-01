@@ -197,4 +197,10 @@ public class EventService {
         eventRepository.save(event);
     }
 
+    public List<Event> findEventThisYearByArtist(Long artistId) {
+        LocalDate now = LocalDate.now();
+        return eventRepository.findArtistEventThisYear(artistId, now.getYear());
+
+    }
+
 }

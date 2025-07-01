@@ -117,7 +117,7 @@ public class AdminController {
 
         // Create a new category with the artist's name in uppercase
         Category category = new Category();
-        category.setName(artist.getArtistName().toUpperCase());
+        category.setName(artist.getArtistName().toUpperCase().replaceAll("\\s+", ""));
         categoryRepository.save(category);
 
         Verification verification = verificationRepository.findById(verificationId)
