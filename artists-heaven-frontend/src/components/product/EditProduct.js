@@ -123,7 +123,7 @@ const EditProduct = () => {
 
             if (response.ok) {
                 setSuccessMessage("Producto actualizado correctamente.");
-                navigate("/product/all"); // Redirigir al listado de productos
+                navigate("/admin/products/store");
             } else {
                 throw new Error("Error al actualizar el producto: " + response.statusText);
             }
