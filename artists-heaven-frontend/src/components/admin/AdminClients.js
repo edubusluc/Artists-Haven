@@ -3,6 +3,13 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import NonAuthorise from '../NonAuthorise';
 import { faUser, faMusic } from '@fortawesome/free-solid-svg-icons';
+import {
+    getStatisticsPerYear,
+    getUsers,
+    getPendingVerifications,
+    getVerifyArtist,
+    doRefuseArtist,
+} from '../../services/adminServices';
 const AdminClient = () => {
     const currentYear = new Date().getFullYear();
     const [year, setYear] = useState(currentYear);
@@ -38,33 +45,19 @@ const AdminClient = () => {
         const fetchData = async () => {
             const delayDebounce = setTimeout(async () => {
                 try {
-                    const query = searchTerm ? `&search=${encodeURIComponent(searchTerm)}` : "";
                     const [staticsRes, usersRes] = await Promise.all([
-                        fetch(`/api/admin/staticsPerYear?year=${year}`, {
-                            method: "GET",
-                            headers: { 'Authorization': `Bearer ${authToken}` },
-                            signal: controller.signal
-                        }),
-                        fetch(`/api/admin/users?page=${page}&size=${pageSize}${query}`, {
-                            method: "GET",
-                            headers: { 'Authorization': `Bearer ${authToken}` },
-                            signal: controller.signal
-                        })
+                        getStatisticsPerYear(authToken, year),
+                        getUsers(authToken, page, pageSize, searchTerm)
                     ]);
-
-                    if (!staticsRes.ok || !usersRes.ok) throw new Error('Error en una de las peticiones');
-
-                    const staticsData = await staticsRes.json();
-                    const usersData = await usersRes.json();
 
                     setData(prev => ({
                         ...prev,
-                        ...staticsData,
-                        incomePerYear: staticsData.incomePerYear ?? 0,
-                        userDetails: usersData,
+                        ...staticsRes,
+                        incomePerYear: staticsRes.incomePerYear ?? 0,
+                        userDetails: usersRes,
                     }));
 
-                    setTotalPages(usersData.totalPages);
+                    setTotalPages(usersRes.totalPages);
                 } catch (error) {
                     if (error.name !== 'AbortError') {
                         console.error(error);
@@ -85,22 +78,11 @@ const AdminClient = () => {
 
     useEffect(() => {
         if (role !== "ADMIN") {
-            // Si el rol no es ADMIN, no hacemos la petición
             return;
         }
         const fetchVerifications = async () => {
             try {
-                const response = await fetch("/api/admin/verification/pending", {
-                    method: "GET",
-                    headers: {
-                        "Content-Type": "application/json",
-                        'Authorization': `Bearer ${authToken}`
-                    },
-                });
-                if (!response.ok) {
-                    throw new Error(`Error: ${response.status}`);
-                }
-                const data = await response.json();
+                const data = await getPendingVerifications(authToken);
                 setVerifications(data);
             } catch (err) {
                 setError(err.message);
@@ -178,54 +160,25 @@ const AdminClient = () => {
         if (role !== "ADMIN") {
             return;
         }
-        fetch('/api/admin/validate_artist', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${authToken}`
-            },
-            body: JSON.stringify({
-                id,
-                verificationId
-            }),
-        })
-            .then(response => {
-                if (response.ok) {
-                    setUsers(users.map(user =>
-                        user.id === id ? { ...user, role: "ARTIST" } : user
-                    ));
-                    console.log("Artitsa verificado")
-                    window.location.reload()
-                } else {
-                    console.log('Error al verificar al artista');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-            });
+        getVerifyArtist(authToken, id, verificationId).then(() => {
+            setUsers(users.map(user =>
+                user.id === id ? { ...user, role: "ARTIST" } : user
+            ));
+            window.location.reload();
+        }).catch(error => {
+            console.error('Error:', error);
+        });
     };
 
     const refuseArtist = (verificationId) => {
         if (role !== "ADMIN") {
             return;
         }
-        fetch(`/api/admin/${verificationId}/refuse`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${authToken}`
-            },
-        })
-            .then(response => {
-                if (response.ok) {
-                    window.location.reload()
-                } else {
-                    console.log('Error al rechazar la verificación del artista');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-            });
+        doRefuseArtist(authToken, verificationId).then(() => {
+            window.location.reload();
+        }).catch(error => {
+            console.error('Error:', error);
+        });
     };
 
 

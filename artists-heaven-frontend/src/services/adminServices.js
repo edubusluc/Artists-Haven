@@ -54,3 +54,29 @@ export const editCategory = (authToken, id, name) => {
     return makeRequest(`${API_BASE}/editCategory`, 'POST', body, authToken);
 };
 
+// Obtener estadísticas del año (como ingresos, etc.)
+export const getStatisticsPerYear = (authToken, year) =>
+    makeRequest(`/api/admin/staticsPerYear?year=${year}`, 'GET', null, authToken);
+
+// Obtener usuarios con paginación y búsqueda
+export const getUsers = (authToken, page, pageSize, searchTerm = '') => {
+    const query = searchTerm ? `&search=${encodeURIComponent(searchTerm)}` : '';
+    return makeRequest(`/api/admin/users?page=${page}&size=${pageSize}${query}`, 'GET', null, authToken);
+};
+
+// Obtener las verificaciones pendientes de artistas
+export const getPendingVerifications = (authToken) =>
+    makeRequest('/api/admin/verification/pending', 'GET', null, authToken);
+
+// Verificar un artista
+export const getVerifyArtist = (authToken, id, verificationId) => {
+    return makeRequest('/api/admin/validate_artist', 'POST', { id, verificationId }, authToken);
+};
+
+// Rechazar un artista
+export const doRefuseArtist = (authToken, verificationId) =>
+    makeRequest(`/api/admin/${verificationId}/refuse`, 'POST', null, authToken);
+
+
+
+
