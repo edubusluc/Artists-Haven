@@ -61,6 +61,9 @@ public class UserService {
         // If the user is an artist, include additional details like the artist's name
         if (user instanceof Artist artist) {
             userProfileDTO.setArtistName(artist.getArtistName());
+            userProfileDTO.setBannerImage(artist.getBannerPhoto());
+            userProfileDTO.setColor(artist.getMainColor());
+            userProfileDTO.setImage(artist.getMainViewPhoto());
         }
 
         // Return the user profile DTO
@@ -75,14 +78,15 @@ public class UserService {
      * @param principal      The authenticated user's principal.
      * @throws IllegalArgumentException if the user is not authenticated.
      */
-    public void updateUserProfile(UserProfileDTO userProfileDTO, Principal principal) {
+    public void updateUserProfile(UserProfileUpdateDTO userProfileDTO, Principal principal, String image,
+            String bannerImage) {
         // Extract the authenticated user
         User user = getUserById(userProfileDTO.getId());
 
         // Update the user's first and last name
         user.setFirstName(userProfileDTO.getFirstName());
         user.setLastName(userProfileDTO.getLastName());
-        
+
         user.setUsername(userProfileDTO.getUsername());
 
         user.setEmail(userProfileDTO.getEmail());
@@ -91,11 +95,18 @@ public class UserService {
         user.setAddress(userProfileDTO.getAddress());
         user.setPostalCode(userProfileDTO.getPostalCode());
         user.setCountry(userProfileDTO.getCountry());
-        
 
         // If the user is an artist, update the artist name if it's provided
         if (user instanceof Artist artist && userProfileDTO.getArtistName() != null) {
             artist.setArtistName(userProfileDTO.getArtistName());
+            artist.setMainColor(userProfileDTO.getColor());
+            if (!bannerImage.isEmpty()) {
+                artist.setBannerPhoto(bannerImage);
+            }
+            if (!image.isEmpty()) {
+                artist.setMainViewPhoto(image);
+            }
+
         }
 
         // Save the updated user data to the repository

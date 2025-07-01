@@ -8,12 +8,14 @@ const ArtistForm = () => {
     email: "",
     password: "",
     artistName: "",
-    url: ""
+    url: "",
+    color: "#ffffff"
   });
 
   const [errorMessage, setErrorMessage] = useState("");
   const navigate = useNavigate();
   const [images, setImages] = useState([]);
+  const [bannerImage, setBannerImage] = useState([]);
   const [validationError, setValidationError] = useState("");
 
   const handleImageChange = (e) => {
@@ -27,6 +29,19 @@ const ArtistForm = () => {
     }
     setErrorMessage("");
     setImages(files);
+  };
+
+  const handleBannerImage = (e) => {
+    const files = Array.from(e.target.files);
+    const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/bmp", "image/webp"];
+    const invalidFiles = files.filter(file => !allowedTypes.includes(file.type));
+    if (invalidFiles.length > 0) {
+      setErrorMessage("Solo se permiten archivos de imagen válidos (jpg, png, gif, bmp, webp).");
+      setBannerImage([]);
+      return;
+    }
+    setErrorMessage("");
+    setBannerImage(files);
   };
 
   const handleChange = (e) => {
@@ -43,7 +58,7 @@ const ArtistForm = () => {
     setValidationError("");
 
     // Validar que haya imágenes
-    if (images.length === 0) {
+    if (images.length === 0 || bannerImage === 0) {
       setValidationError("Debes seleccionar al menos una imagen válida.");
       return;
     }
@@ -56,6 +71,7 @@ const ArtistForm = () => {
     });
 
     data.append("image", images[0]); // Asegúrate de que el backend espere `image`
+    data.append("bannerImage", bannerImage[0]);
 
     try {
       const response = await fetch("/api/artists/register", {
@@ -76,9 +92,11 @@ const ArtistForm = () => {
         email: "",
         password: "",
         artistName: "",
-        url: ""
+        url: "",
+        color: "#ffffff",
       });
       setImages([]);
+      setBannerImage([]);
       navigate('/auth/login');
     } catch (error) {
       setErrorMessage(error.message || "Error al registrar el artista");
@@ -190,6 +208,29 @@ const ArtistForm = () => {
           />
         </div>
 
+        {/* Color picker */}
+        <div className="relative">
+          <label htmlFor="color" className="block text-sm font-medium text-gray-700 mb-2">
+            Color preferido
+          </label>
+          <div className="flex items-center space-x-2">
+            {/* Color preview */}
+            <div
+              className="w-8 h-8 rounded-full border border-gray-300"
+              style={{ backgroundColor: formData.color }}
+            ></div>
+            {/* Color picker input */}
+            <input
+              type="color"
+              id="color"
+              name="color"
+              value={formData.color}
+              onChange={handleChange}
+              className="w-full h-10 px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+            />
+          </div>
+        </div>
+
         <div>
           <div className="mb-2">
             <label className="block font-semibold text-sm text-gray-600">Imágen Principal</label>
@@ -203,6 +244,19 @@ const ArtistForm = () => {
             required
             accept="image/*"
 
+          />
+        </div>
+
+        <div>
+          <div className="mb-2">
+            <label className="block font-semibold text-sm text-gray-600">Banner</label>
+          </div>
+
+          <input
+            type="file"
+            onChange={handleBannerImage}
+            className="block w-full text-sm text-gray-500"
+            accept="image/*"
           />
         </div>
 

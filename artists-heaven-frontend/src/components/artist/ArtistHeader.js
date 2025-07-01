@@ -1,4 +1,5 @@
 import React, { useContext, useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTachometerAlt, faCalendar, faUsers, faBars, faShoppingCart, faUser, faRightFromBracket } from '@fortawesome/free-solid-svg-icons';
 import { Link } from "react-router-dom";
@@ -15,6 +16,7 @@ const ArtistHeader = () => {
     const [isSidebarVisible, setSidebarVisible] = useState(false);
     const [isSidebarVisibleLeft, setSidebarVisibleLeft] = useState(false);
     const { t, i18n } = useTranslation();
+    const navigate = useNavigate();
 
     const changeLanguage = (lng) => {
         i18n.changeLanguage(lng);
@@ -26,6 +28,11 @@ const ArtistHeader = () => {
 
     const handleMouseLeave = () => {
         setDropdownVisible(false);
+    };
+
+    const handleLinkClick = (path) => {
+        closeSidebar(); 
+        navigate(path); 
     };
 
     const calculateTotalPrice = () => {
@@ -127,14 +134,15 @@ const ArtistHeader = () => {
                         X
                     </button>
                     <h3 className="p-4 custom-font-shop custom-font-shop-black">My Profile</h3>
-                    <div className="p-4 ustom-font-shop-regular custom-font-shop-black">
-                        <Link to="/users/profile">
-                            <p>
-                                <FontAwesomeIcon icon={faUser} /> My Profile
-                            </p>
-                        </Link>
+                    <div className="p-4 custom-font-shop-regular custom-font-shop-black">
+                        <p
+                            style={{ cursor: "pointer" }}
+                            onClick={() => handleLinkClick("/users/profile")}
+                        >
+                            <FontAwesomeIcon icon={faUser} /> My Profile
+                        </p>
                         <div className="flex items-center">
-                            <FontAwesomeIcon icon={faRightFromBracket} className="mr-1" /> 
+                            <FontAwesomeIcon icon={faRightFromBracket} className="mr-1" />
                             <Logout />
                         </div>
                     </div>

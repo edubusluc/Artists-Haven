@@ -351,6 +351,22 @@ class EventServiceTest {
         verify(eventRepository, times(0)).save(event);
     }
 
+    @Test
+    void testFindEventThisYearByArtist() {
+        Long artistId = 10L;
+        Event event = new Event();
+        event.setDate(LocalDate.now().plusDays(10));
+
+        List<Event> events = List.of(event);
+
+        when(eventRepository.findArtistEventThisYear(artistId, LocalDate.now().getYear())).thenReturn(events);
+        
+        List<Event> result = eventService.findEventThisYearByArtist(artistId);
+        assertNotNull(result);
+        assertTrue(event.getDate().equals(LocalDate.now().plusDays(10)));
+    }
+
+
     @AfterEach
     void tearDown() {
         SecurityContextHolder.clearContext();

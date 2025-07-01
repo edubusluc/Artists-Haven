@@ -123,7 +123,7 @@ class UserServiceTest {
         User user = new User();
         user.setFirstName("OldFirstName");
         user.setLastName("OldLastName");
-        UserProfileDTO userProfileDTO = new UserProfileDTO();
+        UserProfileUpdateDTO userProfileDTO = new UserProfileUpdateDTO();
         userProfileDTO.setFirstName("NewFirstName");
         userProfileDTO.setLastName("NewLastName");
         userProfileDTO.setId(1L);
@@ -133,7 +133,7 @@ class UserServiceTest {
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
 
-        userService.updateUserProfile(userProfileDTO, principal);
+        userService.updateUserProfile(userProfileDTO, principal, "", "");
 
         assertEquals("NewFirstName", user.getFirstName());
         assertEquals("NewLastName", user.getLastName());
@@ -146,7 +146,7 @@ class UserServiceTest {
         artist.setFirstName("OldFirstName");
         artist.setLastName("OldLastName");
         artist.setArtistName("OldArtistName");
-        UserProfileDTO userProfileDTO = new UserProfileDTO();
+        UserProfileUpdateDTO userProfileDTO = new UserProfileUpdateDTO();
         userProfileDTO.setFirstName("NewFirstName");
         userProfileDTO.setLastName("NewLastName");
         userProfileDTO.setArtistName("NewArtistName");
@@ -156,7 +156,7 @@ class UserServiceTest {
         when(((Authentication) principal).getPrincipal()).thenReturn(artist);
         when(userRepository.findById(1L)).thenReturn(Optional.of(artist));
 
-        userService.updateUserProfile(userProfileDTO, principal);
+        userService.updateUserProfile(userProfileDTO, principal, "/mainImage", "/image");
 
         assertEquals("NewFirstName", artist.getFirstName());
         assertEquals("NewLastName", artist.getLastName());

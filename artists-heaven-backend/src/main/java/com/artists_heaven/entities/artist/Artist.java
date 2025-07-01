@@ -30,5 +30,11 @@ public class Artist extends User {
     @NotNull
     private String mainViewPhoto;
 
+    @NotNull
+    private String mainColor;
+
+    @NotNull
+    private String bannerPhoto;
+
 
 }

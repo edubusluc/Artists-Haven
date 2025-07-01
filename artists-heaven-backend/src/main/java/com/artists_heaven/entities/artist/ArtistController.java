@@ -13,7 +13,11 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.http.MediaType;
 
 import com.artists_heaven.admin.MonthlySalesDTO;
+import com.artists_heaven.event.Event;
+import com.artists_heaven.event.EventService;
 import com.artists_heaven.images.ImageServingUtil;
+import com.artists_heaven.product.Product;
+import com.artists_heaven.product.ProductService;
 
 import io.swagger.v3.oas.annotations.Parameter;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -27,13 +31,49 @@ public class ArtistController {
 
     private final ArtistService artistService;
 
+    private final ProductService productService;
+
+    private final EventService eventService;
+
     private static final String UPLOAD_DIR = "artists-heaven-backend/src/main/resources/mainArtist_media/";
 
     private final ImageServingUtil imageServingUtil;
 
-    public ArtistController(ArtistService artistService, ImageServingUtil imageServingUtil) {
+    public ArtistController(ArtistService artistService, ImageServingUtil imageServingUtil,
+            ProductService productService, EventService eventService) {
         this.artistService = artistService;
         this.imageServingUtil = imageServingUtil;
+        this.productService = productService;
+        this.eventService = eventService;
+    }
+
+    @GetMapping("/{artistId}")
+    public ResponseEntity<ArtistDTO> getArtistById(@PathVariable final Long artistId) {
+        // Buscar artista
+        Artist artist = artistService.findById(artistId);
+
+        // Obtener productos relacionados, idealmente con lógica en service
+        String artistKey = normalizeArtistName(artist.getArtistName());
+        List<Product> artistProducts = productService.findProductsByArtist(artistKey);
+
+        // Obtener eventos de este año
+        List<Event> artistEvents = eventService.findEventThisYearByArtist(artistId);
+
+        // Mapear a DTO
+        ArtistDTO artistDTO = new ArtistDTO();
+        artistDTO.setArtistName(artist.getArtistName());
+        artistDTO.setArtistEvents(artistEvents);
+        artistDTO.setArtistProducts(artistProducts);
+        artistDTO.setPrimaryColor(artist.getMainColor());
+        artistDTO.setBannerPhoto(artist.getBannerPhoto());
+        
+        return ResponseEntity.ok(artistDTO);
+    }
+
+    private String normalizeArtistName(final String artistName) {
+        if (artistName == null)
+            return "";
+        return artistName.toUpperCase().replaceAll("\\s+", "");
     }
 
     @PostMapping(value = "/register", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -41,8 +81,10 @@ public class ArtistController {
 
         try {
             String imageUrl = imageServingUtil.saveImages(request.getImage(), UPLOAD_DIR, "/mainArtist_media/", false);
+            String bannerUrl = imageServingUtil.saveImages(request.getBannerImage(), UPLOAD_DIR, "/mainArtist_media/", false);
             Artist registeredArtist = new Artist();
             registeredArtist.setMainViewPhoto(imageUrl);
+            registeredArtist.setBannerPhoto(bannerUrl);
 
             registeredArtist = artistService.registerArtist(request, registeredArtist);
             return new ResponseEntity<>(registeredArtist, HttpStatus.CREATED);

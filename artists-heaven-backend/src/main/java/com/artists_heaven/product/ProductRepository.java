@@ -30,4 +30,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     @Query(value = "SELECT * FROM Product p where p.available = true ORDER BY p.created_date desc LIMIT 12", nativeQuery = true)
     List<Product> find12ProductsSortedByName();
 
+    @Query("SELECT p FROM Product p JOIN p.categories c WHERE c.name = :artistName")
+    List<Product> findProductsByArtistCategory(@Param("artistName") String artistName);
+
 }

@@ -74,6 +74,9 @@ public class ArtistService {
         // set url
         artist.setUrl(request.getUrl());
 
+        //set color
+        artist.setMainColor(request.getColor());
+
         // Save the artist in the database and return the saved entity
         return artistRepository.save(artist);
     }

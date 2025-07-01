@@ -372,4 +372,8 @@ public class ProductService {
         categoryRepository.save(category);
     }
 
+    public List<Product> findProductsByArtist(String artistName) {
+        return productRepository.findProductsByArtistCategory(artistName);
+    }
+
 }

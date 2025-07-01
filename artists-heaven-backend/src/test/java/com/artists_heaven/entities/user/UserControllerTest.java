@@ -1,12 +1,17 @@
 package com.artists_heaven.entities.user;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 
 import java.security.Principal;
 import java.util.Collections;
@@ -19,8 +24,13 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import com.artists_heaven.entities.artist.Artist;
+import org.springframework.web.multipart.MultipartFile;
 
+import com.artists_heaven.entities.artist.Artist;
+import com.artists_heaven.images.ImageServingUtil;
+
+import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
@@ -33,6 +43,9 @@ class UserControllerTest {
 
         @Mock
         private UserRepository userRepository;
+
+        @Mock
+        private ImageServingUtil imageServingUtil;
 
         @InjectMocks
         private UserController userController;
@@ -136,6 +149,95 @@ class UserControllerTest {
                 mockMvc.perform(get("/api/users/profile").principal(principal))
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$.email").value("artist@email.com"));
+        }
+
+        @Test
+        void testUpdateUserProfile_success() throws Exception {
+                // Simular archivos
+                MockMultipartFile imageFile = new MockMultipartFile(
+                                "image", "profile.jpg", MediaType.IMAGE_JPEG_VALUE, "fake-image-content".getBytes());
+                MockMultipartFile bannerFile = new MockMultipartFile(
+                                "bannerImage", "banner.jpg", MediaType.IMAGE_JPEG_VALUE,
+                                "fake-banner-content".getBytes());
+
+                // Simular principal
+                Principal principal = () -> "testUser";
+
+                // Simular guardado de imágenes
+                when(imageServingUtil.saveImages(any(MultipartFile.class), anyString(), anyString(), eq(false)))
+                                .thenReturn("saved/path.jpg");
+
+                // Simular lógica de actualización sin excepción
+                doNothing().when(userService).updateUserProfile(any(UserProfileUpdateDTO.class), eq(principal),
+                                anyString(), anyString());
+
+                // Enviar request multipart simulando PUT con "_method" override (Spring lo
+                // permite)
+                mockMvc.perform(multipart("/api/users/profile/edit")
+                                .file(imageFile)
+                                .file(bannerFile)
+                                .param("email", "test@example.com")
+                                .param("firstName", "Alice")
+                                .param("lastName", "Smith")
+                                .param("artistName", "BrushMaster")
+                                .param("address", "123 Art Street")
+                                .param("city", "Paris")
+                                .param("postalCode", "75000")
+                                .param("country", "France")
+                                .param("phone", "+33 123456789")
+                                .param("color", "#FF5733")
+                                .with(request -> {
+                                        request.setMethod("PUT");
+                                        request.setUserPrincipal(principal);
+                                        return request;
+                                }))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.message").value("Profile updated successfully"));
+        }
+
+        @Test
+        void testUpdateUserProfile_withoutImages_success() throws Exception {
+                Principal principal = () -> "testUser";
+
+                doNothing().when(userService).updateUserProfile(any(UserProfileUpdateDTO.class), eq(principal), eq(""),
+                                eq(""));
+
+                mockMvc.perform(multipart("/api/users/profile/edit")
+                                .param("email", "test@example.com")
+                                .param("firstName", "Alice")
+                                .param("lastName", "Smith")
+                                .param("artistName", "BrushMaster")
+                                .param("address", "123 Art Street")
+                                .param("city", "Paris")
+                                .param("postalCode", "75000")
+                                .param("country", "France")
+                                .param("phone", "+33 123456789")
+                                .param("color", "#FF5733")
+                                .with(request -> {
+                                        request.setMethod("PUT");
+                                        request.setUserPrincipal(principal);
+                                        return request;
+                                }))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.message").value("Profile updated successfully"));
+        }
+
+        @Test
+        void testUpdateUserProfile_generalException() throws Exception {
+                Principal principal = () -> "testUser";
+
+                doThrow(new RuntimeException("Unexpected error")).when(userService)
+                                .updateUserProfile(any(UserProfileUpdateDTO.class), eq(principal), anyString(),
+                                                anyString());
+
+                mockMvc.perform(multipart("/api/users/profile/edit")
+                                .param("email", "test@example.com")
+                                .with(request -> {
+                                        request.setMethod("PUT");
+                                        request.setUserPrincipal(principal);
+                                        return request;
+                                }))
+                                .andExpect(status().isInternalServerError());
         }
 
         @AfterEach

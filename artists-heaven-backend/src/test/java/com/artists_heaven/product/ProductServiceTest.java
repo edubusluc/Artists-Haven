@@ -706,4 +706,15 @@ class ProductServiceTest {
         assertTrue(exception.getReason().contains("Category with the id '1' not exists."));
     }
 
+    @Test
+    void testFindProductByArtist() {
+        Product product = new Product();
+        List<Product> products = List.of(product);
+
+        when(productRepository.findProductsByArtistCategory("test")).thenReturn(products);
+
+        List<Product> result = productService.findProductsByArtist("test");
+        assertNotNull(result);
+    }
+
 }

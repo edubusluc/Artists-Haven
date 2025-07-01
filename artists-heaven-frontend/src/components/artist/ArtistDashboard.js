@@ -28,6 +28,11 @@ const ArtistDashboard = () => {
     const [authToken] = useState(localStorage.getItem("authToken"));
 
     useEffect(() => {
+        window.scrollTo(0, 0);
+    }, []);
+
+
+    useEffect(() => {
         if (!authToken || role !== 'ARTIST') return;
 
         const controller = new AbortController();
@@ -203,7 +208,7 @@ const ArtistDashboard = () => {
                             {!["PENDING", "ACCEPTED"].includes(data.isVerificated) ? (
                                 <Link to="/verification">
                                     <button
-                                         className="w-full md:w-auto bg-yellow-400 text-black font-semibold py-2 px-6 rounded-md shadow-md transition duration-300 ease-in-out hover:bg-yellow-500 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-yellow-300"
+                                        className="w-full md:w-auto bg-yellow-400 text-black font-semibold py-2 px-6 rounded-md shadow-md transition duration-300 ease-in-out hover:bg-yellow-500 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-yellow-300"
                                     >Send Verification Request</button>
                                 </Link>
                             ) : (
