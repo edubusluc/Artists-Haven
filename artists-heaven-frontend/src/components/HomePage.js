@@ -92,6 +92,8 @@ const HomePage = () => {
     </div>
   );
 
+  console.log(artists)
+
   return (
     <>
       <div className="p-6 bg-white">
@@ -131,30 +133,32 @@ const HomePage = () => {
           >
             {artists.map((artist, index) => (
               <SwiperSlide key={index}>
-                <div className="group relative w-full h-[600px] md:h-[800px] overflow-hidden shadow-lg">
-                  <img
-                    src={`/api/artists/${artist.mainPhoto}`}
-                    alt={artist.name}
-                    loading="lazy"
-                    className="w-full h-full object-cover transform transition duration-500 ease-in-out group-hover:scale-110"
-                  />
-                  <div className="absolute bottom-0 right-0 flex items-end justify-end h-full w-full pr-2 pb-2">
-                    <p
-                      className="custom-font-shop text-white font-bold"
-                      style={{
-                        writingMode: 'vertical-rl',
-                        transform: 'rotate(180deg)',
-                        fontSize: '80px',
-                        lineHeight: 1,
-                        textAlign: 'right',
-                        whiteSpace: 'nowrap',
-                        textShadow: '2px 2px 4px rgba(0, 0, 0, 0.3)',
-                      }}
-                    >
-                      {artist.name}
-                    </p>
+                <Link to={`/artist/${artist.name}`} state={{ artistId: artist.id }}>
+                  <div className="group relative w-full h-[600px] md:h-[800px] overflow-hidden shadow-lg">
+                    <img
+                      src={`/api/artists/${artist.mainPhoto}`}
+                      alt={artist.name}
+                      loading="lazy"
+                      className="w-full h-full object-cover transform transition duration-500 ease-in-out group-hover:scale-110"
+                    />
+                    <div className="absolute bottom-0 right-0 flex items-end justify-end h-full w-full pr-2 pb-2">
+                      <p
+                        className="custom-font-shop text-white font-bold"
+                        style={{
+                          writingMode: 'vertical-rl',
+                          transform: 'rotate(180deg)',
+                          fontSize: '80px',
+                          lineHeight: 1,
+                          textAlign: 'right',
+                          whiteSpace: 'nowrap',
+                          textShadow: '2px 2px 4px rgba(0, 0, 0, 0.3)',
+                        }}
+                      >
+                        {artist.name}
+                      </p>
+                    </div>
                   </div>
-                </div>
+                </Link>
               </SwiperSlide>
             ))}
           </Swiper>

@@ -89,7 +89,7 @@ const CreateEventForm = () => {
                     moreInfo: "",
                 });
                 setImages([]);
-                navigate("/");
+                navigate("/event/all-my-events");
             } else {
                 const err = await response.text();
                 throw new Error(err || "Error al crear el evento.");

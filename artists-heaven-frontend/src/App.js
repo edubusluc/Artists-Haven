@@ -28,6 +28,7 @@ import MySpace from './components/user/MySpace';
 import ArtistsRegister from './components/artist/ArtistsRegister';
 import ArtistDashboard from './components/artist/ArtistDashboard';
 import ArtistHeader from './components/artist/ArtistHeader';
+import ArtistView from './components/ArtistView';
 
 // Components - Orders
 import OrderAnonymous from './components/order/OrderAnonymous';
@@ -100,6 +101,7 @@ const AppRoutes = ({ role }) => (
     <Route path="/admin/orders" element={<AdminOrder />} />
     <Route path="/admin/orderDetails/:id" element={<AdminOrderDetails />} />
     <Route path="/artist/dashboard" element={<ArtistDashboard />} />
+    <Route path="/artist/:name" element={<ArtistView />} />
   </Routes>
 );
 
