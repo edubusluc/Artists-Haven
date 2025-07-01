@@ -4,7 +4,6 @@ const ReturnRequestModal = ({ isOpen, onClose, onSubmit }) => {
   const [reason, setReason] = useState("");
   const [email, setEmail] = useState("");
   const authToken = localStorage.getItem("authToken");
-  console.log(authToken);
 
   if (!isOpen) return null;
 
