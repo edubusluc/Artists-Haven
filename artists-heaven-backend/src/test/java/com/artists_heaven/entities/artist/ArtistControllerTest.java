@@ -14,6 +14,7 @@ import java.util.Map;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDate;
 import java.nio.file.Files;
 
 import org.junit.jupiter.api.AfterEach;
@@ -32,7 +33,12 @@ import org.springframework.security.core.context.SecurityContextHolder;
 
 import com.artists_heaven.admin.MonthlySalesDTO;
 import com.artists_heaven.entities.user.UserRepository;
+import com.artists_heaven.event.Event;
+import com.artists_heaven.event.EventService;
 import com.artists_heaven.images.ImageServingUtil;
+import com.artists_heaven.product.Product;
+import com.artists_heaven.product.ProductService;
+
 
 class ArtistControllerTest {
 
@@ -43,6 +49,12 @@ class ArtistControllerTest {
 
         @Mock
         private UserRepository userRepository;
+
+        @Mock
+        private ProductService productService;
+
+        @Mock
+        private EventService eventService;
 
         @Mock
         private ImageServingUtil imageServingUtil;
@@ -250,6 +262,56 @@ class ArtistControllerTest {
 
                 // Limpieza
                 Files.deleteIfExists(imagePath);
+        }
+
+        @Test
+        void testGetArtistById_success() throws Exception {
+                // Preparar datos simulados
+                Long artistId = 1L;
+                String artistName = "Duki";
+                String normalizedKey = "DUKI";
+
+                Artist artist = new Artist();
+                artist.setId(artistId);
+                artist.setArtistName(artistName);
+                artist.setMainColor("#FF0000");
+                artist.setBannerPhoto("banner.jpg");
+
+                Product product1 = new Product();
+                product1.setName("Camiseta Tour");
+                product1.setPrice(20.0f);
+
+                Product product2 = new Product();
+                product2.setName("Gorra");
+                product2.setPrice(15.0f);
+
+                List<Product> mockProducts = List.of(product1, product2);
+
+                Event event1 = new Event();
+                event1.setName("Tour 2025");
+                event1.setDate(LocalDate.of(2025, 10, 10));
+                Event event2 = new Event();
+                event2.setName("Festival");
+                event2.setDate(LocalDate.of(2025, 7, 1));
+
+                List<Event> mockEvents = List.of(event1, event2);
+
+                // Simular los servicios
+                when(artistService.findById(artistId)).thenReturn(artist);
+                when(productService.findProductsByArtist(normalizedKey)).thenReturn(mockProducts);
+                when(eventService.findEventThisYearByArtist(artistId)).thenReturn(mockEvents);
+
+                // Llamar a la API y verificar la respuesta
+                mockMvc.perform(get("/api/artists/{artistId}", artistId)
+                                .contentType(MediaType.APPLICATION_JSON))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.artistName").value("Duki"))
+                                .andExpect(jsonPath("$.artistProducts[0].name").value("Camiseta Tour"))
+                                .andExpect(jsonPath("$.artistProducts[1].name").value("Gorra"))
+                                .andExpect(jsonPath("$.artistEvents[0].name").value("Tour 2025"))
+                                .andExpect(jsonPath("$.artistEvents[1].name").value("Festival"))
+                                .andExpect(jsonPath("$.primaryColor").value("#FF0000"))
+                                .andExpect(jsonPath("$.bannerPhoto").value("banner.jpg"));
         }
 
         @AfterEach
