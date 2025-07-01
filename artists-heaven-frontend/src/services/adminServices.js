@@ -82,5 +82,10 @@ export const getOrders = (authToken, page, pageSize) => {
     return makeRequest(`/api/admin/orders?page=${page}&size=${pageSize}`, 'GET', null, authToken);
 };
 
+//Función para actualizar el estado de un pedido
+export const updateOrderStatus = (authToken, orderId, newStatus) => {
+    return makeRequest('/api/admin/updateStatus', 'POST', { orderId, status: newStatus }, authToken);
+};
+
 
 

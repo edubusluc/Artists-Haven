@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { updateOrderStatus } from "../../services/adminServices";
 
 const OrderDetails = () => {
     const { id } = useParams();
@@ -47,18 +48,9 @@ const OrderDetails = () => {
             });
     }, [id, rol, authToken]);
 
-    const updateOrderStatus = async (orderId, newStatus) => {
+    const handleUpdateOrdeStatus = async (orderId, newStatus) => {
         try {
-            const response = await fetch("/api/admin/updateStatus", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${authToken}`,
-                },
-                body: JSON.stringify({ orderId, status: newStatus }),
-            });
-            if (!response.ok) throw new Error("Error al actualizar el estado");
-
+            await updateOrderStatus(authToken, orderId, newStatus);
             setOrder((prev) => ({ ...prev, status: newStatus }));
         } catch (error) {
             console.error("Error actualizando estado:", error);
@@ -114,7 +106,7 @@ const OrderDetails = () => {
                         <select
                             id="status-select"
                             value={order.status}
-                            onChange={(e) => updateOrderStatus(order.id, e.target.value)}
+                            onChange={(e) => handleUpdateOrdeStatus(order.id, e.target.value)}
                             className="w-full sm:w-auto border border-gray-300 rounded-xl px-4 py-2 text-gray-700 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-300"
                         >
                             {orderStatuses.map((status) => (
@@ -131,7 +123,7 @@ const OrderDetails = () => {
                             onClick={() => navigate("/admin/orders")}
                             className="bg-yellow-500 hover:bg-yellow-600 text-white font-medium py-2 px-6 rounded-full shadow-lg transition-all duration-300 transform hover:scale-105"
                         >
-                        ← Volver a Pedidos
+                            ← Volver a Pedidos
                         </button>
                     </div>
                 </div>
