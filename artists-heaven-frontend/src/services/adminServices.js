@@ -77,6 +77,10 @@ export const getVerifyArtist = (authToken, id, verificationId) => {
 export const doRefuseArtist = (authToken, verificationId) =>
     makeRequest(`/api/admin/${verificationId}/refuse`, 'POST', null, authToken);
 
+// Función para obtener lor pedidos
+export const getOrders = (authToken, page, pageSize) => {
+    return makeRequest(`/api/admin/orders?page=${page}&size=${pageSize}`, 'GET', null, authToken);
+};
 
 
 

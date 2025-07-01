@@ -1,11 +1,12 @@
 import Footer from '../Footer';
 import { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faBug, faEnvelope, faShieldAlt, faExclamationCircle, faLock, faCoffee, faSackDollar, faShirt, faUser, faMusic } from '@fortawesome/free-solid-svg-icons';
+import { faBug, faShieldAlt, faExclamationCircle, faLock, faCoffee, faSackDollar, faShirt, faUser, faMusic } from '@fortawesome/free-solid-svg-icons';
 import SalesChart from '../charts/SalesChart';
 import CountStatusPieChart from '../charts/CountPieChart';
 import TopSellingItemsChart from '../charts/TopSellingItemsChart';
 import NonAuthorise from '../NonAuthorise';
+import { getStatisticsPerYear } from '../../services/adminServices';
 
 const AdminDashboard = () => {
     const currentYear = new Date().getFullYear();
@@ -39,15 +40,7 @@ const AdminDashboard = () => {
 
         const fetchData = async () => {
             try {
-                const response = await fetch(`/api/admin/staticsPerYear?year=${year}`, {
-                    method: "GET",
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`,
-                    },
-                    signal: controller.signal,
-                });
-                if (!response.ok) throw new Error('Error al obtener datos');
-                const data = await response.json();
+                const data = await getStatisticsPerYear(authToken, year);
                 setData({
                     ...data,
                     incomePerYear: data.incomePerYear ?? 0,

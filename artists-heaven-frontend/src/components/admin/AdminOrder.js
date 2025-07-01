@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import CountStatusPieChart from '../charts/CountPieChart';
 import NonAuthorise from '../NonAuthorise';
+import { getStatisticsPerYear, getOrders } from '../../services/adminServices';
 
 const AdminOrder = () => {
     const currentYear = new Date().getFullYear();
@@ -63,13 +64,7 @@ const AdminOrder = () => {
 
         const fetchData = async () => {
             try {
-                const response = await fetch(`/api/admin/staticsPerYear?year=${year}`, {
-                    method: "GET",
-                    headers: { 'Authorization': `Bearer ${authToken}` },
-                    signal: controller.signal,
-                });
-                if (!response.ok) throw new Error('Error al obtener datos');
-                const staticsData = await response.json();
+                const staticsData = await getStatisticsPerYear(authToken, year);
                 setData(prev => ({
                     ...prev,
                     ...staticsData,
@@ -84,13 +79,7 @@ const AdminOrder = () => {
 
         const fetchOrders = async () => {
             try {
-                const response = await fetch(`/api/admin/orders?page=${page}&size=${pageSize}`, {
-                    method: "GET",
-                    headers: { 'Authorization': `Bearer ${authToken}` },
-                    signal: controller.signal,
-                });
-                if (!response.ok) throw new Error('Error al obtener órdenes');
-                const ordersData = await response.json();
+                const ordersData = await getOrders(authToken, page, pageSize)
                 setOrders(ordersData.content || []);
                 setTotalPages(ordersData.totalPages || 1);
             } catch (error) {
