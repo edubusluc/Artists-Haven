@@ -6,6 +6,7 @@ import SalesChart from '../charts/SalesChart';
 import TopSellingItemsChart from '../charts/TopSellingItemsChart';
 import NonAuthorise from '../NonAuthorise';
 import { Link } from 'react-router-dom';
+import { getArtistDashboardStatistics } from '../../services/artistServices';
 
 const ArtistDashboard = () => {
     const currentYear = new Date().getFullYear();
@@ -39,15 +40,7 @@ const ArtistDashboard = () => {
 
         const fetchData = async () => {
             try {
-                const response = await fetch(`/api/artists/dashboard?year=${year}`, {
-                    method: "GET",
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`,
-                    },
-                    signal: controller.signal,
-                });
-                if (!response.ok) throw new Error('Error al obtener datos');
-                const data = await response.json();
+                const data = await getArtistDashboardStatistics(authToken, year)
                 setData({
                     ...data,
                     futureEvents: data.futureEvents ?? 0,

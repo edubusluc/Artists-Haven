@@ -6,9 +6,6 @@ import { Link } from "react-router-dom";
 import { useTranslation } from 'react-i18next';
 import Logout from "../Logout";
 
-
-
-
 const ArtistHeader = () => {
     const [shoppingCart, setShoppingCart] = useState({ items: [] });
     const [isDropdownVisible, setDropdownVisible] = useState(false);
@@ -64,8 +61,6 @@ const ArtistHeader = () => {
     const closeSidebarLeft = () => {
         setSidebarVisibleLeft(false);
     };
-
-
 
     return (
         <div className="p-4"
