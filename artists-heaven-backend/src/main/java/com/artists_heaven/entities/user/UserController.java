@@ -7,11 +7,15 @@ import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.HttpClientErrorException.Unauthorized;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.artists_heaven.images.ImageServingUtil;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -28,8 +32,13 @@ public class UserController {
 
     private final UserService userService;
 
-    public UserController(UserService userService) {
+    private final ImageServingUtil imageServingUtil;
+
+    private static final String UPLOAD_DIR = "artists-heaven-backend/src/main/resources/mainArtist_media/";
+
+    public UserController(UserService userService, ImageServingUtil imageServingUtil) {
         this.userService = userService;
+        this.imageServingUtil = imageServingUtil;
     }
 
     @Operation(summary = "Retrieve all users", description = "Fetches a list of all registered users.")
@@ -84,10 +93,23 @@ public class UserController {
     })
     @PutMapping("/profile/edit")
     public ResponseEntity<Object> updateUserProfile(
-            @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "User profile data to update", required = true, content = @Content(mediaType = "application/json", schema = @Schema(implementation = UserProfileDTO.class))) @RequestBody UserProfileDTO userProfileDTO,
+            @ModelAttribute UserProfileUpdateDTO userProfileDTO,
             Principal principal) {
         try {
-            userService.updateUserProfile(userProfileDTO, principal);
+            String mainImage = "";
+            String banner = "";
+
+            MultipartFile image = userProfileDTO.getImage();
+            MultipartFile bannerImage = userProfileDTO.getBannerImage();
+
+            if (image != null && !image.isEmpty()) {
+                mainImage = imageServingUtil.saveImages(image, UPLOAD_DIR, "/mainArtist_media/", false);
+            }
+            if (bannerImage != null && !bannerImage.isEmpty()) {
+                banner = imageServingUtil.saveImages(bannerImage, UPLOAD_DIR, "/mainArtist_media/", false);
+            }
+
+            userService.updateUserProfile(userProfileDTO, principal, mainImage, banner);
             return ResponseEntity.ok(Map.of("message", "Profile updated successfully"));
         } catch (Unauthorized e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());

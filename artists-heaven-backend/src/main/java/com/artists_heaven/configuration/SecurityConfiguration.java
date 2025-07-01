@@ -57,7 +57,8 @@ public class SecurityConfiguration {
             "/swagger-ui.html",
             "/api/returns/create",
             "/api/returns/*/label",
-            "/api/orders/by-identifier"
+            "/api/orders/by-identifier",
+            "/api/artists/{id}"
     };
 
     // Endpoints accessible only by ADMIN users

@@ -16,7 +16,8 @@ public class ArtistRegisterDTO {
     private String password;
     private String artistName;
     private String url;
-
     private MultipartFile image;
+    private MultipartFile bannerImage;
+    private String color;
 
 }
