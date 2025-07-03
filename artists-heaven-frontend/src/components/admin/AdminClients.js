@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import NonAuthorise from '../NonAuthorise';
 import { faUser, faMusic } from '@fortawesome/free-solid-svg-icons';
@@ -10,6 +9,7 @@ import {
     getVerifyArtist,
     doRefuseArtist,
 } from '../../services/adminServices';
+
 const AdminClient = () => {
     const currentYear = new Date().getFullYear();
     const [year, setYear] = useState(currentYear);
@@ -18,16 +18,9 @@ const AdminClient = () => {
 
     const [page, setPage] = useState(0);
     const [totalPages, setTotalPages] = useState(1);
-    const pageSize = 6;
-
     const [searchTerm, setSearchTerm] = useState("");
 
-    const [data, setData] = useState({
-        numUsers: 0,
-        numArtists: 0,
-        userDetails: { content: [] }
-    });
-
+    const [data, setData] = useState({ numUsers: 0, numArtists: 0, userDetails: { content: [] } });
     const [verifications, setVerifications] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -36,54 +29,36 @@ const AdminClient = () => {
     const [videoBlobsCache, setVideoBlobsCache] = useState({});
     const pendingFetches = React.useRef({});
 
-
+    // Fetch statistics and users
     useEffect(() => {
         if (!authToken || role !== 'ADMIN') return;
 
-        const controller = new AbortController();
-
         const fetchData = async () => {
-            const delayDebounce = setTimeout(async () => {
-                try {
-                    const [staticsRes, usersRes] = await Promise.all([
-                        getStatisticsPerYear(authToken, year),
-                        getUsers(authToken, page, pageSize, searchTerm)
-                    ]);
-
-                    setData(prev => ({
-                        ...prev,
-                        ...staticsRes,
-                        incomePerYear: staticsRes.incomePerYear ?? 0,
-                        userDetails: usersRes,
-                    }));
-
-                    setTotalPages(usersRes.totalPages);
-                } catch (error) {
-                    if (error.name !== 'AbortError') {
-                        console.error(error);
-                    }
-                }
-            }, 400);
-
-            return () => {
-                clearTimeout(delayDebounce);
-            };
+            try {
+                const [staticsRes, usersRes] = await Promise.all([
+                    getStatisticsPerYear(authToken, year),
+                    getUsers(authToken, page, 6, searchTerm),
+                ]);
+                setData(prev => ({ ...prev, ...staticsRes, userDetails: usersRes }));
+                setTotalPages(usersRes.totalPages);
+            } catch (error) {
+                setError(error.message || "Error fetching data");
+            }
         };
 
-        fetchData();
-        return () => {
-            controller.abort();
-        };
-    }, [authToken, page, searchTerm]);
+        const delayDebounce = setTimeout(fetchData, 400);
 
+        return () => clearTimeout(delayDebounce);
+    }, [authToken, year, page, searchTerm, role]);
+
+    // Fetch pending verifications
     useEffect(() => {
-        if (role !== "ADMIN") {
-            return;
-        }
+        if (role !== "ADMIN") return;
+
         const fetchVerifications = async () => {
             try {
-                const data = await getPendingVerifications(authToken);
-                setVerifications(data);
+                const verificationsData = await getPendingVerifications(authToken);
+                setVerifications(verificationsData);
             } catch (err) {
                 setError(err.message);
             } finally {
@@ -92,21 +67,14 @@ const AdminClient = () => {
         };
 
         fetchVerifications();
-    }, [authToken]);
+    }, [authToken, role]);
 
+    // Video blob fetch
     const fetchVideoBlob = useCallback(async (videoUrl) => {
-        if (videoBlobsCache[videoUrl]) {
-            return videoBlobsCache[videoUrl];
-        }
-        if (pendingFetches.current[videoUrl]) {
-            return pendingFetches.current[videoUrl];
-        }
-        const fetchPromise = fetch(`/api/admin${videoUrl}`, {
-            method: "GET",
-            headers: {
-                'Authorization': `Bearer ${authToken}`
-            }
-        })
+        if (videoBlobsCache[videoUrl]) return videoBlobsCache[videoUrl];
+        if (pendingFetches.current[videoUrl]) return pendingFetches.current[videoUrl];
+
+        const fetchPromise = fetch(`/api/admin${videoUrl}`, { method: "GET", headers: { 'Authorization': `Bearer ${authToken}` } })
             .then(response => {
                 if (!response.ok) throw new Error(`Failed to fetch video: ${response.status}`);
                 return response.blob();
@@ -124,10 +92,10 @@ const AdminClient = () => {
             });
 
         pendingFetches.current[videoUrl] = fetchPromise;
-
         return fetchPromise;
     }, [authToken, videoBlobsCache]);
 
+    // Video Link
     const VideoLink = ({ videoUrl }) => {
         const [videoSrc, setVideoSrc] = useState(null);
 
@@ -156,35 +124,26 @@ const AdminClient = () => {
         );
     };
 
-    const verifyArtist = (id, verificationId) => {
-        if (role !== "ADMIN") {
-            return;
-        }
-        getVerifyArtist(authToken, id, verificationId).then(() => {
-            setUsers(users.map(user =>
+    // Verify artist
+    const verifyArtist = async (id, verificationId) => {
+        try {
+            await getVerifyArtist(authToken, id, verificationId);
+            setUsers(users => users.map(user =>
                 user.id === id ? { ...user, role: "ARTIST" } : user
             ));
-            window.location.reload();
-        }).catch(error => {
+        } catch (error) {
             console.error('Error:', error);
-        });
-    };
-
-    const refuseArtist = (verificationId) => {
-        if (role !== "ADMIN") {
-            return;
         }
-        doRefuseArtist(authToken, verificationId).then(() => {
-            window.location.reload();
-        }).catch(error => {
-            console.error('Error:', error);
-        });
     };
 
-
-    useEffect(() => {
-        window.scrollTo(0, 0);
-    }, [page]);
+    // Refuse artist
+    const refuseArtist = async (verificationId) => {
+        try {
+            await doRefuseArtist(authToken, verificationId);
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    };
 
     const nextPage = () => {
         if (page < totalPages - 1) setPage(page + 1);
@@ -194,8 +153,8 @@ const AdminClient = () => {
         if (page > 0) setPage(page - 1);
     };
 
-    const handleSearchChange = (event) => {
-        setSearchTerm(event.target.value);
+    const handleSearchChange = (e) => {
+        setSearchTerm(e.target.value);
     };
 
     const MetricCard = React.memo(({ icon, value, title, iconColor, bgColor }) => {
@@ -212,14 +171,12 @@ const AdminClient = () => {
         );
     });
 
-    if (role !== 'ADMIN') {
-        return <NonAuthorise />;
-    }
+    if (role !== 'ADMIN') return <NonAuthorise />;
 
     return (
         <div className="min-h-screen bg-gradient-to-r from-gray-300 to-white flex flex-col">
             <div className="grid grid-cols-1 lg:grid-cols-2 p-4 m-4 gap-4">
-                {/*COLUMNA 1 */}
+                {/* First Column */}
                 <div className="w-full h-full rounded-lg shadow-lg bg-white backdrop-blur-md md:p-8 p-4">
                     <p className="custom-font-footer-black text-xl md:text-2xl font-bold text-center md:text-left mb-6">
                         Gestión de Clientes
@@ -231,7 +188,7 @@ const AdminClient = () => {
                         onChange={handleSearchChange}
                         className="p-3 border border-gray-300 rounded-lg w-full mb-4 text-sm"
                     />
-
+                    {/* User list */}
                     <div className="flex flex-col gap-6">
                         {Array.isArray(data.userDetails?.content) && data.userDetails.content.length > 0 ? (
                             data.userDetails.content.map((user) => (
@@ -246,7 +203,7 @@ const AdminClient = () => {
                                         <p><span className="font-medium text-gray-700">Dirección:</span> {user.address || 'N/A'}</p>
                                         <p><span className="font-medium text-gray-700">Rol:</span>
                                             <span className={`ml-1 font-semibold px-2 py-1 rounded text-xs 
-                                ${user.role === 'ADMIN' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'}`}>
+                                                ${user.role === 'ADMIN' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'}`}>
                                                 {user.role}
                                             </span>
                                         </p>
@@ -257,6 +214,7 @@ const AdminClient = () => {
                             <p className="text-gray-500 col-span-full text-center">No hay usuarios disponibles.</p>
                         )}
                     </div>
+                    {/* Pagination */}
                     <div className="flex flex-col sm:flex-row justify-center items-center mt-4 gap-2 sm:gap-4">
                         <button onClick={prevPage} disabled={page === 0} className="w-full sm:w-auto px-4 py-2 bg-gray-300 rounded disabled:opacity-50">
                             Anterior
@@ -268,7 +226,7 @@ const AdminClient = () => {
                     </div>
                 </div>
 
-                {/*COLUMNA 2 */}
+                {/* Second Column */}
                 <div className="w-full">
                     <div className="bg-white p-4 rounded-lg mb-4 w-full">
                         <div className="flex flex-col md:flex-row justify-between gap-4">
@@ -292,11 +250,11 @@ const AdminClient = () => {
                             </div>
                         </div>
                     </div>
+                    {/* Verifications */}
                     <div className="bg-white p-4 rounded-lg mb-4 w-full overflow-x-auto">
                         <p className="custom-font-footer-black text-xl md:text-2xl font-bold text-center md:text-left mb-6">
                             Verificaciones Pendientes
                         </p>
-
                         {verifications.length > 0 ? (
                             <table className="min-w-full divide-y divide-gray-200 text-sm">
                                 <thead className="bg-gray-100 text-gray-600 uppercase text-xs">
@@ -317,14 +275,14 @@ const AdminClient = () => {
                                                 {verification.artist?.artistName || "Desconocido"}
                                             </td>
                                             <td className="px-4 py-3">
-                                                <VideoLink videoUrl={verification.videoUrl} authToken={authToken} />
+                                                <VideoLink videoUrl={verification.videoUrl} />
                                             </td>
                                             <td className="px-4 py-3">
                                                 {new Date(verification.date).toLocaleString()}
                                             </td>
                                             <td className="px-4 py-3">
                                                 <span className={`px-2 py-1 rounded text-xs font-semibold
-    ${verification.status === 'PENDING'
+                                                    ${verification.status === 'PENDING'
                                                         ? 'bg-yellow-100 text-yellow-700'
                                                         : verification.status === 'REJECTED'
                                                             ? 'bg-red-100 text-red-700'
@@ -334,7 +292,7 @@ const AdminClient = () => {
                                                 </span>
                                             </td>
                                             <td className="px-4 py-3 text-center">
-                                                {verification.status == 'PENDING' ? (
+                                                {verification.status === 'PENDING' && (
                                                     <>
                                                         <button
                                                             onClick={() => verifyArtist(verification.artist.id, verification.id)}
@@ -342,17 +300,13 @@ const AdminClient = () => {
                                                         >
                                                             Verificar
                                                         </button>
-                                                        {verification.status === 'PENDING' && (
-                                                            <button
-                                                                onClick={() => refuseArtist(verification.id)}
-                                                                className="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600 transition"
-                                                            >
-                                                                Rechazar
-                                                            </button>
-                                                        )}
+                                                        <button
+                                                            onClick={() => refuseArtist(verification.id)}
+                                                            className="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600 transition"
+                                                        >
+                                                            Rechazar
+                                                        </button>
                                                     </>
-                                                ) : (
-                                                    <span className="text-gray-500 italic text-sm">Sin acciones pendientes</span>
                                                 )}
                                             </td>
                                         </tr>
@@ -363,14 +317,10 @@ const AdminClient = () => {
                             <p className="text-gray-500 text-sm text-center">No hay verificaciones pendientes.</p>
                         )}
                     </div>
-                    <div>USUARIOS PENALIZADOS</div>
                 </div>
             </div>
-
         </div>
-
     );
-
-}
+};
 
 export default AdminClient;

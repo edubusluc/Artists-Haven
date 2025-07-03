@@ -1,25 +1,14 @@
-import React, { useContext, useState, useEffect } from "react";
+import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTachometerAlt, faBoxOpen, faUsers, faBars, faShoppingCart, faUser, faRightFromBracket } from '@fortawesome/free-solid-svg-icons';
 import { Link } from "react-router-dom";
-import { useTranslation } from 'react-i18next';
 import Logout from "../Logout";
 
 const AdminHeader = () => {
-    const [shoppingCart, setShoppingCart] = useState({ items: [] });
     const [isDropdownVisible, setDropdownVisible] = useState(false);
     const [authToken] = useState(localStorage.getItem("authToken"));
     const [isSidebarVisible, setSidebarVisible] = useState(false);
     const [isSidebarVisibleLeft, setSidebarVisibleLeft] = useState(false);
-    const { t, i18n } = useTranslation();
-
-    const changeLanguage = (lng) => {
-        i18n.changeLanguage(lng);
-    };
-
-    const handleMouseEnter = () => {
-        setDropdownVisible(true);
-    };
 
     const handleMouseLeave = () => {
         setDropdownVisible(false);

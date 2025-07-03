@@ -32,6 +32,7 @@ const ArtistDashboard = () => {
         window.scrollTo(0, 0);
     }, []);
 
+    console.log(data)
 
     useEffect(() => {
         if (!authToken || role !== 'ARTIST') return;
@@ -131,7 +132,10 @@ const ArtistDashboard = () => {
 
     };
 
-    const getStatusProps = (status) => STATUS_MAP[status] || DEFAULT_STATUS;
+    const getStatusProps = (status) => {
+        const statusStr = typeof status === 'string' ? status.toUpperCase() : 'NOT_VERIFIED';
+        return STATUS_MAP[statusStr] || DEFAULT_STATUS;
+    };
 
     const getLabel = (status) => getStatusProps(status).label;
     const getIconColor = (status) => getStatusProps(status).iconColor;
