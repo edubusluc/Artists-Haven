@@ -290,16 +290,21 @@ public class AdminController {
             @ApiResponse(responseCode = "500", description = "Internal server error occurred while updating the order status", content = @Content(mediaType = "text/plain"))
     })
     @PostMapping("/updateStatus")
-    public ResponseEntity<String> updateOrderStatus(
+    public ResponseEntity<Map<String, String>> updateOrderStatus(
             @Parameter(description = "Request payload containing order ID and new status", required = true) @RequestBody OrderStatusUpdateDTO request) {
         try {
             adminService.updateOrderStatus(request.getOrderId(), request.getStatus());
-            return ResponseEntity.ok("Order status updated successfully.");
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Order status updated successfully.");
+            return ResponseEntity.ok(response);
         } catch (EntityNotFoundException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+            Map<String, String> response = new HashMap<>();
+            response.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("An error occurred while updating the order status.");
+            Map<String, String> response = new HashMap<>();
+            response.put("error", "An error occurred while updating the order status.");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
 

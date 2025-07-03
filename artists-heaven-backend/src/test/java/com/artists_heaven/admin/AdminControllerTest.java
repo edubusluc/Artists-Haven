@@ -408,7 +408,7 @@ class AdminControllerTest {
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("{\"orderId\": 1, \"status\": \"PAID\"}"))
                                 .andExpect(status().isOk())
-                                .andExpect(content().string("Order status updated successfully."));
+                                .andExpect(jsonPath("$.message").value("Order status updated successfully."));
         }
 
         @Test
@@ -429,7 +429,7 @@ class AdminControllerTest {
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("{\"orderId\": 1, \"status\": \"PAID\"}"))
                                 .andExpect(status().isNotFound()) // Verificamos que la respuesta es 404 NOT FOUND
-                                .andExpect(content().string("Order not found with id: " + orderId)); // Verificamos el
+                                .andExpect(jsonPath("$.error").value("Order not found with id: " + orderId)); // Verificamos el
                                                                                                      // mensaje de error
         }
 
@@ -452,7 +452,7 @@ class AdminControllerTest {
                                 .content("{\"orderId\": 1, \"status\": \"PAID\"}"))
                                 .andExpect(status().isInternalServerError()) // Verificamos que la respuesta es 500
                                                                              // INTERNAL SERVER ERROR
-                                .andExpect(content().string("An error occurred while updating the order status.")); // Verificamos
+                                .andExpect(jsonPath("$.error").value("An error occurred while updating the order status.")); // Verificamos
                                                                                                                     // el
                                                                                                                     // mensaje
                                                                                                                     // de

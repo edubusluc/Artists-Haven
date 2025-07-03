@@ -6,6 +6,7 @@ import SalesChart from '../charts/SalesChart';
 import TopSellingItemsChart from '../charts/TopSellingItemsChart';
 import NonAuthorise from '../NonAuthorise';
 import { Link } from 'react-router-dom';
+import { getArtistDashboardStatistics } from '../../services/artistServices';
 
 const ArtistDashboard = () => {
     const currentYear = new Date().getFullYear();
@@ -31,6 +32,7 @@ const ArtistDashboard = () => {
         window.scrollTo(0, 0);
     }, []);
 
+    console.log(data)
 
     useEffect(() => {
         if (!authToken || role !== 'ARTIST') return;
@@ -39,15 +41,7 @@ const ArtistDashboard = () => {
 
         const fetchData = async () => {
             try {
-                const response = await fetch(`/api/artists/dashboard?year=${year}`, {
-                    method: "GET",
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`,
-                    },
-                    signal: controller.signal,
-                });
-                if (!response.ok) throw new Error('Error al obtener datos');
-                const data = await response.json();
+                const data = await getArtistDashboardStatistics(authToken, year)
                 setData({
                     ...data,
                     futureEvents: data.futureEvents ?? 0,
@@ -138,7 +132,10 @@ const ArtistDashboard = () => {
 
     };
 
-    const getStatusProps = (status) => STATUS_MAP[status] || DEFAULT_STATUS;
+    const getStatusProps = (status) => {
+        const statusStr = typeof status === 'string' ? status.toUpperCase() : 'NOT_VERIFIED';
+        return STATUS_MAP[statusStr] || DEFAULT_STATUS;
+    };
 
     const getLabel = (status) => getStatusProps(status).label;
     const getIconColor = (status) => getStatusProps(status).iconColor;

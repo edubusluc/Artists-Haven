@@ -1,20 +1,24 @@
 import Footer from '../Footer';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faBug, faEnvelope, faShieldAlt, faExclamationCircle, faLock, faCoffee, faSackDollar, faShirt, faUser, faMusic } from '@fortawesome/free-solid-svg-icons';
+import { faBug, faShieldAlt, faExclamationCircle, faLock, faCoffee, faSackDollar, faShirt, faUser, faMusic } from '@fortawesome/free-solid-svg-icons';
 import SalesChart from '../charts/SalesChart';
 import CountStatusPieChart from '../charts/CountPieChart';
 import TopSellingItemsChart from '../charts/TopSellingItemsChart';
 import NonAuthorise from '../NonAuthorise';
+import { getStatisticsPerYear } from '../../services/adminServices';
+
+const categoryDetails = {
+    'FEATURE_REQUEST': { icon: faCoffee, color: 'bg-blue-300', iconColor: 'text-blue-600' },
+    'BUG_REPORT': { icon: faBug, color: 'bg-red-300', iconColor: 'text-red-600' },
+    'ABUSE_REPORT': { icon: faExclamationCircle, color: 'bg-yellow-300', iconColor: 'text-yellow-600' },
+    'ISSUE_REPORT': { icon: faLock, color: 'bg-orange-300', iconColor: 'text-orange-600' },
+    'SECURITY_REPORT': { icon: faShieldAlt, color: 'bg-purple-300', iconColor: 'text-purple-600' },
+};
 
 const AdminDashboard = () => {
     const currentYear = new Date().getFullYear();
     const role = localStorage.getItem("role");
-
-    const yearsOptions = [];
-    for (let y = currentYear; y >= currentYear - 5; y--) {
-        yearsOptions.push(y);
-    }
 
     const [year, setYear] = useState(currentYear);
     const [data, setData] = useState({
@@ -30,47 +34,37 @@ const AdminDashboard = () => {
         mostCountrySold: {}
     });
 
+    const yearsOptions = useMemo(() => {
+        return Array.from({ length: 6 }, (_, i) => currentYear - i);
+    }, [currentYear]);
+
     const [authToken] = useState(localStorage.getItem("authToken"));
 
-    useEffect(() => {
+    const fetchData = useCallback(async () => {
         if (!authToken || role !== 'ADMIN') return;
 
         const controller = new AbortController();
-
-        const fetchData = async () => {
-            try {
-                const response = await fetch(`/api/admin/staticsPerYear?year=${year}`, {
-                    method: "GET",
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`,
-                    },
-                    signal: controller.signal,
-                });
-                if (!response.ok) throw new Error('Error al obtener datos');
-                const data = await response.json();
-                setData({
-                    ...data,
-                    incomePerYear: data.incomePerYear ?? 0,
-                });
-            } catch (error) {
-                if (error.name !== 'AbortError') {
-                    console.error(error);
-                }
+        try {
+            const data = await getStatisticsPerYear(authToken, year);
+            setData(prevData => ({
+                ...prevData,
+                ...data,
+                incomePerYear: data.incomePerYear ?? 0
+            }));
+        } catch (error) {
+            if (error.name !== 'AbortError') {
+                console.error('Error fetching statistics:', error);
             }
-        };
-        fetchData();
-        return () => {
-            controller.abort(); 
-        };
-    }, [authToken, year]);
+        }
+    }, [authToken, role, year]);
 
-    const categoryDetails = {
-        'FEATURE_REQUEST': { icon: faCoffee, color: 'bg-blue-300', iconColor: 'text-blue-600' },
-        'BUG_REPORT': { icon: faBug, color: 'bg-red-300', iconColor: 'text-red-600' },
-        'ABUSE_REPORT': { icon: faExclamationCircle, color: 'bg-yellow-300', iconColor: 'text-yellow-600' },
-        'ISSUE_REPORT': { icon: faLock, color: 'bg-orange-300', iconColor: 'text-orange-600' },
-        'SECURITY_REPORT': { icon: faShieldAlt, color: 'bg-purple-300', iconColor: 'text-purple-600' },
-    };
+
+    useEffect(() => {
+        fetchData();
+        return () => fetchData();
+    }, [fetchData]);
+
+
 
     const MetricCard = ({ icon, value, title, iconColor, bgColor }) => (
         <div className="flex-1 bg-white shadow-lg rounded-lg p-4 m-2 flex items-center">
@@ -86,8 +80,8 @@ const AdminDashboard = () => {
 
     const ReportCard = ({ category, count }) => {
         const { icon, color, iconColor } = categoryDetails[category] || {};
+        if (!icon) return null;
         return (
-            icon ? (
                 <div className="bg-gray-50 p-4 rounded-lg m-2 flex flex-col md:flex-row items-center justify-between w-full max-w-xs md:max-w-sm shadow-md overflow-hidden">
                     <div className={`mr-2 px-3 py-3 rounded-full ${color} w-12 h-12 flex items-center justify-center mb-4 md:mb-0`}>
                         <FontAwesomeIcon icon={icon} className={`${iconColor} text-2xl md:text-3xl`} />
@@ -97,7 +91,6 @@ const AdminDashboard = () => {
                         <p className="text-lg md:text-xl font-bold text-gray-900">{count ?? 0}</p>
                     </div>
                 </div>
-            ) : null
         );
     };
 
