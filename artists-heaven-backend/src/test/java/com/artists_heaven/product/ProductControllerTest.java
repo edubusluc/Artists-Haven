@@ -615,6 +615,63 @@ class ProductControllerTest {
                                 .andExpect(status().isNotFound());
         }
 
+        @Test
+        void testGetTshirts_Success() throws Exception {
+                List<Product> mockProducts = List.of(new Product());
+                when(productService.findTshirtsProduct()).thenReturn(mockProducts);
+
+                mockMvc.perform(get("/api/product/tshirt")
+                                .accept(MediaType.APPLICATION_JSON))
+                                .andExpect(status().isOk());
+        }
+
+        @Test
+        void testGetTshirts_Failure() throws Exception {
+                when(productService.findTshirtsProduct()).thenThrow(new RuntimeException("Service error"));
+
+                mockMvc.perform(get("/api/product/tshirt")
+                                .accept(MediaType.APPLICATION_JSON))
+                                .andExpect(status().isNotFound());
+        }
+
+        @Test
+        void testGetPants_Success() throws Exception {
+                List<Product> mockProducts = List.of(new Product());
+                when(productService.findPantsProduct()).thenReturn(mockProducts);
+
+                mockMvc.perform(get("/api/product/pants")
+                                .accept(MediaType.APPLICATION_JSON))
+                                .andExpect(status().isOk());
+        }
+
+        @Test
+        void testGetPants_Failure() throws Exception {
+                when(productService.findPantsProduct()).thenThrow(new RuntimeException("Service error"));
+
+                mockMvc.perform(get("/api/product/pants")
+                                .accept(MediaType.APPLICATION_JSON))
+                                .andExpect(status().isNotFound());
+        }
+
+        @Test
+        void testGetAccessories_Success() throws Exception {
+                List<Product> mockProducts = List.of(new Product());
+                when(productService.findAccesoriesProduct()).thenReturn(mockProducts);
+
+                mockMvc.perform(get("/api/product/accessories")
+                                .accept(MediaType.APPLICATION_JSON))
+                                .andExpect(status().isOk());
+        }
+
+        @Test
+        void testGetAccessories_Failure() throws Exception {
+                when(productService.findAccesoriesProduct()).thenThrow(new RuntimeException("Service error"));
+
+                mockMvc.perform(get("/api/product/accessories")
+                                .accept(MediaType.APPLICATION_JSON))
+                                .andExpect(status().isNotFound());
+        }
+
         @AfterEach
         void tearDown() {
                 SecurityContextHolder.clearContext();

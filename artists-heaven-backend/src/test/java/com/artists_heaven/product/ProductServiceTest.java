@@ -27,8 +27,6 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.artists_heaven.admin.CategoryDTO;
 
-import jakarta.transaction.Transactional;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -67,7 +65,6 @@ class ProductServiceTest {
     }
 
     @Test
-    @Transactional
     void registerProductTest() throws Exception {
         ProductDTO productDTO = new ProductDTO();
         productDTO.setCategories(new HashSet<>());
@@ -76,6 +73,8 @@ class ProductServiceTest {
         productDTO.setPrice(100.0f);
         productDTO.setSizes(new HashMap<>());
         productDTO.setImages(new ArrayList<>());
+        productDTO.setSection(Section.TSHIRT);
+        productDTO.setAvailableUnits(0);
 
         Product product = new Product();
         product.setCategories(productDTO.getCategories());
@@ -102,6 +101,8 @@ class ProductServiceTest {
         productDTO.setPrice(100.0f);
         productDTO.setSizes(new HashMap<>());
         productDTO.setImages(new ArrayList<>());
+        productDTO.setSection(Section.TSHIRT);
+        productDTO.setAvailableUnits(0);
 
         when(productRepository.save(any(Product.class))).thenThrow(new RuntimeException("Database error"));
 
@@ -110,6 +111,36 @@ class ProductServiceTest {
         });
 
         assertEquals("Unable to create the product", exception.getMessage());
+        verify(productRepository, times(1)).save(any(Product.class));
+    }
+
+    @Test
+    void registerProductWithAvailableUnitsTest() {
+        ProductDTO productDTO = new ProductDTO();
+        productDTO.setCategories(new HashSet<>());
+        productDTO.setDescription("Product with units");
+        productDTO.setName("Product Name");
+        productDTO.setPrice(150.0f);
+        productDTO.setSizes(new HashMap<>());
+        productDTO.setImages(new ArrayList<>());
+        productDTO.setSection(Section.TSHIRT);
+        productDTO.setAvailableUnits(10);
+
+        Product product = new Product();
+        product.setCategories(productDTO.getCategories());
+        product.setDescription(productDTO.getDescription());
+        product.setName(productDTO.getName());
+        product.setPrice(productDTO.getPrice());
+        product.setAvailableUnits(productDTO.getAvailableUnits());
+        product.setImages(productDTO.getImages());
+        product.setSection(productDTO.getSection());
+
+        when(productRepository.save(any(Product.class))).thenReturn(product);
+
+        Product result = productService.registerProduct(productDTO);
+
+        assertEquals(product, result);
+        assertEquals(10, result.getAvailableUnits());
         verify(productRepository, times(1)).save(any(Product.class));
     }
 
@@ -715,6 +746,50 @@ class ProductServiceTest {
 
         List<Product> result = productService.findProductsByArtist("test");
         assertNotNull(result);
+    }
+
+    @Test
+    void testFindAllProducts() {
+        List<Product> mockProducts = List.of(new Product(), new Product());
+        when(productRepository.findAll()).thenReturn(mockProducts);
+
+        List<Product> result = productService.findAllProducts();
+
+        assertEquals(2, result.size());
+        verify(productRepository, times(1)).findAll();
+    }
+
+    @Test
+    void testFindTshirtsProduct() {
+        List<Product> mockProducts = List.of(new Product());
+        when(productRepository.findBySection(Section.TSHIRT)).thenReturn(mockProducts);
+
+        List<Product> result = productService.findTshirtsProduct();
+
+        assertEquals(1, result.size());
+        verify(productRepository, times(1)).findBySection(Section.TSHIRT);
+    }
+
+    @Test
+    void testFindPantsProduct() {
+        List<Product> mockProducts = List.of(new Product());
+        when(productRepository.findBySection(Section.PANTS)).thenReturn(mockProducts);
+
+        List<Product> result = productService.findPantsProduct();
+
+        assertEquals(1, result.size());
+        verify(productRepository, times(1)).findBySection(Section.PANTS);
+    }
+
+    @Test
+    void testFindAccessoriesProduct() {
+        List<Product> mockProducts = List.of(new Product());
+        when(productRepository.findBySection(Section.ACCESSORIES)).thenReturn(mockProducts);
+
+        List<Product> result = productService.findAccesoriesProduct();
+
+        assertEquals(1, result.size());
+        verify(productRepository, times(1)).findBySection(Section.ACCESSORIES);
     }
 
 }
