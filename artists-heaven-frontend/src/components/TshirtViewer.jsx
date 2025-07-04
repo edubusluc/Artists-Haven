@@ -21,7 +21,7 @@ const TshirtModel = () => {
     }
   });
 
-  return <primitive ref={modelRef} object={scene} scale={2} position={[0, -45, 0]} />;
+  return <primitive ref={modelRef} object={scene} scale={2} position={[0, -48, 0]} />;
 };
 
 const TshirtViewer = () => {
@@ -60,7 +60,7 @@ const TshirtViewer = () => {
       </Canvas>
 
       {/* Texto por delante */}
-      <div className="absolute top-[60%] md:top-[65%] left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center z-20 pointer-events-none px-4">
+      <div className="absolute top-[65%] md:top-[75%] left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center z-20 pointer-events-none px-4">
         <h2 className="main-view-font font-light uppercase italic tracking-widest
                  text-xl sm:text-2xl md:text-3xl lg:text-4xl leading-tight drop-shadow">
           ARTISTS
@@ -75,7 +75,7 @@ const TshirtViewer = () => {
       </div>
 
       {/* Botón de orden */}
-      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-10">
+      <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-10">
         <button className="button-yellow-border">
           ORDER NOW
         </button>

@@ -92,7 +92,7 @@ const AdminProductList = () => {
     useEffect(() => {
         window.scrollTo(0, 0);
     }, [page]);
-
+ 
     const handleSearchChange = (e) => setSearchTerm(e.target.value);
 
     const nextPage = () => {

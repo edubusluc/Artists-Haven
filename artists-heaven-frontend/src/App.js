@@ -44,6 +44,9 @@ import ProductsList from './components/product/ProductsList';
 import EditProduct from './components/product/EditProduct';
 import ProductDetails from './components/product/ProductDetails';
 import PromoteProductForm from './components/product/PromoteProductForm';
+import TshirtList from './components/product/TshirtList';
+import PantsList from './components/product/PantsList';
+import AccessoriesList from './components/product/AccessoriesList';
 
 // Components - Events
 import CreateEventForm from './components/Event/CreateEventForm';
@@ -83,7 +86,7 @@ const AppRoutes = ({ role }) => (
     <Route path="/verification" element={<VerificationForm />} />
     <Route path="/admin/verification/pending" element={<VerificationList />} />
     <Route path="/product/new" element={<CreateProductForm />} />
-    <Route path="/product/all" element={<ProductsList />} />
+    <Route path="/shop" element={<ProductsList />} />
     <Route path="/product/edit/:id" element={<EditProduct />} />
     <Route path="/product/details/:id" element={<ProductDetails />} />
     <Route path="/product/promote/:id" element={<PromoteProductForm />} />
@@ -102,6 +105,9 @@ const AppRoutes = ({ role }) => (
     <Route path="/admin/orderDetails/:id" element={<AdminOrderDetails />} />
     <Route path="/artist/dashboard" element={<ArtistDashboard />} />
     <Route path="/artist/:name" element={<ArtistView />} />
+    <Route path="/shop/camisetas" element={<TshirtList/>}/>
+    <Route path="/shop/pantalones" element={<PantsList/>}/>
+    <Route path="/shop/accesorios" element={<AccessoriesList/>}/>
   </Routes>
 );
 
@@ -135,9 +141,7 @@ const App = () => {
         <Suspense fallback={<div className="text-white">Cargando traducciones...</div>}>
           <Router>
             {getHeader()}
-            <div className={`min-h-screen pt-10 bg-gradient-to-r ${backgroundClass}`}>
               <AppRoutes role={role} />
-            </div>
           </Router>
         </Suspense>
       </CartProvider>
