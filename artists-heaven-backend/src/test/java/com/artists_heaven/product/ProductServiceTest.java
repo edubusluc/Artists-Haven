@@ -10,6 +10,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.nio.file.Path;
@@ -27,6 +28,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.artists_heaven.admin.CategoryDTO;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -790,6 +792,44 @@ class ProductServiceTest {
 
         assertEquals(1, result.size());
         verify(productRepository, times(1)).findBySection(Section.ACCESSORIES);
+    }
+
+    @Test
+    void testAccessoryWithSize_ThrowsException() {
+        Product product = new Product();
+        product.setSection(Section.ACCESSORIES);
+
+        Map<String, Integer> sizes = new HashMap<>();
+        sizes.put("M", 1);
+        product.setSize(sizes);
+
+        product.setAvailableUnits(10);
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, product::validateProduct);
+        assertEquals("Los accesorios no pueden tener tallas asignadas.", exception.getMessage());
+    }
+
+    @Test
+    void testAccessoryWithNullUnits_ThrowsException() {
+        Product product = new Product();
+        product.setSection(Section.ACCESSORIES);
+        product.setSize(null);
+
+        product.setAvailableUnits(null);
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, product::validateProduct);
+        assertEquals("La cantidad de unidades disponibles debe ser mayor o igual a 0 para los accesorios.",
+                exception.getMessage());
+    }
+
+    @Test
+    void testValidAccessory_NoException() {
+        Product product = new Product();
+        product.setSection(Section.ACCESSORIES);
+        product.setSize(null); 
+        product.setAvailableUnits(5); 
+
+        assertDoesNotThrow(product::validateProduct);
     }
 
 }

@@ -20,6 +20,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.hamcrest.Matchers.hasSize;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -82,7 +83,6 @@ class ProductControllerTest {
         }
 
         @Test
-        @Transactional
         void testGetAllProducts() throws Exception {
                 List<Product> products = new ArrayList<>();
                 Product product1 = new Product();
@@ -112,6 +112,51 @@ class ProductControllerTest {
 
                 mockMvc.perform(get("/api/product/allProducts"))
                                 .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.content[0].name").value("Product1"));
+        }
+
+        @Test
+        void testGetAllProducts_SizeMinusOne() throws Exception {
+                List<Product> products = new ArrayList<>();
+                Product product1 = new Product();
+                product1.setName("Product1");
+                products.add(product1);
+
+                Product product2 = new Product();
+                product2.setName("Product2");
+                products.add(product2);
+
+                when(productService.findAllProducts()).thenReturn(products);
+
+                mockMvc.perform(get("/api/product/allProducts")
+                                .param("size", "-1"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.content", hasSize(2)))
+                                .andExpect(jsonPath("$.content[0].name").value("Product1"))
+                                .andExpect(jsonPath("$.content[1].name").value("Product2"));
+        }
+
+        @Test
+        void testGetAllProducts_WithPagination_NoSearch() throws Exception {
+                List<Product> products = new ArrayList<>();
+                Product product1 = new Product();
+                product1.setName("Product1");
+                products.add(product1);
+
+                Product product2 = new Product();
+                product2.setName("Product2");
+                products.add(product2);
+
+                Pageable pageable = PageRequest.of(0, 1);
+                Page<Product> page = new PageImpl<>(products, pageable, products.size());
+
+                when(productService.getAllProducts(any(Pageable.class))).thenReturn(page);
+
+                mockMvc.perform(get("/api/product/allProducts")
+                                .param("page", "0")
+                                .param("size", "1"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.content", hasSize(2)))
                                 .andExpect(jsonPath("$.content[0].name").value("Product1"));
         }
 
