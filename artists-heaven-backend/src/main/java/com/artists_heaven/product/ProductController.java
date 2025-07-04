@@ -47,16 +47,28 @@ public class ProductController {
     }
 
     @GetMapping("/allProducts")
-    @Operation(summary = "Retrieve paginated list of products", description = "Returns a paginated list of products. Supports optional search by product name or description.")
+    @Operation(summary = "Retrieve list of products", description = "Returns a list of products. Supports optional search by product name or description. If size = -1, returns all matching products.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved paginated products list", content = @Content(mediaType = "application/json", schema = @Schema(implementation = PageResponse.class)))
+            @ApiResponse(responseCode = "200", description = "Successfully retrieved products list", content = @Content(mediaType = "application/json", schema = @Schema(implementation = PageResponse.class)))
     })
     public PageResponse<Product> getAllProducts(
             @Parameter(description = "Page number to retrieve (0-based)", example = "0") @RequestParam(defaultValue = "0") int page,
 
-            @Parameter(description = "Number of products per page", example = "6") @RequestParam(defaultValue = "6") int size,
+            @Parameter(description = "Number of products per page. Use -1 to retrieve all products", example = "6") @RequestParam(defaultValue = "6") int size,
 
             @Parameter(description = "Optional search keyword to filter products by name or description", example = "laptop", required = false) @RequestParam(required = false) String search) {
+
+        if (size == -1) {
+            List<Product> products;
+            products = productService.findAllProducts();
+            return new PageResponse<>(
+                    products,
+                    0,
+                    products.size(),
+                    products.size(),
+                    1,
+                    true);
+        }
 
         PageRequest pageRequest = PageRequest.of(page, size);
         Page<Product> result;
@@ -267,15 +279,47 @@ public class ProductController {
     public ResponseEntity<List<ProductDTO>> getSorted12Product() {
         try {
             List<Product> product12 = productService.get12ProductsSortedByName();
-            List<ProductDTO> product12DTO = product12.stream()
-                    .map(this::mapToProductDTO)
-                    .toList();
-            return ResponseEntity.ok(product12DTO);
-
+            return buildProductResponse(product12);
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(null);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
         }
+    }
+
+    @GetMapping("tshirt")
+    public ResponseEntity<List<ProductDTO>> getTshirts() {
+        try {
+            List<Product> products = productService.findTshirtsProduct();
+            return buildProductResponse(products);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+        }
+    }
+
+    @GetMapping("pants")
+    public ResponseEntity<List<ProductDTO>> getPants() {
+        try {
+            List<Product> products = productService.findPantsProduct();
+            return buildProductResponse(products);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+        }
+    }
+
+    @GetMapping("accessories")
+    public ResponseEntity<List<ProductDTO>> getAccessories() {
+        try {
+            List<Product> products = productService.findAccesoriesProduct();
+            return buildProductResponse(products);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+        }
+    }
+
+    private ResponseEntity<List<ProductDTO>> buildProductResponse(List<Product> products) {
+        List<ProductDTO> productDTOs = products.stream()
+                .map(this::mapToProductDTO)
+                .toList();
+        return ResponseEntity.ok(productDTOs);
     }
 
     private ProductDTO mapToProductDTO(Product product) {

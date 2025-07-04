@@ -33,4 +33,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     @Query("SELECT p FROM Product p JOIN p.categories c WHERE c.name = :artistName")
     List<Product> findProductsByArtistCategory(@Param("artistName") String artistName);
 
+    @Query("SELECT p FROM Product p WHERE p.section = :section")
+    List<Product> findBySection(@Param("section") Section section);
+
 }
