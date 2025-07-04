@@ -25,4 +25,13 @@ public class PageResponse<T> {
         this.totalPages = page.getTotalPages();
         this.last = page.isLast();
     }
+
+    public PageResponse(List<T> content, int pageNumber, int pageSize, long totalElements, int totalPages, boolean last) {
+    this.content = content;
+    this.pageNumber = pageNumber;
+    this.pageSize = pageSize;
+    this.totalElements = totalElements;
+    this.totalPages = totalPages;
+    this.last = last;
+}
 }
