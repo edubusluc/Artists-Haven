@@ -20,6 +20,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.hamcrest.Matchers.hasSize;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -82,7 +83,6 @@ class ProductControllerTest {
         }
 
         @Test
-        @Transactional
         void testGetAllProducts() throws Exception {
                 List<Product> products = new ArrayList<>();
                 Product product1 = new Product();
@@ -112,6 +112,51 @@ class ProductControllerTest {
 
                 mockMvc.perform(get("/api/product/allProducts"))
                                 .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.content[0].name").value("Product1"));
+        }
+
+        @Test
+        void testGetAllProducts_SizeMinusOne() throws Exception {
+                List<Product> products = new ArrayList<>();
+                Product product1 = new Product();
+                product1.setName("Product1");
+                products.add(product1);
+
+                Product product2 = new Product();
+                product2.setName("Product2");
+                products.add(product2);
+
+                when(productService.findAllProducts()).thenReturn(products);
+
+                mockMvc.perform(get("/api/product/allProducts")
+                                .param("size", "-1"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.content", hasSize(2)))
+                                .andExpect(jsonPath("$.content[0].name").value("Product1"))
+                                .andExpect(jsonPath("$.content[1].name").value("Product2"));
+        }
+
+        @Test
+        void testGetAllProducts_WithPagination_NoSearch() throws Exception {
+                List<Product> products = new ArrayList<>();
+                Product product1 = new Product();
+                product1.setName("Product1");
+                products.add(product1);
+
+                Product product2 = new Product();
+                product2.setName("Product2");
+                products.add(product2);
+
+                Pageable pageable = PageRequest.of(0, 1);
+                Page<Product> page = new PageImpl<>(products, pageable, products.size());
+
+                when(productService.getAllProducts(any(Pageable.class))).thenReturn(page);
+
+                mockMvc.perform(get("/api/product/allProducts")
+                                .param("page", "0")
+                                .param("size", "1"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.content", hasSize(2)))
                                 .andExpect(jsonPath("$.content[0].name").value("Product1"));
         }
 
@@ -611,6 +656,63 @@ class ProductControllerTest {
                 when(productService.get12ProductsSortedByName()).thenThrow(new RuntimeException("Error"));
 
                 mockMvc.perform(get("/api/product/sorted12Product")
+                                .accept(MediaType.APPLICATION_JSON))
+                                .andExpect(status().isNotFound());
+        }
+
+        @Test
+        void testGetTshirts_Success() throws Exception {
+                List<Product> mockProducts = List.of(new Product());
+                when(productService.findTshirtsProduct()).thenReturn(mockProducts);
+
+                mockMvc.perform(get("/api/product/tshirt")
+                                .accept(MediaType.APPLICATION_JSON))
+                                .andExpect(status().isOk());
+        }
+
+        @Test
+        void testGetTshirts_Failure() throws Exception {
+                when(productService.findTshirtsProduct()).thenThrow(new RuntimeException("Service error"));
+
+                mockMvc.perform(get("/api/product/tshirt")
+                                .accept(MediaType.APPLICATION_JSON))
+                                .andExpect(status().isNotFound());
+        }
+
+        @Test
+        void testGetPants_Success() throws Exception {
+                List<Product> mockProducts = List.of(new Product());
+                when(productService.findPantsProduct()).thenReturn(mockProducts);
+
+                mockMvc.perform(get("/api/product/pants")
+                                .accept(MediaType.APPLICATION_JSON))
+                                .andExpect(status().isOk());
+        }
+
+        @Test
+        void testGetPants_Failure() throws Exception {
+                when(productService.findPantsProduct()).thenThrow(new RuntimeException("Service error"));
+
+                mockMvc.perform(get("/api/product/pants")
+                                .accept(MediaType.APPLICATION_JSON))
+                                .andExpect(status().isNotFound());
+        }
+
+        @Test
+        void testGetAccessories_Success() throws Exception {
+                List<Product> mockProducts = List.of(new Product());
+                when(productService.findAccesoriesProduct()).thenReturn(mockProducts);
+
+                mockMvc.perform(get("/api/product/accessories")
+                                .accept(MediaType.APPLICATION_JSON))
+                                .andExpect(status().isOk());
+        }
+
+        @Test
+        void testGetAccessories_Failure() throws Exception {
+                when(productService.findAccesoriesProduct()).thenThrow(new RuntimeException("Service error"));
+
+                mockMvc.perform(get("/api/product/accessories")
                                 .accept(MediaType.APPLICATION_JSON))
                                 .andExpect(status().isNotFound());
         }

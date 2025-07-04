@@ -54,8 +54,14 @@ public class ProductService {
             product.setDescription(productDTO.getDescription());
             product.setName(productDTO.getName());
             product.setPrice(productDTO.getPrice());
-            product.setSize(productDTO.getSizes());
             product.setImages(productDTO.getImages());
+            product.setSection(productDTO.getSection());
+
+            if(productDTO.getAvailableUnits() != 0){
+                product.setAvailableUnits(productDTO.getAvailableUnits());
+            }else{
+                product.setSize(productDTO.getSizes());
+            }
             // Save the product to the repository and return the saved product
             return productRepository.save(product);
         } catch (Exception e) {
@@ -363,7 +369,7 @@ public class ProductService {
 
     public void editCategory(CategoryDTO categoryDTO) {
         Optional<Category> optionalCategory = categoryRepository.findById(categoryDTO.getId());
-        if(!optionalCategory.isPresent()){
+        if (!optionalCategory.isPresent()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Category with the id '" + categoryDTO.getId() + "' not exists.");
         }
@@ -374,6 +380,22 @@ public class ProductService {
 
     public List<Product> findProductsByArtist(String artistName) {
         return productRepository.findProductsByArtistCategory(artistName);
+    }
+
+    public List<Product> findAllProducts() {
+        return productRepository.findAll();
+    }
+
+    public List<Product> findTshirtsProduct() {
+        return productRepository.findBySection(Section.TSHIRT);
+    }
+
+    public List<Product> findPantsProduct() {
+         return productRepository.findBySection(Section.PANTS);
+    }
+
+    public List<Product> findAccesoriesProduct() {
+        return productRepository.findBySection(Section.ACCESSORIES);
     }
 
 }

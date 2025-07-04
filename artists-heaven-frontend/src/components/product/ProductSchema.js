@@ -4,11 +4,8 @@ import { Link } from "react-router-dom";
 import ProductCard from "./ProductCard";
 import SlidingPanel from "./SlidingPanel";
 
-const ProductList = () => {
+const ProductSchema = ({ endpoint, title }) => {
     const [products, setProducts] = useState([]);
-    const [page, setPage] = useState(0);
-    const [totalPages, setTotalPages] = useState(1);
-    const pageSize = 6;
     const [isFilterOpen, setIsFilterOpen] = useState(false);
 
     const [orderBy, setOrderBy] = useState("default");
@@ -21,70 +18,70 @@ const ProductList = () => {
     const [tempPriceRange, setTempPriceRange] = useState(priceRange);
     const [tempSelectedCategories, setTempSelectedCategories] = useState(selectedCategories);
 
-
     const [maxAbsolutePrice, setMaxAbsolutePrice] = useState(1000);
 
     useEffect(() => {
         window.scrollTo(0, 0);
-    }, [page]);
+    }, []);
 
     useEffect(() => {
-        fetch(`/api/product/allProducts?size=-1`)
+        fetch(endpoint)
             .then((response) => {
-                if (!response.ok) throw new Error("Hubo un error al obtener los productos");
+                if (!response.ok) throw new Error("Error al obtener productos");
                 return response.json();
             })
             .then((data) => {
-                setProducts(data.content);
-                setTotalPages(Math.ceil(data.content.length / pageSize));
-
-                const prices = data.content.map((p) => p.price);
+                setProducts(data);
+                const prices = data.map((p) => p.price);
                 const maxPrice = Math.max(...prices);
                 setMaxAbsolutePrice(maxPrice);
                 setPriceRange({ min: 0, max: maxPrice });
                 setTempPriceRange({ min: 0, max: maxPrice });
             })
             .catch((error) => console.error("Error:", error));
-    }, []);
+    }, [endpoint]);
 
-    console.log(products);
+    console.log(products)
+
     const categories = useMemo(() => {
-        const catsMap = new Map();  // Usar Map para evitar duplicados por id
+        const catsMap = new Map();
         products.forEach((p) => {
             if (p.categories && Array.isArray(p.categories)) {
                 p.categories.forEach((cat) => {
-                    catsMap.set(cat.id, cat); // Usamos id como clave para evitar duplicados
+                    catsMap.set(cat.id, cat);
                 });
             }
         });
-        return Array.from(catsMap.values()); // Array de objetos categoría únicos
+        return Array.from(catsMap.values());
     }, [products]);
 
-    console.log(categories)
+    const hasNonAccessoryProducts = useMemo(() => {
+        return products.some(product => product.section !== "ACCESSORIES");
+    }, [products]);
 
     const filteredProducts = useMemo(() => {
         let result = [...products];
 
-        // Filtro por tallas
         if (selectedSizes.length > 0) {
-            result = result.filter((product) =>
-                selectedSizes.some((size) => product.size?.[size] > 0)
-            );
+            result = result.filter((product) => {
+                // Si es accesorio, no se filtra por talla
+                if (product.section === "ACCESSORIES") return true;
+
+                // Si no es accesorio, aplicar filtro de tallas
+                return selectedSizes.some((size) => product.sizes?.[size] > 0);
+            });
         }
 
-        // Filtro por precio
         result = result.filter(
             (product) => product.price >= priceRange.min && product.price <= priceRange.max
         );
 
-        // Filtro por categorías
         if (selectedCategories.length > 0) {
             result = result.filter((product) =>
                 product.categories?.some((cat) => selectedCategories.includes(cat))
             );
         }
 
-        // Ordenar
         switch (orderBy) {
             case "az":
                 result.sort((a, b) => a.name.localeCompare(b.name));
@@ -102,11 +99,8 @@ const ProductList = () => {
                 break;
         }
 
-        setTotalPages(Math.ceil(result.length / pageSize));
-        if (page >= Math.ceil(result.length / pageSize)) setPage(0);
-
         return result;
-    }, [products, selectedSizes, priceRange, selectedCategories, orderBy, page, pageSize]);
+    }, [products, selectedSizes, priceRange, selectedCategories, orderBy]);
 
     const toggleTempSize = (size) => {
         setTempSelectedSizes((prev) =>
@@ -125,9 +119,7 @@ const ProductList = () => {
         setSelectedSizes(tempSelectedSizes);
         setPriceRange(tempPriceRange);
         setSelectedCategories(tempSelectedCategories);
-
         setIsFilterOpen(false);
-        setPage(0);
     };
 
     const handleClearFilters = () => {
@@ -142,7 +134,6 @@ const ProductList = () => {
         setTempSelectedCategories([]);
 
         setIsFilterOpen(false);
-        setPage(0);
     };
 
     useEffect(() => {
@@ -154,20 +145,12 @@ const ProductList = () => {
         }
     }, [isFilterOpen, orderBy, selectedSizes, priceRange, selectedCategories]);
 
-
     return (
         <>
-            <div
-                style={{
-                    padding: "20px",
-                    color: "white",
-                    minHeight: "100vh",
-                    marginTop: '40px'
-                }}
-            >
+            <div style={{ padding: "20px", color: "white", minHeight: "100vh", marginTop: '40px' }}>
                 <div className="flex justify-between">
                     <p className="custom-font-shop-regular mb-4" style={{ color: "black" }}>
-                        {filteredProducts.length} Products
+                        {filteredProducts.length} productos
                     </p>
                     <p
                         className="custom-font-shop-regular mb-4 cursor-pointer"
@@ -189,7 +172,6 @@ const ProductList = () => {
                 </div>
             </div>
 
-            {/* Panel separado por Portal */}
             <SlidingPanel
                 isOpen={isFilterOpen}
                 position="right"
@@ -221,20 +203,22 @@ const ProductList = () => {
                     </select>
                 </div>
 
-                <div className="p-4 custom-font-shop-regular mb-4" style={{ color: "black" }}>
-                    <p className="font-semibold mb-2">Tallas</p>
-                    {["XS", "S", "M", "L", "XL", "XXL"].map((size) => (
-                        <label key={size} className="inline-flex items-center mr-4 mb-2 cursor-pointer">
-                            <input
-                                type="checkbox"
-                                className="form-checkbox"
-                                checked={tempSelectedSizes.includes(size)}
-                                onChange={() => toggleTempSize(size)}
-                            />
-                            <span className="ml-2">{size}</span>
-                        </label>
-                    ))}
-                </div>
+                {hasNonAccessoryProducts && (
+                    <div className="p-4 custom-font-shop-regular mb-4" style={{ color: "black" }}>
+                        <p className="font-semibold mb-2">Tallas</p>
+                        {["XS", "S", "M", "L", "XL", "XXL"].map((size) => (
+                            <label key={size} className="inline-flex items-center mr-4 mb-2 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    className="form-checkbox"
+                                    checked={tempSelectedSizes.includes(size)}
+                                    onChange={() => toggleTempSize(size)}
+                                />
+                                <span className="ml-2">{size}</span>
+                            </label>
+                        ))}
+                    </div>
+                )}
 
                 {/* Categorías */}
                 <div className="p-4 custom-font-shop-regular mb-4" style={{ color: "black" }}>
@@ -302,4 +286,4 @@ const ProductList = () => {
     );
 };
 
-export default ProductList;
+export default ProductSchema;

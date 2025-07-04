@@ -8,6 +8,8 @@ const CreateProductForm = () => {
     price: "",
     sizes: { XS: 0, S: 0, M: 0, L: 0, XL: 0, XXL: 0 },
     categories: [],
+    section: "",
+    availableUnits: 0,
   });
 
   const [categoriesList, setCategoriesList] = useState([]);
@@ -37,6 +39,16 @@ const CreateProductForm = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setProduct({ ...product, [name]: value });
+  };
+
+  const handleSectionChange = (e) => {
+    const section = e.target.value;
+    setProduct({
+      ...product,
+      section: section,
+      sizes: section === "ACCESSORIES" ? {} : product.sizes, // Limpiar tamaños si es un accesorio
+      availableUnits: section === "ACCESSORIES" ? 1 : product.availableUnits // Establecer unidades disponibles solo si es un accesorio
+    });
   };
 
   const handleSizeChange = (e, size) => {
@@ -73,6 +85,15 @@ const CreateProductForm = () => {
       setValidationError("Debes seleccionar al menos una categoría.");
       return
     }
+    if (!product.section) {
+      setValidationError("Debes seleccionar una sección.");
+      return;
+    }
+
+    if (product.section === "ACCESSORIES" && (!product.availableUnits || product.availableUnits < 1)) {
+      setValidationError("Los accesorios deben tener al menos 1 unidad disponible.");
+      return;
+    }
     setValidationError("");
 
     const formData = new FormData();
@@ -100,7 +121,7 @@ const CreateProductForm = () => {
           categories: [],
         });
         setImages([]);
-        navigate("/product/all");
+        navigate("/admin/products/store");
       } else {
         throw new Error("No se pudo crear el producto.");
       }
@@ -115,9 +136,8 @@ const CreateProductForm = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-r from-gray-300 to-white  py-10 px-4 sm:px-10">
+    <div className="min-h-screen bg-gradient-to-r from-gray-300 to-white py-10 px-4 sm:px-10">
       <div className="max-w-4xl mx-auto bg-white shadow-md rounded-lg p-6">
-
         <h2 className="text-2xl font-bold mb-6 text-gray-700 text-center">Crear Nuevo Producto</h2>
 
         {validationError && (
@@ -163,22 +183,56 @@ const CreateProductForm = () => {
           </div>
 
           <div>
-            <label className="block font-semibold mb-2 text-sm text-gray-600">Tallas y Stock</label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-              {["XS", "S", "M", "L", "XL", "XXL"].map((size) => (
-                <div key={size}>
-                  <label className="block text-sm text-gray-500">{size}</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={product.sizes[size] || 0}
-                    onChange={(e) => handleSizeChange(e, size)}
-                    className="w-full border rounded px-3 py-1 text-sm"
-                  />
-                </div>
-              ))}
-            </div>
+            <label className="block font-semibold mb-2 text-sm text-gray-600">Sección</label>
+            <select
+              name="section"
+              value={product.section}
+              onChange={handleSectionChange} // Cambié el handle a uno que limpie las tallas si es un accesorio
+              className="w-full border rounded px-4 py-2 text-sm"
+              required
+            >
+              <option value="">Selecciona una sección</option>
+              <option value="TSHIRT">Camisetas</option>
+              <option value="PANTS">Pantalones</option>
+              <option value="ACCESSORIES">Accesorios</option>
+            </select>
           </div>
+
+          {/* Mostrar el campo de tallas y stock solo si el producto no es un accesorio */}
+          {product.section !== "ACCESSORIES" && (
+            <div>
+              <label className="block font-semibold mb-2 text-sm text-gray-600">Tallas y Stock</label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                {["XS", "S", "M", "L", "XL", "XXL"].map((size) => (
+                  <div key={size}>
+                    <label className="block text-sm text-gray-500">{size}</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={product.sizes[size] || 0}
+                      onChange={(e) => handleSizeChange(e, size)}
+                      className="w-full border rounded px-3 py-1 text-sm"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Mostrar el campo de unidades disponibles solo si el producto es un accesorio */}
+          {product.section === "ACCESSORIES" && (
+            <div>
+              <label className="block font-semibold mb-2 text-sm text-gray-600">Unidades disponibles</label>
+              <input
+                type="number"
+                min="1"
+                value={product.availableUnits}
+                onChange={(e) => setProduct({ ...product, availableUnits: e.target.value })}
+                className="w-full border rounded px-4 py-2 text-sm"
+                required
+              />
+            </div>
+          )}
 
           <div>
             <label className="block font-semibold mb-2 text-sm text-gray-600">Categorías</label>
@@ -222,6 +276,7 @@ const CreateProductForm = () => {
       </div>
     </div>
   );
+
 };
 
 export default CreateProductForm;

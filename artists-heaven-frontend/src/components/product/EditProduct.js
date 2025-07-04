@@ -10,8 +10,10 @@ const EditProduct = () => {
         description: "",
         price: "",
         sizes: {},
+        availableUnits: 1, // Unidades disponibles solo para accesorios
         categories: [],
         images: [],
+        section: "",
     });
 
     const [loading, setLoading] = useState(true);
@@ -23,13 +25,11 @@ const EditProduct = () => {
     const [authToken, setAuthToken] = useState(localStorage.getItem("authToken"));
     const rol = localStorage.getItem("role");
 
-
     // Cargar datos del producto al montar el componente
     useEffect(() => {
         if (rol !== "ADMIN") {
-            // Si el rol no es ADMIN, no realizar las peticiones
             setErrorMessage("No tienes permisos para acceder a esta página.");
-            return; // No hacer nada más si no es ADMIN
+            return;
         }
         fetch(`/api/product/details/${id}`, {
             method: "GET",
@@ -56,9 +56,8 @@ const EditProduct = () => {
     // Cargar lista de categorías
     useEffect(() => {
         if (rol !== "ADMIN") {
-            // Si el rol no es ADMIN, no realizar las peticiones
             setErrorMessage("No tienes permisos para acceder a esta página.");
-            return; // No hacer nada más si no es ADMIN
+            return;
         }
         fetch("/api/product/categories")
             .then((response) => response.json())
@@ -137,7 +136,6 @@ const EditProduct = () => {
     }
 
     if (rol !== "ADMIN") {
-        // Si el rol no es ADMIN, no hacemos la petición
         return "No tienes permisos para acceder a esta página";
     }
 
@@ -182,23 +180,41 @@ const EditProduct = () => {
                         />
                     </div>
 
-                    <div>
-                        <label className="block font-semibold mb-2 text-sm text-gray-600">Tallas y Stock</label>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                            {["XS", "S", "M", "L", "XL", "XXL"].map((size) => (
-                                <div key={size}>
-                                    <label className="block text-sm text-gray-500">{size}</label>
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        value={product.sizes[size] || ""}
-                                        onChange={(e) => handleSizeChange(e, size)}
-                                        className="w-full border rounded px-3 py-1 text-sm"
-                                    />
-                                </div>
-                            ))}
+                    {/* Mostrar el campo de tallas solo si el producto no es un accesorio */}
+                    {product.section !== "ACCESSORIES" && (
+                        <div>
+                            <label className="block font-semibold mb-2 text-sm text-gray-600">Tallas y Stock</label>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                                {["XS", "S", "M", "L", "XL", "XXL"].map((size) => (
+                                    <div key={size}>
+                                        <label className="block text-sm text-gray-500">{size}</label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            value={product.sizes[size] || ""}
+                                            onChange={(e) => handleSizeChange(e, size)}
+                                            className="w-full border rounded px-3 py-1 text-sm"
+                                        />
+                                    </div>
+                                ))}
+                            </div>
                         </div>
-                    </div>
+                    )}
+
+                    {/* Mostrar el campo de unidades disponibles solo si el producto es un accesorio */}
+                    {product.section === "ACCESSORIES" && (
+                        <div>
+                            <label className="block font-semibold mb-2 text-sm text-gray-600">Unidades disponibles</label>
+                            <input
+                                type="number"
+                                min="1"
+                                value={product.availableUnits}
+                                onChange={(e) => setProduct({ ...product, availableUnits: e.target.value })}
+                                className="w-full border rounded px-4 py-2 text-sm"
+                                required
+                            />
+                        </div>
+                    )}
 
                     <div>
                         <label className="block font-semibold mb-2 text-sm text-gray-600">Categorías</label>
@@ -252,6 +268,23 @@ const EditProduct = () => {
                             className="block w-full text-sm text-gray-500"
                         />
                     </div>
+
+                    <div>
+                        <label className="block font-semibold mb-2 text-sm text-gray-600">Sección</label>
+                        <select
+                            name="section"
+                            value={product.section}
+                            onChange={handleChange}
+                            className="w-full border rounded px-4 py-2 text-sm"
+                            required
+                        >
+                            <option value="">Selecciona una sección</option>
+                            <option value="TSHIRT">Camisetas</option>
+                            <option value="PANTS">Pantalones</option>
+                            <option value="ACCESSORIES">Accesorios</option>
+                        </select>
+                    </div>
+
                     <button type="submit" className="w-full py-2 bg-yellow-400 text-black font-semibold rounded-md shadow-md transition duration-300 ease-in-out hover:bg-yellow-500 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-yellow-300">
                         Guardar Cambios
                     </button>
@@ -260,10 +293,6 @@ const EditProduct = () => {
                     {errorMessage && <div className="text-red-600 text-sm mt-3">{errorMessage}</div>}
                 </form>
             </div>
-
-            {/* Mensajes */}
-            {successMessage && <div className="alert alert-success mt-3">{successMessage}</div>}
-            {errorMessage && <div className="alert alert-danger mt-3">{errorMessage}</div>}
         </div>
     );
 };

@@ -8,10 +8,6 @@ import Logout from "./Logout";
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
-
-
-// Componente reutilizable de panel deslizante
-
 const SlidingPanel = ({ isOpen, position = "right", onClose, children, maxWidth = "400px" }) => {
     const sideStyles = position === "left"
         ? { left: 0 }
@@ -26,7 +22,7 @@ const SlidingPanel = ({ isOpen, position = "right", onClose, children, maxWidth 
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         onClick={onClose}
-                        className="fixed inset-0 bg-black bg-opacity-50 z-40"
+                        className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-40"
                     />
                     <motion.div
                         initial={{ x: position === 'left' ? '-100%' : '100%' }}
@@ -75,17 +71,16 @@ const Header = () => {
         { to: "admin/orders", label: "WHO ARE WE" },
     ];
 
-    const handleScroll = () => {
-        setHeaderVisible(window.scrollY < lastScrollY);
-        setLastScrollY(window.scrollY);
-    };
-
     useEffect(() => {
         let timeout = null;
         const handleScroll = () => {
             clearTimeout(timeout);
             timeout = setTimeout(() => {
-                setHeaderVisible(window.scrollY < lastScrollY);
+                if (window.scrollY === 0) {
+                    setHeaderVisible(true);
+                } else {
+                    setHeaderVisible(window.scrollY < lastScrollY);
+                }
                 setLastScrollY(window.scrollY);
             }, 100);
         };
@@ -166,7 +161,7 @@ const Header = () => {
                 right: 0,
                 zIndex: 1000,
                 transition: "top 0.3s",
-                top: isHeaderVisible && !isLeftPanelOpen && !isCartPanelOpen && !isSearchPanelOpen ? "0" : "-80px",
+                top: (isHeaderVisible || window.scrollY === 0) && !isLeftPanelOpen && !isCartPanelOpen && !isSearchPanelOpen ? "0" : "-80px",
             }}
         >
             <div className="grid grid-cols-3 w-full">
@@ -238,7 +233,20 @@ const Header = () => {
                                         <p className="custom-font-shop-regular custom-font-shop-black">Talla: {item.size}</p>
                                     </div>
                                 </div>
-                                <div style={{ border: '1px solid black', padding: '4px 8px', borderRadius: '4px', minWidth: '40px', textAlign: 'center', fontWeight: 'bold' }}>
+                                <div
+                                    style={{
+                                        border: '1px solid black',
+                                        padding: '4px 8px',
+                                        borderRadius: '4px',
+                                        minWidth: '40px',
+                                        height: '32px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        fontWeight: 'bold',
+                                        lineHeight: '1',
+                                    }}
+                                >
                                     {item.quantity}
                                 </div>
                             </div>

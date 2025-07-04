@@ -58,7 +58,10 @@ public class SecurityConfiguration {
             "/api/returns/create",
             "/api/returns/*/label",
             "/api/orders/by-identifier",
-            "/api/artists/{id}"
+            "/api/artists/{id}",
+            "/api/product/tshirt",
+            "/api/product/pants",
+            "/api/product/accessories",
     };
 
     // Endpoints accessible only by ADMIN users

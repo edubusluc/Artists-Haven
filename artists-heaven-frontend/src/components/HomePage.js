@@ -92,76 +92,91 @@ const HomePage = () => {
     </div>
   );
 
+  const NavigationLink = ({ to, children, textSize = 'text-4xl' }) => (
+    <Link to={to} className="transition-transform duration-300 transform hover:scale-105">
+      <p className={`custom-font-shop ${textSize} text-gray-700 hover:text-black transition-colors duration-300`}>
+        {children}
+      </p>
+    </Link>
+  );
+
   console.log(artists)
 
   return (
     <>
-      <div className="p-6 bg-white">
+      <div className="bg-white">
         <Suspense fallback={<div className="text-center">Cargando camiseta...</div>}>
           <TshirtViewer />
         </Suspense>
 
-        <div className="flex justify-between mt-10">
-          <p className="custom-font-shop text-gray-500 text-4xl">BEST SELLERS NEW ACCESSORIES</p>
-          <p>Ver todo</p>
-        </div>
+        <div className='p-6'>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1 w-full">
-          {product12.map((product, index) => (
-            <Link to={`/product/details/${product.id}`} key={index}>
-              <div className="flex justify-center">
-                <ProductCard product={product} />
-              </div>
-            </Link>
-          ))}
-        </div>
+          <div className="flex justify-between mt-10 overflow-y-hidden">
+            <div className='flex gap-4'>
+              <NavigationLink to="/shop">ALL</NavigationLink>
+              <NavigationLink to="/shop/camisetas">CAMISETAS</NavigationLink>
+              <NavigationLink to="/shop/pantalones">PANTALONES</NavigationLink>
+              <NavigationLink to="/shop/accesorios">ACCESORIOS</NavigationLink>
+            </div>
+          </div>
 
-        <div className="mt-12 space-y-4">
-          <p className="text-lg font-medium text-gray-700">Artistas</p>
-          <Swiper
-            modules={[Autoplay]}
-            spaceBetween={20}
-            slidesPerView={1.2}
-            loop
-            autoplay={{ delay: 3000, disableOnInteraction: false }}
-            breakpoints={{
-              640: { slidesPerView: 2 },
-              768: { slidesPerView: 3 },
-              1024: { slidesPerView: 4 },
-            }}
-            className="w-full"
-          >
-            {artists.map((artist, index) => (
-              <SwiperSlide key={index}>
-                <Link to={`/artist/${artist.name}`} state={{ artistId: artist.id }}>
-                  <div className="group relative w-full h-[600px] md:h-[800px] overflow-hidden shadow-lg">
-                    <img
-                      src={`/api/artists/${artist.mainPhoto}`}
-                      alt={artist.name}
-                      loading="lazy"
-                      className="w-full h-full object-cover transform transition duration-500 ease-in-out group-hover:scale-110"
-                    />
-                    <div className="absolute bottom-0 right-0 flex items-end justify-end h-full w-full pr-2 pb-2">
-                      <p
-                        className="custom-font-shop text-white font-bold"
-                        style={{
-                          writingMode: 'vertical-rl',
-                          transform: 'rotate(180deg)',
-                          fontSize: '80px',
-                          lineHeight: 1,
-                          textAlign: 'right',
-                          whiteSpace: 'nowrap',
-                          textShadow: '2px 2px 4px rgba(0, 0, 0, 0.3)',
-                        }}
-                      >
-                        {artist.name}
-                      </p>
-                    </div>
-                  </div>
-                </Link>
-              </SwiperSlide>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1 w-full">
+            {product12.map((product, index) => (
+              <Link to={`/product/details/${product.id}`} key={index}>
+                <div className="flex justify-center">
+                  <ProductCard product={product} />
+                </div>
+              </Link>
             ))}
-          </Swiper>
+          </div>
+
+          <div className="mt-12 space-y-4">
+            <p className="text-lg font-medium text-gray-700">Artistas</p>
+            <Swiper
+              modules={[Autoplay]}
+              spaceBetween={20}
+              slidesPerView={1.2}
+              loop
+              autoplay={{ delay: 3000, disableOnInteraction: false }}
+              breakpoints={{
+                640: { slidesPerView: 2 },
+                768: { slidesPerView: 3 },
+                1024: { slidesPerView: 4 },
+              }}
+              className="w-full"
+            >
+              {artists.map((artist, index) => (
+                <SwiperSlide key={index}>
+                  <Link to={`/artist/${artist.name}`} state={{ artistId: artist.id }}>
+                    <div className="group relative w-full h-[600px] md:h-[800px] overflow-hidden shadow-lg">
+                      <img
+                        src={`/api/artists/${artist.mainPhoto}`}
+                        alt={artist.name}
+                        loading="lazy"
+                        className="w-full h-full object-cover transform transition duration-500 ease-in-out group-hover:scale-110"
+                      />
+                      <div className="absolute bottom-0 right-0 flex items-end justify-end h-full w-full pr-2 pb-2">
+                        <p
+                          className="custom-font-shop text-white font-bold"
+                          style={{
+                            writingMode: 'vertical-rl',
+                            transform: 'rotate(180deg)',
+                            fontSize: '80px',
+                            lineHeight: 1,
+                            textAlign: 'right',
+                            whiteSpace: 'nowrap',
+                            textShadow: '2px 2px 4px rgba(0, 0, 0, 0.3)',
+                          }}
+                        >
+                          {artist.name}
+                        </p>
+                      </div>
+                    </div>
+                  </Link>
+                </SwiperSlide>
+              ))}
+            </Swiper>
+          </div>
         </div>
       </div>
       <Footer />
