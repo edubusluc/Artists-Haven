@@ -73,6 +73,9 @@ public class ProductDTO {
 
     private Integer discount;
 
+    private Section section;
+
+    private Integer availableUnits;
     /**
      * Constructor that maps a Product entity to ProductDTO.
      *
@@ -89,6 +92,8 @@ public class ProductDTO {
         this.createdDate = product.getCreatedDate();
         this.onPromotion = product.getOn_Promotion();
         this.discount = product.getDiscount();
+        this.section = product.getSection();
+        this.availableUnits = product.getAvailableUnits();
     }
 
     public ProductDTO(){

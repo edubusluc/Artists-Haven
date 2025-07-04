@@ -20,6 +20,9 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
+import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -64,5 +67,24 @@ public class Product {
 
     @CreationTimestamp
     private Date createdDate;
+
+    @NotNull
+    private Section section;
+
+    private Integer availableUnits;
+
+     @PrePersist
+    @PreUpdate
+    public void validateProduct() {
+        // Validación para productos de la sección ACCESSORIES (Accesorios)
+        if (this.section == Section.ACCESSORIES) {
+            if (this.size != null && !this.size.isEmpty()) {
+                throw new IllegalArgumentException("Los accesorios no pueden tener tallas asignadas.");
+            }
+            if (this.availableUnits == null || this.availableUnits < 0) {
+                throw new IllegalArgumentException("La cantidad de unidades disponibles debe ser mayor o igual a 0 para los accesorios.");
+            }
+        }
+    }
 
 }
