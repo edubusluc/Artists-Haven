@@ -41,7 +41,7 @@ const MySpace = () => {
             </div>
 
             {/* Sidebar */}
-            <aside className={`md:w-80 w-full bg-white shadow p-4 md:p-6 flex-col justify-between 
+            <aside className={`md:w-80 w-full bg-white shadow p-4 md:p-6 flex-col justify-between mt-10
                 ${mobileMenuOpen ? "flex" : "hidden"} md:flex transition`}>
                 <nav className="space-y-2">
                     {menuItems.map((item) => (
@@ -67,7 +67,7 @@ const MySpace = () => {
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 p-4 md:p-10 bg-gray-100">
+            <main className="flex-1 p-4 md:p-10 bg-gray-100 mt-10">
                 <div className="bg-white p-4 md:p-6 rounded-xl shadow mb-4">
                     {getView(active)}
                 </div>

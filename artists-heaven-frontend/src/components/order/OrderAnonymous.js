@@ -177,7 +177,7 @@ const OrderAnonymous = () => {
 
     return (
         <>
-            <div className="bg-white p-8 rounded-xl shadow flex flex-col gap-4">
+            <div className="bg-white p-8 rounded-xl shadow flex flex-col gap-4 mt-10">
                 {order.status === "DELIVERED" && (
                     <div className="text-right">
                         <button

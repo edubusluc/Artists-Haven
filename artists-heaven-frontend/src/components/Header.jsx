@@ -51,7 +51,12 @@ const Header = () => {
     const { t, i18n } = useTranslation();
     const [isHeaderVisible, setHeaderVisible] = useState(true);
     const [lastScrollY, setLastScrollY] = useState(0);
-    const [searchValue, setSearchValue] = useState("");
+
+    // Estados para búsqueda desplegable
+    const [expandedSearchSection, setExpandedSearchSection] = useState(null); // 'pedido' | 'producto' | null
+    const [searchPedidoValue, setSearchPedidoValue] = useState("");
+    const [searchProductoValue, setSearchProductoValue] = useState("");
+
     const navigate = useNavigate();
 
     const changeLanguage = (lng) => i18n.changeLanguage(lng);
@@ -93,8 +98,7 @@ const Header = () => {
     };
 
     const handleSearchByIdentifier = async ({ identifier }) => {
-
-        if (searchValue.trim() === '') {
+        if (identifier.trim() === '') {
             alert('Por favor, escribe un valor para buscar.');
             return;
         }
@@ -107,23 +111,52 @@ const Header = () => {
                 }
             });
 
-            if (!response.ok) throw new Error(`Error ${response.status}: ${await response.text()}`);
+            if (response.status === 404) {
+                alert('No se encuentra el pedido buscado.');
+                return;
+            }
+
+            if (!response.ok) {
+                throw new Error(`Error ${response.status}: ${await response.text()}`);
+            }
 
             const order = await response.json();
             setSearchPanelOpen(false);
             navigate('/orders/by-identifier', { state: { order } });
 
         } catch (error) {
+            console.log(error.message);
             alert("Ocurrió un error: " + error.message);
         }
     };
 
-    const handleKeyDown = (e) => {
+    const handleSearchProduct = async (query) => {
+        if (query.trim() === '') {
+            alert('Por favor, escribe un valor para buscar.');
+            return;
+        }
+        // Aquí puedes implementar la lógica de búsqueda de producto
+        // Por ejemplo, navegar a página de resultados con query
+        console.log("Buscar producto:", query);
+        setSearchPanelOpen(false);
+        navigate('/products/search', { state: { query } });
+    };
+
+    const handleKeyDownPedido = (e) => {
         if (e.key === "Enter") {
-            handleSearchByIdentifier({ identifier: searchValue });
+            handleSearchByIdentifier({ identifier: searchPedidoValue });
         }
     };
 
+    const handleKeyDownProducto = (e) => {
+        if (e.key === "Enter") {
+            handleSearchProduct(searchProductoValue);
+        }
+    };
+
+    const toggleSearchSection = (section) => {
+        setExpandedSearchSection(expandedSearchSection === section ? null : section);
+    };
 
     const handleRedirectToPayment = async () => {
         try {
@@ -271,26 +304,63 @@ const Header = () => {
                 )}
             </SlidingPanel>
 
-            {/* Sidebar Derecho (Búsqueda) */}
+            {/* Sidebar Derecho (Búsqueda) con acordeones */}
             <SlidingPanel isOpen={isSearchPanelOpen} onClose={() => setSearchPanelOpen(false)}>
-                <h3 className="p-4 custom-font-shop custom-font-shop-black">Buscar</h3>
-                <div className="p-4 flex items-center gap-2">
-                    <input
-                        type="number"
-                        placeholder="Buscar pedidos..."
-                        className="flex-1 border p-2 rounded"
-                        value={searchValue}
-                        onChange={(e) => setSearchValue(e.target.value)}
-                        onKeyDown={handleKeyDown}
-                        required
-                    />
-                    <button
-                        onClick={() => handleSearchByIdentifier({ identifier: searchValue })}
-                        className=" text-black px-4 py-2 rounded"
-                    >
-                        <FontAwesomeIcon icon={faSearch} />
-                    </button>
+                {/* Buscar Pedido */}
+                <div
+                    onClick={() => toggleSearchSection("pedido")}
+                    className="p-4 mt-4 cursor-pointer flex justify-between items-center border-b border-gray-300 custom-font-shop custom-font-shop-black"
+                >
+                    <h3>Buscar Pedido</h3>
+                    <span>{expandedSearchSection === "pedido" ? "▲" : "▼"}</span>
                 </div>
+                {expandedSearchSection === "pedido" && (
+                    <div className="p-4 flex items-center gap-2">
+                        <input
+                            type="number"
+                            placeholder="Buscar pedidos..."
+                            className="flex-1 border p-2 rounded"
+                            value={searchPedidoValue}
+                            onChange={(e) => setSearchPedidoValue(e.target.value)}
+                            onKeyDown={handleKeyDownPedido}
+                            required
+                        />
+                        <button
+                            onClick={() => handleSearchByIdentifier({ identifier: searchPedidoValue })}
+                            className="border px-4 py-2 rounded bg-gray-300 hover:bg-gray-400"
+                        >
+                            Buscar
+                        </button>
+                    </div>
+                )}
+
+                {/* Buscar Producto */}
+                <div
+                    onClick={() => toggleSearchSection("producto")}
+                    className="p-4 cursor-pointer flex justify-between items-center border-b border-gray-300 custom-font-shop custom-font-shop-black"
+                >
+                    <h3>Buscar Producto</h3>
+                    <span>{expandedSearchSection === "producto" ? "▲" : "▼"}</span>
+                </div>
+                {expandedSearchSection === "producto" && (
+                    <div className="p-4 flex items-center gap-2">
+                        <input
+                            type="text"
+                            placeholder="Buscar productos..."
+                            className="flex-1 border p-2 rounded"
+                            value={searchProductoValue}
+                            onChange={(e) => setSearchProductoValue(e.target.value)}
+                            onKeyDown={handleKeyDownProducto}
+                            required
+                        />
+                        <button
+                            onClick={() => handleSearchProduct(searchProductoValue)}
+                            className="border px-4 py-2 rounded bg-gray-300 hover:bg-gray-400"
+                        >
+                            Buscar
+                        </button>
+                    </div>
+                )}
             </SlidingPanel>
         </div>
     );
