@@ -10,6 +10,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import com.artists_heaven.order.Order;
+
 @Repository
 public interface ProductRepository extends JpaRepository<Product, Long> {
 
@@ -35,5 +37,13 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     @Query("SELECT p FROM Product p WHERE p.section = :section")
     List<Product> findBySection(@Param("section") Section section);
+
+    @Query("SELECT o FROM Order o")
+    List<Order> getOrders();
+
+    Product findByNameIgnoreCase(String name);
+
+    @Query("SELECT p FROM Product p LEFT JOIN p.ratings r WHERE p.available = true GROUP BY p.id ORDER BY AVG(r.score) DESC")
+    List<Product> findTopRatingProduct();
 
 }

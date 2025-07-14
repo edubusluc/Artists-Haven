@@ -62,6 +62,7 @@ public class SecurityConfiguration {
             "/api/product/tshirt",
             "/api/product/pants",
             "/api/product/accessories",
+            "api/chatbot/**"
     };
 
     // Endpoints accessible only by ADMIN users

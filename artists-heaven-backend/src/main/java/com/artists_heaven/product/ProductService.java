@@ -6,7 +6,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -16,6 +19,8 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.artists_heaven.admin.CategoryDTO;
+import com.artists_heaven.order.Order;
+import com.artists_heaven.order.OrderItem;
 
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -57,9 +62,9 @@ public class ProductService {
             product.setImages(productDTO.getImages());
             product.setSection(productDTO.getSection());
 
-            if(productDTO.getAvailableUnits() != 0){
+            if (productDTO.getAvailableUnits() != 0) {
                 product.setAvailableUnits(productDTO.getAvailableUnits());
-            }else{
+            } else {
                 product.setSize(productDTO.getSizes());
             }
             // Save the product to the repository and return the saved product
@@ -391,11 +396,60 @@ public class ProductService {
     }
 
     public List<Product> findPantsProduct() {
-         return productRepository.findBySection(Section.PANTS);
+        return productRepository.findBySection(Section.PANTS);
     }
 
     public List<Product> findAccesoriesProduct() {
         return productRepository.findBySection(Section.ACCESSORIES);
+    }
+
+    public Map<String, String> getTopSellingProduct() {
+        List<Order> orders = productRepository.getOrders();
+
+        Map<String, Integer> countMap = new HashMap<>();
+        String topProduct = null;
+        int max = 0;
+
+        for (Order order : orders) {
+            for (OrderItem item : order.getItems()) {
+                String name = item.getName();
+                int total = countMap.merge(name, 1, Integer::sum);
+                if (total > max) {
+                    max = total;
+                    topProduct = name;
+                }
+            }
+        }
+
+        Product product = productRepository.findByNameIgnoreCase(topProduct);
+
+        return Map.of(
+                "nombre", product.getName(),
+                "descripcion", product.getDescription(),
+                "precio", String.format("%.2f", product.getPrice()));
+    }
+
+    public Map<String, String> getRecommendedProduct() {
+        List<Product> products = productRepository.findTopRatingProduct();
+
+        // Asegurarse de que la lista tiene al menos 3 productos
+        int limit = Math.min(3, products.size());
+        List<Product> top3Products = products.subList(0, limit);
+
+        Map<String, String> recommendedMap = new LinkedHashMap<>();
+
+        for (Product product : top3Products) {
+            String name = product.getName();
+            String description = product.getDescription();
+            double price = product.getPrice();
+
+            // Puedes personalizar el formato del valor como desees
+            String value = "Descripción: " + description + ", Precio: $" + price;
+
+            recommendedMap.put(name, value);
+        }
+
+        return recommendedMap;
     }
 
 }
