@@ -54,7 +54,6 @@ public class ChatbotController {
             return ok(geminiResponse);
 
         } catch (Exception e) {
-            e.printStackTrace();
             return serverError(true,
                     "Error interno en el servidor",
                     "Internal server error");
