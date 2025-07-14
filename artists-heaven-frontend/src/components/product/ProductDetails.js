@@ -137,7 +137,7 @@ const ProductDetails = () => {
 
     return (
         <>
-            <div className="grid grid-cols-1 md:grid-cols-2 p-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 p-4 mt-10">
                 {/* Columna 1 */}
                 <div>
                     {/*VERSION MÓVIL*/}

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import faqData from "../utils/FAQ.json"; // Ajusta según tu estructura
+import faqData from "../utils/FAQ.json";
 import { useTranslation } from "react-i18next";
 
 const FAQ = () => {

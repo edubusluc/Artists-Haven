@@ -42,6 +42,7 @@ jobs:
           echo "EMAIL_PASSWORD=${{ secrets.EMAIL_PASSWORD }}" >> artists-heaven-backend/src/main/resources/.env
           echo "STRIPE_KEY=${{ secrets.STRIPE_KEY }}" >> artists-heaven-backend/src/main/resources/.env
           echo "STRIPE_WEBHOOK=${{ secrets.STRIPE_WEBHOOK }}" >> artists-heaven-backend/src/main/resources/.env
+          echo "GEMINI_KEY=${{ secrets.GEMINI_KEY }}" >> artists-heaven-backend/src/main/resources/.env
 
       # Set up JDK
       - name: Set up JDK 20.0.2

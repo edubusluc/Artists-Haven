@@ -62,6 +62,11 @@ import AdminClient from './components/admin/AdminClients';
 import AdminOrder from './components/admin/AdminOrder';
 import AdminOrderDetails from './components/admin/AdminOrderDetails';
 
+
+import Chatbot from './components/ChatBot';
+import ScrollToTop from './components/ScrollToTop';
+
+
 const AppRoutes = ({ role }) => (
   <Routes>
     <Route
@@ -105,9 +110,9 @@ const AppRoutes = ({ role }) => (
     <Route path="/admin/orderDetails/:id" element={<AdminOrderDetails />} />
     <Route path="/artist/dashboard" element={<ArtistDashboard />} />
     <Route path="/artist/:name" element={<ArtistView />} />
-    <Route path="/shop/camisetas" element={<TshirtList/>}/>
-    <Route path="/shop/pantalones" element={<PantsList/>}/>
-    <Route path="/shop/accesorios" element={<AccessoriesList/>}/>
+    <Route path="/shop/camisetas" element={<TshirtList />} />
+    <Route path="/shop/pantalones" element={<PantsList />} />
+    <Route path="/shop/accesorios" element={<AccessoriesList />} />
   </Routes>
 );
 
@@ -140,8 +145,10 @@ const App = () => {
       <CartProvider>
         <Suspense fallback={<div className="text-white">Cargando traducciones...</div>}>
           <Router>
+            <ScrollToTop />
             {getHeader()}
-              <AppRoutes role={role} />
+            <AppRoutes role={role} />
+            <Chatbot />
           </Router>
         </Suspense>
       </CartProvider>

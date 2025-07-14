@@ -19,10 +19,28 @@ const ProductSchema = ({ endpoint, title }) => {
     const [tempSelectedCategories, setTempSelectedCategories] = useState(selectedCategories);
 
     const [maxAbsolutePrice, setMaxAbsolutePrice] = useState(1000);
+    const [imagesLoaded, setImagesLoaded] = useState(false);
+
+    // Nuevo estado para controlar visibilidad y animación fadeIn
+    const [isVisible, setIsVisible] = useState(false);
 
     useEffect(() => {
-        window.scrollTo(0, 0);
-    }, []);
+        if (!products.length) return;
+        const imageUrls = products.map(p => p.images); 
+        const loadImage = (src) => new Promise((resolve) => {
+            const img = new Image();
+            img.src = src;
+            img.onload = img.onerror = resolve;
+        });
+
+        Promise.all(imageUrls.map(loadImage)).then(() => {
+            setImagesLoaded(true);
+            setTimeout(() => {
+                setIsVisible(true); // Activamos el fadeIn
+            }, 60); // Delay suave
+        });
+
+    }, [products]);
 
     useEffect(() => {
         fetch(endpoint)
@@ -40,8 +58,6 @@ const ProductSchema = ({ endpoint, title }) => {
             })
             .catch((error) => console.error("Error:", error));
     }, [endpoint]);
-
-    console.log(products)
 
     const categories = useMemo(() => {
         const catsMap = new Map();
@@ -64,10 +80,7 @@ const ProductSchema = ({ endpoint, title }) => {
 
         if (selectedSizes.length > 0) {
             result = result.filter((product) => {
-                // Si es accesorio, no se filtra por talla
                 if (product.section === "ACCESSORIES") return true;
-
-                // Si no es accesorio, aplicar filtro de tallas
                 return selectedSizes.some((size) => product.sizes?.[size] > 0);
             });
         }
@@ -147,7 +160,16 @@ const ProductSchema = ({ endpoint, title }) => {
 
     return (
         <>
-            <div style={{ padding: "20px", color: "white", minHeight: "100vh", marginTop: '40px' }}>
+            <div
+                style={{
+                    padding: "20px",
+                    color: "white",
+                    minHeight: "100vh",
+                    marginTop: '40px',
+                    opacity: isVisible ? 1 : 0,
+                    transition: "opacity 0.7s ease-in-out",
+                }}
+            >
                 <div className="flex justify-between">
                     <p className="custom-font-shop-regular mb-4" style={{ color: "black" }}>
                         {filteredProducts.length} productos
