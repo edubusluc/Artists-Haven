@@ -7,6 +7,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -27,12 +28,12 @@ public class RefreshTokenService {
         RefreshToken existingToken = refreshTokenRepository.findByUser(user);
         if (existingToken != null) {
             existingToken.setToken(UUID.randomUUID().toString());
-            existingToken.setExpiryDate(Instant.now().plusSeconds(7 * 24 * 60 * 60));
+            existingToken.setExpiryDate(Instant.now().plus(7, ChronoUnit.DAYS));
             return refreshTokenRepository.save(existingToken);
         } else {
             RefreshToken refreshToken = new RefreshToken();
             refreshToken.setUser(user);
-            refreshToken.setExpiryDate(Instant.now().plusSeconds(7 * 24 * 60 * 60));
+            refreshToken.setExpiryDate(Instant.now().plus(7, ChronoUnit.DAYS));
             refreshToken.setToken(UUID.randomUUID().toString());
             return refreshTokenRepository.save(refreshToken);
         }
