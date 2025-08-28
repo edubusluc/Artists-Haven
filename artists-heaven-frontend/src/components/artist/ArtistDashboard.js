@@ -7,6 +7,9 @@ import TopSellingItemsChart from '../charts/TopSellingItemsChart';
 import NonAuthorise from '../NonAuthorise';
 import { Link } from 'react-router-dom';
 import { getArtistDashboardStatistics } from '../../services/artistServices';
+import { checkTokenExpiration } from '../../utils/authUtils';
+import SessionExpired from '../SessionExpired';
+import { useTranslation } from 'react-i18next';
 
 const ArtistDashboard = () => {
     const currentYear = new Date().getFullYear();
@@ -27,24 +30,23 @@ const ArtistDashboard = () => {
     });
 
     const [authToken] = useState(localStorage.getItem("authToken"));
+    const {t} = useTranslation();
 
     useEffect(() => {
         window.scrollTo(0, 0);
     }, []);
 
-    console.log(data)
-
     useEffect(() => {
-        if (!authToken || role !== 'ARTIST') return;
+        if (!checkTokenExpiration || role !== 'ARTIST') return;
 
         const controller = new AbortController();
 
         const fetchData = async () => {
             try {
-                const data = await getArtistDashboardStatistics(authToken, year)
+                const response = await getArtistDashboardStatistics(authToken, year)
                 setData({
-                    ...data,
-                    futureEvents: data.futureEvents ?? 0,
+                    ...response.data,
+                    futureEvents: response.data.futureEvents ?? 0,
                 });
             } catch (error) {
                 if (error.name !== 'AbortError') {
@@ -73,10 +75,12 @@ const ArtistDashboard = () => {
         </div>
     );
 
+    console.log(data)
+
 
     const STATUS_MAP = {
         VERIFIED: {
-            label: "Verificado",
+            label: t('artistDashboard.verified'),
             iconColor: "text-green-600",
             bgColor: "bg-green-100",
             bgColorCard: "bg-green-400",
@@ -85,7 +89,7 @@ const ArtistDashboard = () => {
 
         },
         ACCEPTED: {
-            label: "Verificado",
+            label: t('artistDashboard.verified'),
             iconColor: "text-green-600",
             bgColor: "bg-green-100",
             bgColorCard: "bg-green-400",
@@ -94,7 +98,7 @@ const ArtistDashboard = () => {
 
         },
         PENDING: {
-            label: "Pendiente",
+            label: t('artistDashboard.pending'),
             iconColor: "text-yellow-700",
             bgColor: "bg-yellow-500",
             bgColorCard: "bg-yellow-300",
@@ -103,7 +107,7 @@ const ArtistDashboard = () => {
 
         },
         REJECTED: {
-            label: "No verificado",
+            label: t('artistDashboard.notVerified'),
             iconColor: "text-red-600",
             bgColor: "bg-red-100",
             bgColorCard: "bg-red-300",
@@ -112,7 +116,7 @@ const ArtistDashboard = () => {
 
         },
         NOT_VERIFIED: {
-            label: "No verificado",
+            label: t('artistDashboard.notVerified'),
             iconColor: "text-red-600",
             bgColor: "bg-red-100",
             bgColorCard: "bg-red-300",
@@ -123,7 +127,7 @@ const ArtistDashboard = () => {
     };
 
     const DEFAULT_STATUS = {
-        label: "No verificado",
+        label: t('artistDashboard.notVerified'),
         iconColor: "text-red-600",
         bgColor: "bg-red-100",
         bgColorCard: "bg-red-300",
@@ -146,9 +150,10 @@ const ArtistDashboard = () => {
 
 
 
-
-    if (role !== 'ARTIST') {
+    if (!role || role !== 'ARTIST') {
         return <NonAuthorise />;
+    } else if (!checkTokenExpiration()) {
+        return <SessionExpired />;
     }
 
     return (
@@ -156,7 +161,7 @@ const ArtistDashboard = () => {
             <div className="min-h-screen bg-gradient-to-r from-gray-300 to-white flex flex-col">
                 <div className="pl-6 mt-2 flex justify-start items-center space-x-2">
                     <label htmlFor="year-select" className="block text-gray-500 font-medium m-0">
-                        Año:
+                       {t('artistDashboard.year')}:
                     </label>
                     <select
                         id="year-select"
@@ -175,50 +180,50 @@ const ArtistDashboard = () => {
                         <MetricCard
                             icon={getIcon(data.isVerificated)}
                             value={getLabel(data.isVerificated)}
-                            title="Verificación"
+                            title={t('artistDashboard.verification')}
                             iconColor={getIconColor(data.isVerificated)}
                             bgColor={getBgColor(data.isVerificated)}
                             bgColorCard={getBgColorCard(data.isVerificated)}
                             textColor={getTextColor(data.isVerificated)} />
-                        <MetricCard icon={faCalendar} value={data.futureEvents} title="Próximos eventos" iconColor="text-green-600" bgColor="bg-green-300" />
-                        <MetricCard icon={faBackward} value={data.pastEvents} title="Eventos realizados" iconColor="text-orange-600" bgColor="bg-orange-300" />
+                        <MetricCard icon={faCalendar} value={data.futureEvents} title={t('artistDashboard.nextEvents')} iconColor="text-green-600" bgColor="bg-green-300" />
+                        <MetricCard icon={faBackward} value={data.pastEvents} title={t('artistDashboard.pastEvents')} iconColor="text-orange-600" bgColor="bg-orange-300" />
                     </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6">
                     <div className="bg-white shadow-lg rounded-lg p-6">
-                        <p className='text-2xl'>Sales Summary Artist</p>
-                        <p className="text-sm text-gray-400 mb-5">Yearly Sales Report</p>
+                        <p className='text-2xl'>{t('artistDashboard.salesSummaryArtist')}</p>
+                        <p className="text-sm text-gray-400 mb-5">{t('artistDashboard.yearlySalesReport')}</p>
                         <div className="p-4">
                             {Object.keys(data.orderItemCount).length > 0 ? (
                                 <SalesChart year={year} />
                             ) : (
-                                <p className="text-gray-400 italic text-center w-full">No hay datos disponibles</p>
+                                <p className="text-gray-400 italic text-center w-full">{t('artistDashboard.noDataAvailable')}</p>
                             )}
                         </div>
                     </div>
 
                     <div className="grid-cols-1 rounded-lg">
                         <div className='bg-white shadow-lg rounded-lg p-6'>
-                            <p className='text-2xl'>Estado de la verificación</p>
+                            <p className='text-2xl'>{t('artistDashboard.realVerficationStatus')}</p>
 
-                            {!["PENDING", "ACCEPTED"].includes(data.isVerificated) ? (
+                            {!["PENDING", "ACCEPTED", "Verified"].includes(data.isVerificated) ? (
                                 <Link to="/verification">
                                     <button
                                         className="w-full md:w-auto bg-yellow-400 text-black font-semibold py-2 px-6 rounded-md shadow-md transition duration-300 ease-in-out hover:bg-yellow-500 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-yellow-300"
-                                    >Send Verification Request</button>
+                                    >{t('artistDashboard.sendVerification')}</button>
                                 </Link>
                             ) : (
-                                <p className="text-sm text-green-600">Verificación en proceso o ya aceptada</p>
+                                <p className="text-sm text-green-600">{t('artistDashboard.verificationStatus')}</p>
                             )}
                         </div>
-                        <div className="flex flex-col md:flex-row gap-4">
-                            <div className="bg-white shadow-lg rounded-lg p-6 mt-2 flex-1">
-                                <h2 className="text-lg font-semibold text-gray-600 mb-2">Productos Más Vendidos</h2>
+                        <div className="flex flex-col md:flex-row md:flex-wrap gap-4 mt-2">
+                            <div className="bg-white shadow-lg rounded-lg p-6 flex-1 min-w-[300px]">
+                                <h2 className="text-lg font-semibold text-gray-600 mb-2">{t('artistDashboard.bestSellingProduct')}</h2>
                                 <TopSellingItemsChart orderItemCount={data.orderItemCount} />
                             </div>
-                            <div className="bg-white shadow-lg rounded-lg p-6 mt-2 flex-1">
-                                <h2 className="text-lg font-semibold text-gray-600 mb-2">Países Más Vendidos</h2>
+                            <div className="bg-white shadow-lg rounded-lg p-6 flex-1 min-w-[300px]">
+                                <h2 className="text-lg font-semibold text-gray-600 mb-2">{t('artistDashboard.bestSellingCountry')}</h2>
                                 <TopSellingItemsChart orderItemCount={data.mostCountrySold} />
                             </div>
                         </div>

@@ -23,6 +23,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import com.artists_heaven.chat.ChatMessageContext;
 import com.artists_heaven.chat.ChatbotService;
 import com.artists_heaven.chat.QARepository;
 import com.artists_heaven.product.ProductService;
@@ -67,9 +68,16 @@ class ChatbotServiceTest {
     void testSearchNLPAnswer_FindsSimilarAnswer() {
         // Arrange
         String question = "Can you recommend me something?";
-        Map<String, String> predefinedQA = Map.of(
-                "recommend me something", "Sure, I recommend our best products!");
-        when(qaRepository.getAllQA()).thenReturn(predefinedQA);
+
+        // La clave debe ser la pregunta que vamos a comparar
+        String predefinedQuestion = "recommend me something";
+        ChatMessageContext context = new ChatMessageContext(predefinedQuestion, true);
+
+        Map<String, ChatMessageContext> predefinedQA = Map.of(
+                predefinedQuestion, context);
+
+        when(qaRepository.getAllQAContexts()).thenReturn(predefinedQA);
+        when(qaRepository.getAnswer(predefinedQuestion)).thenReturn("Sure, I recommend our best products!");
 
         // Act
         String answer = chatbotService.searchNLPAnswer(question);

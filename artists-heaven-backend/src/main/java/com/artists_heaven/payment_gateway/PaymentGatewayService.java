@@ -1,5 +1,7 @@
 package com.artists_heaven.payment_gateway;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -15,22 +17,27 @@ import com.artists_heaven.entities.user.User;
 import com.artists_heaven.entities.user.UserService;
 import com.artists_heaven.order.Order;
 import com.artists_heaven.order.OrderItem;
-import com.artists_heaven.order.OrderItemRepository;
 import com.artists_heaven.order.OrderRepository;
 import com.artists_heaven.order.OrderStatus;
 import com.artists_heaven.product.Product;
 import com.artists_heaven.product.ProductService;
+import com.artists_heaven.product.Section;
+import com.artists_heaven.rewardCard.RewardCardRepository;
 import com.artists_heaven.shopping_cart.CartItemDTO;
 import com.artists_heaven.shopping_cart.ShoppingCartService;
 import com.stripe.Stripe;
 import com.stripe.exception.SignatureVerificationException;
 import com.stripe.exception.StripeException;
+import com.stripe.model.Coupon;
 import com.stripe.model.Event;
 import com.stripe.model.checkout.Session;
 import com.stripe.net.Webhook;
+import com.stripe.param.CouponCreateParams;
 import com.stripe.param.checkout.SessionCreateParams;
 import io.github.cdimascio.dotenv.Dotenv;
 import jakarta.mail.MessagingException;
+import jakarta.transaction.Transactional;
+import jakarta.annotation.Nullable;
 
 @Service
 public class PaymentGatewayService {
@@ -45,27 +52,39 @@ public class PaymentGatewayService {
 
     private final ProductService productService;
 
-    private final OrderItemRepository orderItemRepository;
-
     private final ShoppingCartService shoppingCartService;
 
     private final EmailSenderService emailSenderService;
+
+    private final RewardCardRepository rewardCardRepository;
 
     private static final String EVENT_TYPE = "checkout.session.completed";
 
     private static final String PRODUCT = "product_";
 
     public PaymentGatewayService(UserService userService, OrderRepository orderRepository,
-            ProductService productService, OrderItemRepository orderItemRepository,
+            ProductService productService,
             ShoppingCartService shoppingCartService,
-            EmailSenderService emailSenderService) {
+            EmailSenderService emailSenderService,
+            RewardCardRepository rewardCardRepository) {
         this.userService = userService;
         this.orderRepository = orderRepository;
         this.productService = productService;
-        this.orderItemRepository = orderItemRepository;
         this.emailSenderService = emailSenderService;
         this.shoppingCartService = shoppingCartService;
         Stripe.apiKey = endpointSecret;
+        this.rewardCardRepository = rewardCardRepository;
+    }
+
+    public String createOrFetchCoupon(int discountPercentage) throws StripeException {
+        // Para simplificar, creamos siempre un cupón (puedes cachearlo si prefieres)
+        CouponCreateParams params = CouponCreateParams.builder()
+                .setAmountOff((long) discountPercentage)
+                .setDuration(CouponCreateParams.Duration.ONCE)
+                .build();
+
+        Coupon coupon = Coupon.create(params);
+        return coupon.getId(); // ID que usaremos en la session
     }
 
     /**
@@ -104,6 +123,12 @@ public class PaymentGatewayService {
      */
     private String processPaymentSession(List<CartItemDTO> items, Long id) {
         try {
+            User user = null;
+
+            if (id != null) {
+                user = userService.getUserById(id);
+            }
+
             // Build the line items for the payment session using the cart items.
             List<SessionCreateParams.LineItem> lineItems = buildLineItems(items);
 
@@ -111,7 +136,8 @@ public class PaymentGatewayService {
             Map<String, String> metadata = buildMetadata(items, id);
 
             // Create session parameters with the line items and metadata.
-            SessionCreateParams.Builder params = buildSessionParams(lineItems, metadata);
+
+            SessionCreateParams.Builder params = buildSessionParams(lineItems, metadata, user);
 
             // Add user details to the session parameters (e.g., shipping address, email).
             addUserDetails(params);
@@ -137,32 +163,32 @@ public class PaymentGatewayService {
     public List<SessionCreateParams.LineItem> buildLineItems(List<CartItemDTO> items) {
         List<SessionCreateParams.LineItem> lineItems = new ArrayList<>();
 
-        // Iterate through each cart item and build a line item for Stripe's payment
-        // session.
+        // Recorremos los productos y construimos los line items
         for (CartItemDTO item : items) {
-            // Create the product data, including the name (e.g., "Artists Heaven - Product
-            // Name - Size: X").
+            String productName = "Artists Heaven - " + item.getProduct().getName();
+            if (!Section.ACCESSORIES.equals(item.getProduct().getSection())) {
+                productName += " - Size: " + item.getSize();
+            }
+
             SessionCreateParams.LineItem.PriceData.ProductData productData = SessionCreateParams.LineItem.PriceData.ProductData
                     .builder()
-                    .setName("Artists Heaven - " + item.getProduct().getName() + " - Size: " + item.getSize())
+                    .setName(productName)
                     .build();
 
-            // Build the price data for the product, including the currency (EUR) and unit
-            // amount in cents.
+            long unitPriceCents = item.getProduct().getPrice().longValue() * 100; // precio en céntimos
+
             SessionCreateParams.LineItem.PriceData priceData = SessionCreateParams.LineItem.PriceData.builder()
                     .setCurrency("EUR")
-                    .setUnitAmount(item.getProduct().getPrice().longValue() * 100) // Convert to cents
+                    .setUnitAmount(unitPriceCents)
                     .setProductData(productData)
                     .build();
 
-            // Add the line item to the list, including the quantity of the product.
             lineItems.add(SessionCreateParams.LineItem.builder()
                     .setQuantity(item.getQuantity().longValue())
                     .setPriceData(priceData)
                     .build());
         }
 
-        // Return the list of line items to be used in the payment session.
         return lineItems;
     }
 
@@ -187,7 +213,12 @@ public class PaymentGatewayService {
             String key = PRODUCT + item.getProduct().getId();
 
             // Create a string that includes the product quantity and size.
-            String productMetadata = item.getQuantity() + "|" + item.getSize();
+            String productMetadata = "";
+            if (item.getProduct().getSection().equals(Section.ACCESSORIES)) {
+                productMetadata = item.getQuantity() + "";
+            } else {
+                productMetadata = item.getQuantity() + "|" + item.getSize();
+            }
 
             // Merge the metadata for the product, appending new values if the product
             // already exists.
@@ -207,26 +238,50 @@ public class PaymentGatewayService {
      *                  product details).
      * @return a builder with the configured session parameters.
      */
-    private SessionCreateParams.Builder buildSessionParams(List<SessionCreateParams.LineItem> lineItems,
-            Map<String, String> metadata) {
+    private SessionCreateParams.Builder buildSessionParams(
+            List<SessionCreateParams.LineItem> lineItems,
+            Map<String, String> metadata,
+            @Nullable User user) throws StripeException {
 
-        // Initialize the session parameters builder with essential configurations.
+        // Inicializamos los parámetros de sesión
         SessionCreateParams.Builder params = SessionCreateParams.builder()
-                // Specify the payment method type (e.g., CARD).
                 .addPaymentMethodType(SessionCreateParams.PaymentMethodType.CARD)
-                // Set the session mode to PAYMENT, meaning it's a one-time payment.
                 .setMode(SessionCreateParams.Mode.PAYMENT)
-                // Set the URL to redirect to upon successful payment.
-                .setSuccessUrl("http://localhost:3000/success")
-                // Set the URL to redirect to if the payment is cancelled.
+                .setSuccessUrl("http://localhost:3000/success?session_id={CHECKOUT_SESSION_ID}")
                 .setCancelUrl("http://localhost:3000/cancel")
-                // Add the line items (products) to the session.
                 .addAllLineItem(lineItems);
 
-        // Add the metadata to the session (e.g., user ID, cart details).
+        // Añadimos metadatos
         metadata.forEach(params::putMetadata);
 
-        // Return the builder with the configured parameters.
+        // 🔑 Si hay usuario, comprobamos RewardCard activa
+        if (user != null) {
+            rewardCardRepository.findFirstByUserAndRedeemedFalse(user).ifPresent(card -> {
+                try {
+                    // Crear cupón en Stripe
+                    CouponCreateParams couponParams = CouponCreateParams.builder()
+                            .setPercentOff(BigDecimal.valueOf(card.getDiscountPercentage()))
+                            .setDuration(CouponCreateParams.Duration.ONCE) // Se aplica solo a esta compra
+                            .build();
+
+                    String couponId = Coupon.create(couponParams).getId();
+
+                    // Agregar descuento a la sesión
+                    params.addDiscount(
+                            SessionCreateParams.Discount.builder()
+                                    .setCoupon(couponId)
+                                    .build());
+
+                    // Marcar la RewardCard como usada
+                    card.setRedeemed(true);
+                    card.setRedeemedAt(LocalDateTime.now());
+                    rewardCardRepository.save(card);
+                } catch (StripeException e) {
+                    throw new RuntimeException("Error creando cupón en Stripe", e);
+                }
+            });
+        }
+
         return params;
     }
 
@@ -346,32 +401,29 @@ public class PaymentGatewayService {
      *                  event's authenticity.
      * @throws MessagingException
      */
+    @Transactional
     public void processStripeEvent(String payload, String sigHeader) throws MessagingException {
-        // Verify the event signature to ensure its authenticity.
         Event event = verifySignature(payload, sigHeader);
-        Order order = new Order();
 
-        // If the event type matches the expected type, process the event.
         if (EVENT_TYPE.equals(event.getType())) {
-            // Retrieve the session associated with the event.
             Session session = getSession(event);
-            if (session == null)
+            if (session == null) {
                 return;
+            }
 
-            // Retrieve the user ID from the session and get the user details.
             Long userId = getUserId(session);
             User user = userId == null ? null : userService.getUserById(userId);
-            // Get the email either from the user or from the session's customer details.
             String email = (user != null) ? user.getEmail() : session.getCustomerDetails().getEmail();
 
-            // Create an order based on the session and user details.
-            order = createOrder(session, userId, user);
-            // Create the order items based on the session and user ID.
-            createOrderItems(session, order, userId);
+            Session.TotalDetails totalDetails = session.getTotalDetails();
+            Long discountAmount = 0L;
+            if (totalDetails != null) {
+                discountAmount = totalDetails.getAmountDiscount()/100; 
+            }
 
-            // Handle any post-order actions, such as sending confirmation emails or
-            // updating inventory.
-            handlePostOrderActions(userId, email, order);
+            Order order = createOrder(session, userId, user, discountAmount);
+            createOrderItems(session, order, userId);
+            handlePostOrderActions(userId, email, order,discountAmount);
         }
     }
 
@@ -438,7 +490,7 @@ public class PaymentGatewayService {
      * @param user    the user object containing additional details like country.
      * @return the saved order object after being persisted in the database.
      */
-    private Order createOrder(Session session, Long userId, User user) {
+    private Order createOrder(Session session, Long userId, User user, Long disscount) {
         // Create a new Order object.
         Order order = new Order();
         // Convert the session's total amount (in cents) to the appropriate currency
@@ -450,12 +502,13 @@ public class PaymentGatewayService {
         order.setPaymentIntent(session.getPaymentIntent());
         // Set the user ID associated with the order.
         order.setUser(user);
+        order.setDiscountApplied(disscount);
         // If a user is provided, set the user's country in the order.
         if (user != null) {
             order.setCountry(user.getCountry());
         }
         // Save the order to the database and return the persisted order.
-        return orderRepository.save(order);
+        return order;
     }
 
     /**
@@ -470,14 +523,12 @@ public class PaymentGatewayService {
      *                shipping details.
      */
     private void createOrderItems(Session session, Order order, Long userId) {
-        // Create a list to hold the order items.
         List<OrderItem> items = new ArrayList<>();
 
         List<String> fields = session.getCustomFields().stream()
                 .map(field -> field.getText().getValue())
                 .toList();
 
-        // Retrieve the customer's shipping details from the session.
         String city = userId != null ? fields.get(0) : session.getCustomerDetails().getAddress().getCity();
         String addressLine1 = userId != null ? fields.get(1) : session.getCustomerDetails().getAddress().getLine1();
         String addressLine2 = userId != null ? null : session.getCustomerDetails().getAddress().getLine2();
@@ -486,17 +537,12 @@ public class PaymentGatewayService {
         String email = session.getCustomerDetails().getEmail();
         String country = getCountryName(session.getCustomerDetails().getAddress().getCountry());
 
-        // Set the country name based on the country code.
-
-        // Loop through the session's metadata and process product entries.
         for (Map.Entry<String, String> entry : session.getMetadata().entrySet()) {
             if (entry.getKey().startsWith(PRODUCT)) {
-                // Process each product entry and add it to the order items.
                 processProductEntry(entry.getKey(), entry.getValue(), order, items);
             }
         }
 
-        // Finalize the order by associating the items and the shipping details.
         finalizeOrder(order, items, city, addressLine1, addressLine2, postalCode, country, phone, email);
     }
 
@@ -524,27 +570,25 @@ public class PaymentGatewayService {
      * @param items the list of order items being created for the order.
      */
     private void processProductEntry(String key, String value, Order order, List<OrderItem> items) {
-        // Extract the product ID from the key by removing the "PRODUCT" prefix.
         Long productId = Long.parseLong(key.replace(PRODUCT, ""));
-        // Retrieve the product from the product service using the product ID.
         Product product = productService.findById(productId);
 
-        // Loop through each entry in the value, which contains the quantity and size of
-        // the product.
         for (String entry : value.split(",")) {
-            // Split the entry into quantity and size.
             String[] values = entry.split("\\|");
             int quantity = Integer.parseInt(values[0]);
-            String size = values[1];
 
-            // Update the stock for the specified size of the product by reducing the
-            // quantity.
-            product.getSize().computeIfPresent(size, (k, v) -> v - quantity);
+            OrderItem item = new OrderItem();
+            if (product.getSection().equals(Section.ACCESSORIES)) {
+                product.setAvailableUnits(product.getAvailableUnits() - quantity);
+                item = new OrderItem(productId, quantity, "", product.getName(), product.getPrice(), order,
+                        product.getSection());
+            } else {
+                String size = values[1];
+                product.getSize().computeIfPresent(size, (k, v) -> v - quantity);
+                item = new OrderItem(productId, quantity, size, product.getName(), product.getPrice(), order,
+                        product.getSection());
+            }
 
-            // Create an OrderItem for this product entry and add it to the repository and
-            // items list.
-            OrderItem item = new OrderItem(productId, quantity, size, product.getName(), product.getPrice(), order);
-            orderItemRepository.save(item);
             items.add(item);
         }
     }
@@ -564,27 +608,24 @@ public class PaymentGatewayService {
     private void finalizeOrder(Order order, List<OrderItem> items, String city, String addressLine1,
             String addressLine2, String postalCode, String country, String phone, String email) {
 
-        // Set a unique identifier for the order using a UUID.
         long id = UUID.randomUUID().getMostSignificantBits();
         id = Math.abs(id);
         order.setIdentifier(id);
-        // Set the order status to 'PAID'.
         order.setStatus(OrderStatus.PAID);
-        // Set the shipping address details.
         order.setCity(city);
         order.setAddressLine1(addressLine1);
         order.setAddressLine2(addressLine2);
         order.setPostalCode(postalCode);
         order.setPhone(phone);
         order.setEmail(email);
+
         order.setItems(items);
+
         if (!country.isEmpty()) {
             order.setCountry(country);
         }
 
         orderRepository.save(order);
-        // Save the order to the repository.
-
     }
 
     /**
@@ -595,13 +636,13 @@ public class PaymentGatewayService {
      * @param email  the email address of the user to send the confirmation.
      * @throws MessagingException
      */
-    private void handlePostOrderActions(Long userId, String email, Order order) throws MessagingException {
+    private void handlePostOrderActions(Long userId, String email, Order order, Long discount) throws MessagingException {
         // If the user is registered, delete the items from their shopping cart.
         if (userId != null) {
             shoppingCartService.deleteShoppingCartUserItems(userId);
         }
         // Send a confirmation email to the user regarding their purchase.
-        emailSenderService.sendPurchaseConfirmationEmail(email, order);
+        emailSenderService.sendPurchaseConfirmationEmail(email, order, discount);
     }
 
     /**
@@ -612,20 +653,19 @@ public class PaymentGatewayService {
      * @return true if all products are available, false otherwise.
      */
     public boolean checkProductAvailable(List<CartItemDTO> items) {
-        // Iterate through each item in the cart.
         for (CartItemDTO i : items) {
-            // Retrieve the product by its ID.
             Product product = productService.findById(i.getProduct().getId());
-            // Check if the requested quantity for the specific size is available.
-            if (product.getSize().get(i.getSize()) < i.getQuantity()) {
-                return false; // If not available, return false.
-            }
-            // Check if the product is available in general.
-            if (!product.getAvailable()) {
-                return false; // If the product is not available, return false.
+
+            if (Section.ACCESSORIES.equals(product.getSection())) {
+                if (product.getAvailableUnits() < i.getQuantity()) {
+                    return false;
+                }
+            } else {
+                if (product.getSize().get(i.getSize()) < i.getQuantity()) {
+                    return false;
+                }
             }
         }
-        // If all checks pass, return true indicating all products are available.
         return true;
     }
 

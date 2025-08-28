@@ -5,7 +5,6 @@ import java.util.List;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -13,13 +12,17 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.http.MediaType;
 
 import com.artists_heaven.admin.MonthlySalesDTO;
-import com.artists_heaven.event.Event;
-import com.artists_heaven.event.EventService;
 import com.artists_heaven.images.ImageServingUtil;
-import com.artists_heaven.product.Product;
-import com.artists_heaven.product.ProductService;
+import com.artists_heaven.standardResponse.StandardResponse;
 
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -29,133 +32,125 @@ import org.springframework.web.bind.annotation.RequestParam;
 @RequestMapping("/api/artists")
 public class ArtistController {
 
-    private final ArtistService artistService;
+        private final ArtistService artistService;
 
-    private final ProductService productService;
+        private final ImageServingUtil imageServingUtil;
 
-    private final EventService eventService;
-
-    private static final String UPLOAD_DIR = "artists-heaven-backend/src/main/resources/mainArtist_media/";
-
-    private final ImageServingUtil imageServingUtil;
-
-    public ArtistController(ArtistService artistService, ImageServingUtil imageServingUtil,
-            ProductService productService, EventService eventService) {
-        this.artistService = artistService;
-        this.imageServingUtil = imageServingUtil;
-        this.productService = productService;
-        this.eventService = eventService;
-    }
-
-    @GetMapping("/{artistId}")
-    public ResponseEntity<ArtistDTO> getArtistById(@PathVariable final Long artistId) {
-        // Buscar artista
-        Artist artist = artistService.findById(artistId);
-
-        // Obtener productos relacionados, idealmente con lógica en service
-        String artistKey = normalizeArtistName(artist.getArtistName());
-        List<Product> artistProducts = productService.findProductsByArtist(artistKey);
-
-        // Obtener eventos de este año
-        List<Event> artistEvents = eventService.findEventThisYearByArtist(artistId);
-
-        // Mapear a DTO
-        ArtistDTO artistDTO = new ArtistDTO();
-        artistDTO.setArtistName(artist.getArtistName());
-        artistDTO.setArtistEvents(artistEvents);
-        artistDTO.setArtistProducts(artistProducts);
-        artistDTO.setPrimaryColor(artist.getMainColor());
-        artistDTO.setBannerPhoto(artist.getBannerPhoto());
-        
-        return ResponseEntity.ok(artistDTO);
-    }
-
-    private String normalizeArtistName(final String artistName) {
-        if (artistName == null)
-            return "";
-        return artistName.toUpperCase().replaceAll("\\s+", "");
-    }
-
-    @PostMapping(value = "/register", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<Artist> registerArtist(@ModelAttribute ArtistRegisterDTO request) {
-
-        try {
-            String imageUrl = imageServingUtil.saveImages(request.getImage(), UPLOAD_DIR, "/mainArtist_media/", false);
-            String bannerUrl = imageServingUtil.saveImages(request.getBannerImage(), UPLOAD_DIR, "/mainArtist_media/", false);
-            Artist registeredArtist = new Artist();
-            registeredArtist.setMainViewPhoto(imageUrl);
-            registeredArtist.setBannerPhoto(bannerUrl);
-
-            registeredArtist = artistService.registerArtist(request, registeredArtist);
-            return new ResponseEntity<>(registeredArtist, HttpStatus.CREATED);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(null);
-        }
-    }
-
-    @GetMapping("/dashboard")
-    public ResponseEntity<ArtistDashboardDTO> getArtistDashboard(@RequestParam int year) {
-        try {
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            Object principalUser = authentication.getPrincipal();
-            Artist artist = (Artist) principalUser;
-            Long id = artist.getId();
-
-            ArtistDashboardDTO artistDashboardDTO = new ArtistDashboardDTO();
-            artistDashboardDTO.setIsVerificated(artistService.isArtistVerificated(id));
-            artistDashboardDTO.setFutureEvents(artistService.getFutureEvents(id, year));
-            artistDashboardDTO.setPastEvents(artistService.getPastEvents(id, year));
-            artistDashboardDTO.setOrderItemCount(artistService.getOrderItemCount(id, year));
-            artistDashboardDTO.setMostCountrySold(artistService.getMostCountrySold(id, year));
-
-            return ResponseEntity.ok(artistDashboardDTO);
-
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
+        public ArtistController(ArtistService artistService, ImageServingUtil imageServingUtil) {
+                this.artistService = artistService;
+                this.imageServingUtil = imageServingUtil;
         }
 
-    }
-
-    @GetMapping("/sales/monthly")
-    public ResponseEntity<List<MonthlySalesDTO>> getMonthlySalesData(
-            @Parameter(description = "Year for which to retrieve monthly sales data", example = "2024", required = true) @RequestParam int year) {
-        try {
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            Object principalUser = authentication.getPrincipal();
-            Artist artist = (Artist) principalUser;
-            Long id = artist.getId();
-
-            List<MonthlySalesDTO> monthlySalesData = artistService.getMonthlySalesDataPerArtist(id, year);
-            return ResponseEntity.ok(monthlySalesData);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
+        @Operation(summary = "Get artist by ID", description = "Retrieve an artist along with their products and events for the current year.")
+        @ApiResponses(value = {
+                        @ApiResponse(responseCode = "200", description = "Artist found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
+                        @ApiResponse(responseCode = "404", description = "Artist not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+        })
+        @GetMapping("/{artistId}")
+        public ResponseEntity<StandardResponse<ArtistDTO>> getArtistById(@PathVariable final Long artistId) {
+                ArtistDTO artistDTO = artistService.getArtistWithDetails(artistId);
+                StandardResponse<ArtistDTO> response = new StandardResponse<>("Artist retrieved successfully",
+                                artistDTO,
+                                HttpStatus.OK.value());
+                return ResponseEntity.ok(response);
         }
-    }
 
-    @GetMapping("/main")
-    public ResponseEntity<List<ArtistMainViewDTO>> getArtistMainView() {
-        try {
-            List<Artist> artists = artistService.getValidArtists();
-            List<ArtistMainViewDTO> artistiMainViewDTO = artists.stream()
-                    .map(this::mapToArtistMainViewDTO)
-                    .toList();
+        @Operation(summary = "Register a new artist", description = "Registers a new artist with images, email, password, and personal details.")
+        @ApiResponses(value = {
+                        @ApiResponse(responseCode = "201", description = "Artist successfully registered", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
+                        @ApiResponse(responseCode = "400", description = "Invalid request or artist already exists", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+        })
+        @PostMapping(value = "/register", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+        public ResponseEntity<StandardResponse<Artist>> registerArtist(@ModelAttribute ArtistRegisterDTO request,
+                        @RequestParam(name = "lang", defaultValue = "en") String lang) {
+                
 
-            return ResponseEntity.ok(artistiMainViewDTO);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
+                Artist registeredArtist = artistService.registerArtist(request, lang);
+
+                StandardResponse<Artist> response = new StandardResponse<>("Artist registered successfully",
+                                registeredArtist, HttpStatus.CREATED.value());
+                return ResponseEntity.status(HttpStatus.CREATED).body(response);
         }
-    }
 
-    private ArtistMainViewDTO mapToArtistMainViewDTO(Artist artist) {
-        return new ArtistMainViewDTO(artist);
-    }
+        @Operation(summary = "Get artist dashboard", description = "Retrieve the dashboard data for the authenticated artist for a specific year. "
+                        +
+                        "Includes verification status, past and future events, order item counts, and top countries sold.")
+        @ApiResponses(value = {
+                        @ApiResponse(responseCode = "200", description = "Dashboard retrieved successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
+                        @ApiResponse(responseCode = "404", description = "Artist not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
+                        @ApiResponse(responseCode = "401", description = "Unauthorized, the user is not authenticated", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+        })
+        @GetMapping("/dashboard")
+        public ResponseEntity<StandardResponse<ArtistDashboardDTO>> getArtistDashboard(@RequestParam int year) {
+                Artist artist = (Artist) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+                Long artistId = artist.getId();
 
-    @GetMapping("/mainArtist_media/{fileName:.+}")
-    public ResponseEntity<Resource> getArtistMainImage(
-            @Parameter(description = "File name including extension", required = true) @PathVariable String fileName) {
-        String basePath = System.getProperty("user.dir")
-                + "/artists-heaven-backend/src/main/resources/mainArtist_media/";
-        return imageServingUtil.serveImage(basePath, fileName);
-    }
+                ArtistDashboardDTO dashboardDTO = artistService.getArtistDashboard(artistId, year);
+
+                StandardResponse<ArtistDashboardDTO> response = new StandardResponse<>(
+                                "Dashboard retrieved successfully",
+                                dashboardDTO,
+                                HttpStatus.OK.value());
+
+                return ResponseEntity.ok(response);
+        }
+
+        @Operation(summary = "Get monthly sales data", description = "Retrieve the monthly sales data for the authenticated artist for a specific year, "
+                        +
+                        "excluding orders with status RETURN_ACCEPTED.")
+        @ApiResponses(value = {
+                        @ApiResponse(responseCode = "200", description = "Monthly sales data retrieved successfully", content = @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = MonthlySalesDTO.class)))),
+                        @ApiResponse(responseCode = "400", description = "Invalid request", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
+                        @ApiResponse(responseCode = "401", description = "Unauthorized, user not authenticated", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
+                        @ApiResponse(responseCode = "404", description = "Artist not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+        })
+        @GetMapping("/sales/monthly")
+        public ResponseEntity<StandardResponse<List<MonthlySalesDTO>>> getMonthlySalesData(
+                        @Parameter(description = "Year for which to retrieve monthly sales data", example = "2024", required = true) @RequestParam int year) {
+
+                Artist artist = (Artist) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+                Long artistId = artist.getId();
+
+                List<MonthlySalesDTO> monthlySales = artistService.getMonthlySalesDataPerArtist(artistId, year);
+
+                StandardResponse<List<MonthlySalesDTO>> response = new StandardResponse<>(
+                                "Monthly sales data retrieved successfully",
+                                monthlySales,
+                                HttpStatus.OK.value());
+
+                return ResponseEntity.ok(response);
+        }
+
+        @Operation(summary = "Get main view of artists", description = "Retrieve a list of all valid artists for displaying in the main view.")
+        @ApiResponses(value = {
+                        @ApiResponse(responseCode = "200", description = "Artists retrieved successfully", content = @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = ArtistMainViewDTO.class)))),
+                        @ApiResponse(responseCode = "400", description = "Invalid request", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+        })
+        @GetMapping("/main")
+        public ResponseEntity<StandardResponse<List<ArtistMainViewDTO>>> getArtistMainView() {
+                List<Artist> artists = artistService.getValidArtists();
+                List<ArtistMainViewDTO> artistMainViewDTOs = artists.stream()
+                                .map(this::mapToArtistMainViewDTO)
+                                .toList();
+
+                StandardResponse<List<ArtistMainViewDTO>> response = new StandardResponse<>(
+                                "Artists retrieved successfully",
+                                artistMainViewDTOs,
+                                HttpStatus.OK.value());
+
+                return ResponseEntity.ok(response);
+        }
+
+        private ArtistMainViewDTO mapToArtistMainViewDTO(Artist artist) {
+                return new ArtistMainViewDTO(artist);
+        }
+
+        @GetMapping("/mainArtist_media/{fileName:.+}")
+        public ResponseEntity<Resource> getArtistMainImage(
+                        @Parameter(description = "File name including extension", required = true) @PathVariable String fileName) {
+                String basePath = System.getProperty("user.dir")
+                                + "/artists-heaven-backend/src/main/resources/mainArtist_media/";
+                return imageServingUtil.serveImage(basePath, fileName);
+        }
 
 }

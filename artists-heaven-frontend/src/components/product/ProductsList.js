@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo } from "react";
 import Footer from "../Footer";
 import { Link } from "react-router-dom";
 import ProductCard from "./ProductCard";
-import SlidingPanel from "./SlidingPanel";
+import SlidingPanel from "../../utils/SlidingPanel";
+import { useTranslation } from 'react-i18next';
 
 const ProductList = () => {
     const [products, setProducts] = useState([]);
@@ -21,12 +22,33 @@ const ProductList = () => {
     const [tempPriceRange, setTempPriceRange] = useState(priceRange);
     const [tempSelectedCategories, setTempSelectedCategories] = useState(selectedCategories);
 
+    const { t, i18n } = useTranslation();
+
 
     const [maxAbsolutePrice, setMaxAbsolutePrice] = useState(1000);
 
+    const [imagesLoaded, setImagesLoaded] = useState(false);
+
+    // Nuevo estado para controlar visibilidad y animación fadeIn
+    const [isVisible, setIsVisible] = useState(false);
+
     useEffect(() => {
-        window.scrollTo(0, 0);
-    }, [page]);
+        if (!products.length) return;
+        const imageUrls = products.map(p => p.images);
+        const loadImage = (src) => new Promise((resolve) => {
+            const img = new Image();
+            img.src = src;
+            img.onload = img.onerror = resolve;
+        });
+
+        Promise.all(imageUrls.map(loadImage)).then(() => {
+            setImagesLoaded(true);
+            setTimeout(() => {
+                setIsVisible(true); // Activamos el fadeIn
+            }, 30); // Delay suave
+        });
+
+    }, [products]);
 
     useEffect(() => {
         fetch(`/api/product/allProducts?size=-1`)
@@ -34,11 +56,11 @@ const ProductList = () => {
                 if (!response.ok) throw new Error("Hubo un error al obtener los productos");
                 return response.json();
             })
-            .then((data) => {
-                setProducts(data.content);
-                setTotalPages(Math.ceil(data.content.length / pageSize));
+            .then((dataProduct) => {
+                setProducts(dataProduct.data.content);
+                setTotalPages(Math.ceil(dataProduct.data.content.length / pageSize));
 
-                const prices = data.content.map((p) => p.price);
+                const prices = dataProduct.data.content.map((p) => p.price);
                 const maxPrice = Math.max(...prices);
                 setMaxAbsolutePrice(maxPrice);
                 setPriceRange({ min: 0, max: maxPrice });
@@ -47,7 +69,6 @@ const ProductList = () => {
             .catch((error) => console.error("Error:", error));
     }, []);
 
-    console.log(products);
     const categories = useMemo(() => {
         const catsMap = new Map();  // Usar Map para evitar duplicados por id
         products.forEach((p) => {
@@ -59,8 +80,6 @@ const ProductList = () => {
         });
         return Array.from(catsMap.values()); // Array de objetos categoría únicos
     }, [products]);
-
-    console.log(categories)
 
     const filteredProducts = useMemo(() => {
         let result = [...products];
@@ -154,27 +173,31 @@ const ProductList = () => {
         }
     }, [isFilterOpen, orderBy, selectedSizes, priceRange, selectedCategories]);
 
+    console.log("Filtered Products:", filteredProducts);
+
 
     return (
         <>
             <div
                 style={{
-                    padding: "20px",
+
                     color: "white",
                     minHeight: "100vh",
-                    marginTop: '40px'
+                    opacity: isVisible ? 1 : 0,
+                    transition: "opacity 0.7s ease-in-out",
                 }}
+                className="p-4 mt-4"
             >
-                <div className="flex justify-between">
+                <div className="flex justify-between mt-5">
                     <p className="custom-font-shop-regular mb-4" style={{ color: "black" }}>
-                        {filteredProducts.length} Products
+                        {filteredProducts.length} {t('productsList.products')}
                     </p>
                     <p
                         className="custom-font-shop-regular mb-4 cursor-pointer"
                         style={{ color: "black" }}
                         onClick={() => setIsFilterOpen(true)}
                     >
-                        Filtrar y buscar
+                        {t('productsList.filterAndSearch')}
                     </p>
                 </div>
 
@@ -193,19 +216,13 @@ const ProductList = () => {
             <SlidingPanel
                 isOpen={isFilterOpen}
                 position="right"
+                title={t('Filters')}
                 onClose={() => setIsFilterOpen(false)}
                 maxWidth="500px"
             >
-                <h3
-                    className="p-4 custom-font-shop custom-font-shop-black"
-                    style={{ borderBottom: "1px solid #e5e7eb" }}
-                >
-                    Filtros
-                </h3>
-
                 <div className="p-4 custom-font-shop-regular mb-4" style={{ color: "black" }}>
                     <label htmlFor="orderBy" className="block mb-2 font-semibold">
-                        Ordenar
+                        {t('productsList.sort')}
                     </label>
                     <select
                         id="orderBy"
@@ -213,16 +230,16 @@ const ProductList = () => {
                         onChange={(e) => setTempOrderBy(e.target.value)}
                         className="w-full border border-gray-300 rounded p-2"
                     >
-                        <option value="default">Por defecto</option>
-                        <option value="az">Ordenado de la A a la Z</option>
-                        <option value="za">Ordenado de la Z a la A</option>
-                        <option value="priceHighLow">Ordenar precio: más alto a más bajo</option>
-                        <option value="priceLowHigh">Ordenar precio: más bajo a más alto</option>
+                        <option value="default">{t('productsList.default')}</option>
+                        <option value="az">{t('productsList.sortedAZ')}</option>
+                        <option value="za">{t('productsList.sortedZA')}</option>
+                        <option value="priceHighLow">{t('productsList.sortedPriceHighLow')}</option>
+                        <option value="priceLowHigh">{t('productsList.sortedPriceLowHigh')}</option>
                     </select>
                 </div>
 
                 <div className="p-4 custom-font-shop-regular mb-4" style={{ color: "black" }}>
-                    <p className="font-semibold mb-2">Tallas</p>
+                    <p className="font-semibold mb-2">{t('productsList.sizes')}</p>
                     {["XS", "S", "M", "L", "XL", "XXL"].map((size) => (
                         <label key={size} className="inline-flex items-center mr-4 mb-2 cursor-pointer">
                             <input
@@ -238,7 +255,7 @@ const ProductList = () => {
 
                 {/* Categorías */}
                 <div className="p-4 custom-font-shop-regular mb-4" style={{ color: "black" }}>
-                    <p className="font-semibold mb-2">Categorías</p>
+                    <p className="font-semibold mb-2">{t('productsList.categories')}</p>
                     {categories.map((category) => (
                         <label key={category.id} className="inline-flex items-center mr-4 mb-2 cursor-pointer">
                             <input
@@ -253,7 +270,7 @@ const ProductList = () => {
                 </div>
 
                 <div className="p-4 custom-font-shop-regular mb-4" style={{ color: "black" }}>
-                    <p className="font-semibold mb-2">Rango de precio</p>
+                    <p className="font-semibold mb-2">{t('productsList.sortPrice')}</p>
                     <input
                         type="range"
                         min={0}
@@ -272,25 +289,27 @@ const ProductList = () => {
                         }}
                     />
                     <p className="mt-2">
-                        Precio: 0€ - {tempPriceRange.max.toFixed(2)}€
+                        {t('productsList.price')}: 0€ - {tempPriceRange.max.toFixed(2)}€
                     </p>
                 </div>
 
                 <div className="p-4 flex w-full gap-4">
                     <button
                         onClick={handleClearFilters}
-                        className="border border-black cursor-pointer px-8 py-6 flex-1"                    >
-                        <span className="custom-font-shop custom-font-shop-black transition-transform duration-300 ease-in-out hover:translate-x-2">
-                            Eliminar filtros
+                        className="slide-on-hover border border-black cursor-pointer px-8 py-6 flex-1 transition-transform duration-300 ease-in-out hover:translate-x-2"
+                    >
+                        <span className="custom-font-shop custom-font-shop-black">
+                            {t('productsList.deleteFilter')}
                         </span>
                     </button>
                     <button
                         onClick={handleApplyFilters}
-                        className="border border-black cursor-pointer px-8 py-6 flex-1"
+                        className="slide-on-hover border border-black cursor-pointer px-8 py-6 flex-1 transition-transform duration-300 ease-in-out hover:translate-x-2"
+
                         style={{ backgroundColor: "black" }}
                     >
-                        <span className="custom-font-shop transition-transform duration-300 ease-in-out hover:translate-x-2">
-                            Aplicar filtros
+                        <span className="custom-font-shop">
+                            {t('productsList.applyFilter')}
                         </span>
                     </button>
                 </div>

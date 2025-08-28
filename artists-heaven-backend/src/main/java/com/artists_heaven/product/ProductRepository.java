@@ -1,6 +1,7 @@
 package com.artists_heaven.product;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import org.springframework.data.domain.Page;
@@ -46,4 +47,11 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     @Query("SELECT p FROM Product p LEFT JOIN p.ratings r WHERE p.available = true GROUP BY p.id ORDER BY AVG(r.score) DESC")
     List<Product> findTopRatingProduct();
 
+    boolean existsByReference(Long reference);
+
+    @Query("SELECT p FROM Product p WHERE p.reference = :reference")
+    Optional<Product> findByReference(Long reference);
+
+    @Query("SELECT p FROM Product p WHERE p.collection.name = :collectionName")
+    List<Product> findByCollectionName(String collectionName);
 }

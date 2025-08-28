@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import jakarta.validation.Valid;
+
 @RestController
 @RequestMapping("/api/chatbot")
 public class ChatbotController {
@@ -18,11 +20,11 @@ public class ChatbotController {
     private ChatbotService chatbotService;
 
     @PostMapping("/message")
-    public ResponseEntity<?> chatWithGemini(@RequestBody Map<String, String> payload) {
+    public ResponseEntity<?> chatWithGemini(@Valid @RequestBody ChatMessageRequestDTO request) {
         try {
-            String userMessage = extractMessage(payload);
+            String userMessage = request.getMessage() != null ? request.getMessage().trim() : "";
 
-            if (userMessage == null) {
+            if (userMessage.isBlank()) {
                 return badRequest(true,
                         "El mensaje no puede estar vacío",
                         "The message cannot be empty");
@@ -30,16 +32,16 @@ public class ChatbotController {
 
             boolean isEnglish = ChatbotUtils.isEnglish(userMessage);
 
-            // 1. Predefined NLP Response
-            String predefinedResponse = chatbotService.searchNLPAnswer(userMessage);
-            if (predefinedResponse != null) {
-                return ok(predefinedResponse);
-            }
-
-            // 2. Dynamic Response
+            // 1. Dynamic Response (Intent Detection first)
             String dynamicResponse = chatbotService.searchDynamicAnswer(userMessage);
             if (dynamicResponse != null) {
                 return ok(dynamicResponse);
+            }
+
+            // 2. Predefined NLP Response (only if no intent detected)
+            String predefinedResponse = chatbotService.searchNLPAnswer(userMessage);
+            if (predefinedResponse != null) {
+                return ok(predefinedResponse);
             }
 
             // 3. Check API Key
@@ -58,14 +60,6 @@ public class ChatbotController {
                     "Error interno en el servidor",
                     "Internal server error");
         }
-    }
-
-    private String extractMessage(Map<String, String> payload) {
-        if (payload == null) {
-            return null;
-        }
-        String message = payload.get("message");
-        return (message != null && !message.isBlank()) ? message.trim() : null;
     }
 
     private ResponseEntity<Map<String, String>> ok(String reply) {

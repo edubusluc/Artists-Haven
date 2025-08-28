@@ -207,3 +207,7 @@ thing
 object
 matter
 seller
+do
+limit
+give
+selling

@@ -16,8 +16,8 @@ import org.apache.commons.text.similarity.LevenshteinDistance;
 
 public class ChatbotUtils {
 
-    private static final Set<String> STOPWORDS_ES = loadStopwords("/stopwords_es.txt");
-    private static final Set<String> STOPWORDS_EN = loadStopwords("/stopwords_en.txt");
+    static final Set<String> STOPWORDS_ES = loadStopwords("/stopwords_es.txt");
+    static final Set<String> STOPWORDS_EN = loadStopwords("/stopwords_en.txt");
 
     private static final Set<String> DICTIONARY_ES = loadDictionary("/dictionary_es.txt");
     private static final Set<String> DICTIONARY_EN = loadDictionary("/dictionary_en.txt");

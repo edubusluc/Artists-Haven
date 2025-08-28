@@ -1,6 +1,8 @@
 package com.artists_heaven.verification;
 
-import java.util.Map;
+import java.util.Locale;
+
+import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -11,6 +13,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.artists_heaven.email.EmailSenderService;
 import com.artists_heaven.entities.artist.Artist;
 import com.artists_heaven.images.ImageServingUtil;
+import com.artists_heaven.standardResponse.StandardResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -29,59 +32,42 @@ public class VerificationController {
 
     private final ImageServingUtil imageServingUtil;
 
-    private final String ERROR = "error";
+    private final MessageSource messageSource;
 
     private final String UPLOAD_DIR = "artists-heaven-backend/src/main/resources/verification_media";
 
     public VerificationController(EmailSenderService emailSenderService, VerificationService verificationService,
-            ImageServingUtil imageServingUtil) {
+            ImageServingUtil imageServingUtil, MessageSource messageSource) {
         this.emailSenderService = emailSenderService;
         this.verificationService = verificationService;
         this.imageServingUtil = imageServingUtil;
+        this.messageSource = messageSource;
     }
 
     @PostMapping("/send")
     @Operation(summary = "Submit artist verification request", description = "Allows an artist to submit a verification request by uploading a validation video and providing their email.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Verification request submitted successfully", content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"message\":\"Request submitted successfully\"}"))),
-            @ApiResponse(responseCode = "401", description = "Unauthorized - user is not an artist or not eligible for verification", content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\":\"User is not an artist\"}"))),
-            @ApiResponse(responseCode = "500", description = "Internal server error while processing the verification request", content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\":\"Error processing the request\"}")))
+            @ApiResponse(responseCode = "200", description = "Verification request submitted successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Forbidden - user is not an artist or not eligible", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
+            @ApiResponse(responseCode = "409", description = "Conflict - duplicate request already exists", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
+            @ApiResponse(responseCode = "500", description = "Internal server error while processing the verification request", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
     })
-    public ResponseEntity<Map<String, Object>> sendValidation(
+    public ResponseEntity<StandardResponse<String>> sendValidation(
             @Parameter(description = "Email of the artist submitting the verification request", required = true) @RequestParam("email") String email,
-            @Parameter(description = "Validation video file uploaded by the artist", required = true, content = @Content(mediaType = "video/*")) @RequestParam("video") MultipartFile video) {
+            @Parameter(description = "Validation video file uploaded by the artist", required = true, content = @Content(mediaType = "video/*")) @RequestParam("video") MultipartFile video, @RequestParam String lang) {
 
-        try {
-            // Validate existence and status of the artist
-            Artist artist = verificationService.validateArtist(email);
-            if (artist == null) {
-                return new ResponseEntity<>(Map.of(ERROR, "User is not an artist"), HttpStatus.UNAUTHORIZED);
-            }
+        Artist artist = verificationService.validateArtistForVerification(email);
 
-            // Check if the artist is already verified or has a pending request
-            if (!verificationService.isArtistEligibleForVerification(artist)) {
-                return new ResponseEntity<>(Map.of(ERROR, "User is not eligible or already verified"),
-                        HttpStatus.UNAUTHORIZED);
-            }
+        String videoUrl = imageServingUtil.saveImages(video, UPLOAD_DIR, "/verification_media/", true);
+        verificationService.createVerification(artist, videoUrl);
 
-            // Check if there is an existing pending verification request
-            if (verificationService.hasPendingVerification(artist)) {
-                return new ResponseEntity<>(Map.of(ERROR, "There is already a pending request for this user"),
-                        HttpStatus.UNAUTHORIZED);
-            }
+        emailSenderService.sendVerificationEmail(artist);
 
-            // Save the video file and create the verification request
-            String videoUrl = imageServingUtil.saveImages(video, UPLOAD_DIR, "/verification_media/", true);
-            verificationService.createVerification(artist, videoUrl);
+        Locale locale = new Locale(lang);
+        String message = messageSource.getMessage("verification.message.successful", null, locale);
 
-            // Send verification email
-            emailSenderService.sendVerificationEmail(artist);
-
-            return ResponseEntity.ok(Map.of("message", "Request submitted successfully"));
-        } catch (Exception e) {
-            return new ResponseEntity<>(Map.of(ERROR, "Error processing the request"),
-                    HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+        return ResponseEntity.ok(
+                new StandardResponse<>(message, HttpStatus.OK.value()));
     }
 
 }

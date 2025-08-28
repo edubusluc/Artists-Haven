@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import ReturnRequestModal from "./ReturnRequestModal";
+import { checkTokenExpiration } from "../../utils/authUtils";
+import { useTranslation } from 'react-i18next';
 
 const MyOrders = () => {
     const [orders, setOrders] = useState([]);
@@ -16,11 +18,14 @@ const MyOrders = () => {
 
     const orderSteps = ["PAID", "IN_PREPARATION", "SENT", "DELIVERED"];
 
+    const { t, i18n } = useTranslation();
+    const language = i18n.language;
+
     const OrderProgressBar = ({ status }) => {
         if (status === "CANCELED") {
             return (
                 <div className="p-4 border border-red-300 bg-red-50 rounded-lg text-red-600 text-center font-semibold">
-                    ❌ Order has been canceled.
+                    {t('myOrders.orderCanceled')}
                 </div>
             );
         }
@@ -28,7 +33,7 @@ const MyOrders = () => {
         if (status === "RETURN_REQUEST") {
             return (
                 <div className="p-4 border border-yellow-300 bg-yellow-50 rounded-lg text-yellow-600 text-center font-semibold">
-                    Return of the order has been requested
+                    {t('myOrders.alreadyReturnRequest')}
                 </div>
             );
         }
@@ -99,7 +104,7 @@ const MyOrders = () => {
     };
 
     const fetchOrders = () => {
-        if (!authToken) {
+        if (!authToken || !checkTokenExpiration()) {
             setError("User is not authenticated.");
             setLoading(false);
             return;
@@ -117,10 +122,10 @@ const MyOrders = () => {
                 if (!res.ok) throw new Error("Failed to fetch orders");
                 return res.json();
             })
-            .then((data) => {
-                setOrders(data.orders || []);
-                setProductImages(data.productImages || {});
-                setHasMore((data.orders || []).length === size); // If less than `size`, no more pages
+            .then((response) => {
+                setOrders(response.data.orders || []);
+                setProductImages(response.data.productImages || {});
+                setHasMore((response.data.orders || []).length === size);
             })
             .catch((err) => setError(err.message))
             .finally(() => setLoading(false));
@@ -149,28 +154,33 @@ const MyOrders = () => {
     };
 
 
-    const handleSubmitReason = (reason) => {
-        fetch(`/api/returns/create`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${authToken}`,
-            },
-            body: JSON.stringify({
-                orderId: selectedOrderId,
-                reason: reason,
-            }),
-        })
-            .then((res) => {
-                if (!res.ok) throw new Error("Failed to create return request");
-                return res.text();
-            })
-            .then((msg) => {
-                alert(msg);
-                handleCloseModal();
-                fetchOrders();
-            })
-            .catch((err) => alert(err.message));
+    const handleSubmitReason = async (reason) => {
+        try {
+            const response = await fetch(`/api/returns/create?lang=${language}`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${authToken}`,
+                },
+                body: JSON.stringify({
+                    orderId: selectedOrderId,
+                    reason: reason,
+                }),
+
+            });
+            const result = await response.json();
+            const errorMessage = result.message;
+
+            if (!response.ok) {
+                throw new Error(errorMessage);
+
+            }
+            alert(result.message);
+            handleCloseModal();
+            fetchOrders();
+        } catch (error) {
+            alert(error.message)
+        }
     };
 
     const handleDownloadLabel = async (orderId) => {
@@ -198,7 +208,7 @@ const MyOrders = () => {
         a.remove();
     };
 
-    if (loading) return <p className="text-gray-600">Loading your orders...</p>;
+    if (loading) return <p className="text-gray-600">{t('myOrders.loadingOrders')}</p>;
 
     if (error)
         return <p className="text-red-500 font-medium bg-red-100 p-4 rounded">{error}</p>;
@@ -206,9 +216,11 @@ const MyOrders = () => {
     if (orders.length === 0)
         return (
             <div className="text-center text-gray-500 py-10">
-                <p className="text-lg">🛒 You haven’t placed any orders yet.</p>
+                <p className="text-lg">{t('myOrders.noOrders')}</p>
             </div>
         );
+
+    console.log(orders);
 
     return (
         <div className="space-y-6">
@@ -220,7 +232,7 @@ const MyOrders = () => {
                                 onClick={() => handleOpenModal(order.id)}
                                 className="w-full md:w-auto bg-yellow-400 text-black font-semibold py-2 px-6 rounded-md shadow-md transition hover:bg-yellow-500"
                             >
-                                Solicitar Devolución
+                                {t('myOrders.returnRequest')}
                             </button>
                         </div>
                     )}
@@ -230,24 +242,24 @@ const MyOrders = () => {
                                 onClick={() => handleDownloadLabel(order.id)}
                                 className="w-full md:w-auto bg-yellow-400 text-black font-semibold py-2 px-6 rounded-md shadow-md transition hover:bg-yellow-500"
                             >
-                                📄 Descargar Etiqueta de Devolución
+                                {t('myOrders.orderCandownloadReturnLabelceled')}
                             </button>
                         </div>
                     )}
                     <OrderProgressBar status={order.status} />
                     <div className="flex justify-between items-center">
                         <div>
-                            <h3 className="text-xl font-semibold">Order #{order.identifier}</h3>
-                            <p className="text-sm text-gray-500">Status: {order.status}</p>
+                            <h3 className="text-xl font-semibold">{t('myOrders.order')} #{order.identifier}</h3>
+                            <p className="text-sm text-gray-500">{t('myOrders.status')}: {order.status}</p>
                         </div>
                         <div className="text-right">
-                            <p className="text-sm text-gray-500">Total:</p>
+                            <p className="text-sm text-gray-500">{t('myOrders.total')}:</p>
                             <p className="text-lg font-bold text-green-600">€{order.totalPrice.toFixed(2)}</p>
                         </div>
                     </div>
 
                     <div className="text-sm text-gray-600">
-                        <p>📍 Shipping to: {order.addressLine1}</p>
+                        <p>📍 {t('myOrders.shippingAddress')}: {order.addressLine1}</p>
                     </div>
 
                     <div className="flex flex-col gap-4 text-sm text-gray-700">
@@ -264,13 +276,12 @@ const MyOrders = () => {
                                             loading="lazy"
                                         />
                                     </div>
-                                    <div className="flex flex-col justify-between w-full">
-                                        <p className="font-medium">Product: {item.name}</p>
-                                        <p>Size: {item.size}</p>
-                                        <p>Qty: {item.quantity}</p>
-                                        <p className="text-green-700 font-semibold">
-                                            €{item.price.toFixed(2)}
-                                        </p>
+                                    <div className="flex flex-col justify-center w-full">
+                                        <p className="inter-400 text-sm">{t('myOrders.product')}: {item.name}</p>
+                                        {item.section !== "ACCESSORIES" &&
+                                            <p className='inter-400 text-sm'>{t('myOrders.size')}: {item.size}</p>}
+                                        <p className='inter-400 text-sm'>{t('myOrders.quantity')}: {item.quantity}</p>
+                                        <p className="text-green-700 inter-400 text-sm">{item.price.toFixed(2)}€</p>
                                     </div>
                                 </div>
                             );
@@ -286,14 +297,14 @@ const MyOrders = () => {
                     onClick={handlePrev}
                     className="px-4 py-2 rounded bg-gray-200 text-sm font-medium disabled:opacity-50"
                 >
-                    ⬅ Previous
+                    {t('myOrders.previous')}
                 </button>
                 <button
                     disabled={!hasMore}
                     onClick={handleNext}
                     className="px-4 py-2 rounded bg-gray-200 text-sm font-medium disabled:opacity-50"
                 >
-                    Next ➡
+                    {t('myOrders.next')}
                 </button>
             </div>
 

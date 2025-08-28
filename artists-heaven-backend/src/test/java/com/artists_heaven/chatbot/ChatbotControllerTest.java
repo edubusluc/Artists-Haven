@@ -15,6 +15,7 @@ import org.mockito.MockitoAnnotations;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
+import com.artists_heaven.chat.ChatMessageRequestDTO;
 import com.artists_heaven.chat.ChatbotController;
 import com.artists_heaven.chat.ChatbotService;
 
@@ -33,9 +34,9 @@ class ChatbotControllerTest {
 
     @Test
     void testChatWithGemini_MessageIsNull() {
-        Map<String, String> payload = Map.of();
+        ChatMessageRequestDTO request = new ChatMessageRequestDTO();
 
-        ResponseEntity<?> response = chatbotController.chatWithGemini(payload);
+        ResponseEntity<?> response = chatbotController.chatWithGemini(request);
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         Map<?, ?> body = (Map<?, ?>) response.getBody();
@@ -45,11 +46,12 @@ class ChatbotControllerTest {
 
     @Test
     void testChatWithGemini_NlpResponseFound() {
-        Map<String, String> payload = Map.of("message", "Hi there!");
+        ChatMessageRequestDTO request = new ChatMessageRequestDTO();
+        request.setMessage("Hi there!");
 
         when(chatbotService.searchNLPAnswer("Hi there!")).thenReturn("Predefined answer");
 
-        ResponseEntity<?> response = chatbotController.chatWithGemini(payload);
+        ResponseEntity<?> response = chatbotController.chatWithGemini(request);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         Map<?, ?> body = (Map<?, ?>) response.getBody();
@@ -58,12 +60,13 @@ class ChatbotControllerTest {
 
     @Test
     void testChatWithGemini_DynamicResponseFound() {
-        Map<String, String> payload = Map.of("message", "Recommend me something");
+        ChatMessageRequestDTO request = new ChatMessageRequestDTO();
+        request.setMessage("Recommend me something");
 
         when(chatbotService.searchNLPAnswer(anyString())).thenReturn(null);
         when(chatbotService.searchDynamicAnswer(anyString())).thenReturn("Dynamic answer");
 
-        ResponseEntity<?> response = chatbotController.chatWithGemini(payload);
+        ResponseEntity<?> response = chatbotController.chatWithGemini(request);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         Map<?, ?> body = (Map<?, ?>) response.getBody();
@@ -72,13 +75,14 @@ class ChatbotControllerTest {
 
     @Test
     void testChatWithGemini_ApiKeyNotConfigured() {
-        Map<String, String> payload = Map.of("message", "Tell me more");
+        ChatMessageRequestDTO request = new ChatMessageRequestDTO();
+        request.setMessage("Tell me more");
 
         when(chatbotService.searchNLPAnswer(anyString())).thenReturn(null);
         when(chatbotService.searchDynamicAnswer(anyString())).thenReturn(null);
         when(chatbotService.isApiKeyConfigured()).thenReturn(false);
 
-        ResponseEntity<?> response = chatbotController.chatWithGemini(payload);
+        ResponseEntity<?> response = chatbotController.chatWithGemini(request);
 
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
         Map<?, ?> body = (Map<?, ?>) response.getBody();
@@ -87,14 +91,14 @@ class ChatbotControllerTest {
 
     @Test
     void testChatWithGemini_CallsGeminiApi() throws Exception {
-        Map<String, String> payload = Map.of("message", "Hello Gemini!");
-
+        ChatMessageRequestDTO request = new ChatMessageRequestDTO();
+        request.setMessage("Hello Gemini!");
         when(chatbotService.searchNLPAnswer(anyString())).thenReturn(null);
         when(chatbotService.searchDynamicAnswer(anyString())).thenReturn(null);
         when(chatbotService.isApiKeyConfigured()).thenReturn(true);
         when(chatbotService.callGeminiAPI("Hello Gemini!")).thenReturn("Gemini response");
 
-        ResponseEntity<?> response = chatbotController.chatWithGemini(payload);
+        ResponseEntity<?> response = chatbotController.chatWithGemini(request);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         Map<?, ?> body = (Map<?, ?>) response.getBody();
@@ -103,14 +107,15 @@ class ChatbotControllerTest {
 
     @Test
     void testChatWithGemini_ExceptionThrown() throws Exception {
-        Map<String, String> payload = Map.of("message", "My message contains a Trigger exception content");
+        ChatMessageRequestDTO request = new ChatMessageRequestDTO();
+        request.setMessage("My message contains a Trigger exception content");
 
         when(chatbotService.searchNLPAnswer(anyString())).thenReturn(null);
         when(chatbotService.searchDynamicAnswer(anyString())).thenReturn(null);
         when(chatbotService.isApiKeyConfigured()).thenReturn(true);
         doThrow(new RuntimeException("Unexpected error")).when(chatbotService).callGeminiAPI(anyString());
 
-        ResponseEntity<?> response = chatbotController.chatWithGemini(payload);
+        ResponseEntity<?> response = chatbotController.chatWithGemini(request);
 
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
         Map<?, ?> body = (Map<?, ?>) response.getBody();

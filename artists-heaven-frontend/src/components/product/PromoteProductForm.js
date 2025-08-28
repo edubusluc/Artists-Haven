@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import NonAuthorise from "../NonAuthorise";
+import SessionExpired from "../SessionExpired";
+import { checkTokenExpiration } from "../../utils/authUtils";
 
 const PromoteProductForm = () => {
     const [discount, setDiscount] = useState(""); // Iniciar con una cadena vacía en lugar de 0
@@ -8,20 +11,31 @@ const PromoteProductForm = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const [errorMessage, setErrorMessage] = useState("");
-    const location = useLocation();
-    const queryParams = new URLSearchParams(location.search);  
+    const { t, i18n } = useTranslation();
+    const language = i18n.language;
+    const [product, setProduct] = useState({});
+    const rol = localStorage.getItem("role");
 
-    const price = parseFloat(queryParams.get('price') || 0); // Obtener el precio original del producto
+    useEffect(() => {
+        fetch(`/api/product/details/${id}`)
+            .then(res => res.json())
+            .then(response => setProduct(response.data));
+    }, [id]);
 
-    // Calcular el precio final con el descuento
-    const discountedPrice = price - (price * (discount ? discount : 0) / 100); // Usar 0 si el descuento está vacío
+    useEffect(() => {
+        setErrorMessage("")
+    }, [language]);
+
+    const discountedPrice = product.price - (product.price * (discount ? discount : 0) / 100); // Usar 0 si el descuento está vacío
+
+
 
     const handleSubmit = async (e) => {
         e.preventDefault();
 
         // Validar el descuento
         if (discount === "" || discount < 0 || discount > 100) {
-            setErrorMessage("El descuento debe estar entre 0 y 100.");
+            setErrorMessage(t('promoted.error.discount'));
             return;
         }
         setErrorMessage("");
@@ -55,20 +69,24 @@ const PromoteProductForm = () => {
         }
     };
 
+    if (!rol || rol !== 'ADMIN') {
+        return <NonAuthorise />;
+    } else if (!checkTokenExpiration()) {
+        return <SessionExpired />;
+    }
+
     return (
         <div className="container mx-auto p-6 bg-white rounded-lg shadow-md">
-            <h2 className="text-2xl font-bold mb-4 text-center text-black">Añadir Descuento al Producto</h2>
+            <h2 className="text-2xl font-bold mb-4 text-center text-black">{t('promoteProductForm.addDiscount')}</h2>
             <form onSubmit={handleSubmit} className="flex flex-col gap-6">
                 {/* Descuento */}
                 <div>
-                    <label className="text-sm font-medium text-gray-700">Descuento (%)</label>
+                    <label className="text-sm font-medium text-gray-700">{t('promoteProductForm.discount')} (%)</label>
                     <input
                         type="number"
                         placeholder="0"
-                        min="0"
-                        max="100"
                         value={discount}
-                        onChange={(e) => setDiscount(e.target.value)} // Actualiza con el valor ingresado
+                        onChange={(e) => setDiscount(e.target.value)}
                         className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-400"
                     />
                     {errorMessage && (
@@ -78,9 +96,15 @@ const PromoteProductForm = () => {
 
                 {/* Desglose del precio */}
                 <div className="mt-4">
-                    <p className="text-sm text-gray-700">Precio Original: <span className="font-semibold">{price.toFixed(2)}€</span></p>
-                    <p className="text-sm text-gray-700">Descuento: <span className="font-semibold">{discount || 0}%</span></p>
-                    <p className="text-sm text-gray-700">Precio Final: <span className="font-semibold">{discountedPrice.toFixed(2)}€</span></p>
+                    <p className="text-sm text-gray-700">
+                        {t('promoteProductForm.originalPrice')}: <span className="font-semibold">{product.price?.toFixed(2) || "0.00"}€</span>
+                    </p>
+                    <p className="text-sm text-gray-700">
+                        {t('promoteProductForm.discount')}: <span className="font-semibold">{discount || 0}%</span>
+                    </p>
+                    <p className="text-sm text-gray-700">
+                        {t('promoteProductForm.finalPrice')}: <span className="font-semibold">{discountedPrice ? discountedPrice.toFixed(2) : "0.00"}€</span>
+                    </p>
                 </div>
 
                 {/* Botón Enviar */}
@@ -89,7 +113,7 @@ const PromoteProductForm = () => {
                         type="submit"
                         className="w-2/3 py-3 mt-4 bg-yellow-400 text-black font-semibold rounded-lg hover:bg-yellow-500 focus:outline-none"
                     >
-                        Aplicar Descuento
+                        {t('promoteProductForm.applyDiscount')}
                     </button>
                 </div>
             </form>

@@ -9,15 +9,14 @@ import lombok.Getter;
 import lombok.Setter;
 
 /**
- * Data Transfer Object representing an event organized or attended by an artist.
- * Contains essential event details such as name, description, date, and location.
+ * Data Transfer Object representing an event organized or attended by an
+ * artist.
+ * Contains essential event details such as name, description, date, and
+ * location.
  */
 @Getter
 @Setter
-@Schema(
-    name = "EventDTO",
-    description = "Represents event data including title, description, date, location, and artist."
-)
+@Schema(name = "EventDTO", description = "Represents event data including title, description, date, location, and artist.")
 public class EventDTO {
 
     /**
@@ -66,4 +65,34 @@ public class EventDTO {
      */
     @Schema(description = "Optional image associated with the event", example = "https://example.com/images/event-banner.jpg")
     private String image;
+
+    private double latitude;
+
+    private double longitude;
+
+    private String artistName;
+
+    private String color;
+
+    private Long id;
+
+    public EventDTO(){
+        
+    }
+
+    public EventDTO(Event event){
+        this.id = event.getId();
+        this.name = event.getName();
+        this.description = event.getDescription();
+        this.date = event.getDate();
+        this.location = event.getLocation();
+        this.moreInfo = event.getMoreInfo();
+        this.artistId = event.getArtist().getId();
+        this.image = event.getImage();
+        this.latitude = event.getLatitude();
+        this.longitude = event.getLongitude();
+        this.artistName = event.getArtist().getArtistName();
+        this.color = event.getArtist().getMainColor();
+
+    }
 }

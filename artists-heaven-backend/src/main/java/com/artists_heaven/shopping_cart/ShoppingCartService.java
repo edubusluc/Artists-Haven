@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import com.artists_heaven.entities.user.User;
 import com.artists_heaven.entities.user.UserService;
 import com.artists_heaven.product.Product;
+import com.artists_heaven.product.Section;
 
 import jakarta.transaction.Transactional;
 
@@ -38,9 +39,19 @@ public class ShoppingCartService {
 
         ShoppingCart shoppingCart = getOrCreateShoppingCart(user.getId());
 
-        Optional<CartItem> existingItem = shoppingCart.getItems().stream()
-                .filter(item -> item.getProduct().getId().equals(product.getId()) && item.getSize().equals(size))
-                .findFirst();
+        Optional<CartItem> existingItem;
+
+        if (Section.ACCESSORIES.equals(product.getSection())) {
+            // Para accesorios, no filtramos por talla
+            existingItem = shoppingCart.getItems().stream()
+                    .filter(item -> item.getProduct().getId().equals(product.getId()))
+                    .findFirst();
+        } else {
+            // Para ropa y otros productos, filtramos por talla
+            existingItem = shoppingCart.getItems().stream()
+                    .filter(item -> item.getProduct().getId().equals(product.getId()) && item.getSize().equals(size))
+                    .findFirst();
+        }
 
         if (existingItem.isPresent()) {
             CartItem item = existingItem.get();
@@ -49,7 +60,7 @@ public class ShoppingCartService {
         } else {
             CartItem newItem = new CartItem();
             newItem.setProduct(product);
-            newItem.setSize(size);
+            newItem.setSize(Section.ACCESSORIES.equals(product.getSection()) ? null : size);
             newItem.setQuantity(quantity);
             newItem.setShoppingCart(shoppingCart);
             shoppingCart.getItems().add(newItem);
@@ -78,21 +89,28 @@ public class ShoppingCartService {
             shoppingCart.setItems(new ArrayList<>());
         }
 
-        // Buscar si el item ya existe en el carrito
-        Optional<CartItem> existingItem = shoppingCart.getItems().stream()
-                .filter(item -> item.getProduct().getId().equals(product.getId()) && item.getSize().equals(size))
-                .findFirst();
+        Optional<CartItem> existingItem;
+
+        if (Section.ACCESSORIES.equals(product.getSection())) {
+            // Para accesorios, ignoramos talla
+            existingItem = shoppingCart.getItems().stream()
+                    .filter(item -> item.getProduct().getId().equals(product.getId()))
+                    .findFirst();
+        } else {
+            // Para ropa, considerar talla
+            existingItem = shoppingCart.getItems().stream()
+                    .filter(item -> item.getProduct().getId().equals(product.getId()) && item.getSize().equals(size))
+                    .findFirst();
+        }
 
         if (existingItem.isPresent()) {
-            // Actualizar la cantidad si el item ya existe
             CartItem item = existingItem.get();
             item.setQuantity(item.getQuantity() + quantity);
             cartItemRepository.save(item);
         } else {
-            // Crear un nuevo item si no existe
             CartItem newItem = new CartItem();
             newItem.setProduct(product);
-            newItem.setSize(size);
+            newItem.setSize(Section.ACCESSORIES.equals(product.getSection()) ? null : size);
             newItem.setQuantity(quantity);
             shoppingCart.getItems().add(newItem);
         }
@@ -103,22 +121,22 @@ public class ShoppingCartService {
     public List<CartItem> removeProduct(Long userId, Long itemId) {
         // Obtener el carrito de compras del usuario
         ShoppingCart shoppingCart = getShoppingCart(userId);
-        
+
         // Buscar el CartItem a modificar o eliminar
-        CartItem toModify = shoppingCart.getItems().get(itemId.intValue());    
+        CartItem toModify = shoppingCart.getItems().get(itemId.intValue());
         if (toModify.getQuantity() == 1) {
             // Si la cantidad es 1, elimina el CartItem completamente
             shoppingCart.getItems().remove(toModify); // Eliminar de la lista
-            cartItemRepository.delete(toModify);     // Eliminar de la base de datos
+            cartItemRepository.delete(toModify); // Eliminar de la base de datos
         } else {
             // Si hay más de una cantidad, reducir la cantidad
             toModify.setQuantity(toModify.getQuantity() - 1);
-            cartItemRepository.save(toModify);       // Actualizar en la base de datos
+            cartItemRepository.save(toModify); // Actualizar en la base de datos
         }
-    
+
         // Guardar el carrito de compras actualizado
         shoppingCartRepository.save(shoppingCart);
-    
+
         // Retornar la lista actualizada de items en el carrito
         return shoppingCart.getItems();
     }
@@ -129,21 +147,21 @@ public class ShoppingCartService {
         CartItem toModify = shoppingCart.getItems().get(itemId.intValue());
         if (toModify.getQuantity() == 1) {
             shoppingCart.getItems().remove(toModify);
-        }else{
+        } else {
             toModify.setQuantity(toModify.getQuantity() - 1);
-        }  
+        }
         return shoppingCartItems;
     }
 
     @Transactional
     public void deleteShoppingCartUserItems(Long userId) {
         ShoppingCart shoppingCart = getShoppingCart(userId);
-        List<CartItem> items = shoppingCart.getItems(); 
-        for(CartItem item : items){
+        List<CartItem> items = shoppingCart.getItems();
+        for (CartItem item : items) {
             cartItemRepository.delete(item);
         }
         shoppingCart.setItems(new ArrayList<>());
         shoppingCartRepository.save(shoppingCart);
-        
+
     }
 }

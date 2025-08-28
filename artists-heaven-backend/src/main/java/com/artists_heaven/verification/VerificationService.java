@@ -7,8 +7,8 @@ import org.springframework.stereotype.Service;
 
 import com.artists_heaven.entities.artist.Artist;
 import com.artists_heaven.entities.artist.ArtistRepository;
-
-import jakarta.persistence.EntityNotFoundException;
+import com.artists_heaven.exception.AppExceptions;
+import com.artists_heaven.exception.AppExceptions.ResourceNotFoundException;
 
 @Service
 public class VerificationService {
@@ -46,10 +46,27 @@ public class VerificationService {
 
     public void refuseVerification(Long id) {
         Verification verification = verificationRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Verification not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Verification not found"));
 
         verification.setStatus(VerificationStatus.REJECTED);
         verificationRepository.save(verification);
+    }
+
+    public Artist validateArtistForVerification(String email) {
+        Artist artist = validateArtist(email);
+        if (artist == null) {
+            throw new AppExceptions.ForbiddenActionException("User is not an artist");
+        }
+
+        if (!isArtistEligibleForVerification(artist)) {
+            throw new AppExceptions.ForbiddenActionException("User is not eligible or already verified");
+        }
+
+        if (hasPendingVerification(artist)) {
+            throw new AppExceptions.DuplicateActionException("There is already a pending request for this user");
+        }
+
+        return artist;
     }
 
 }

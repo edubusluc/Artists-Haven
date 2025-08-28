@@ -7,6 +7,7 @@ import org.springframework.security.core.AuthenticationException;
 import com.artists_heaven.entities.user.User;
 import com.artists_heaven.product.Product;
 import com.artists_heaven.product.ProductService;
+import com.artists_heaven.product.Section;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -62,6 +63,7 @@ public class ShoppingCartController {
         productDTO.setName(cartItem.getProduct().getName());
         productDTO.setPrice(cartItem.getProduct().getPrice());
         productDTO.setImageUrl(product.getImages().get(0));
+        productDTO.setSection(cartItem.getProduct().getSection());
 
         dto.setProduct(productDTO);
         dto.setSize(cartItem.getSize());
@@ -111,30 +113,32 @@ public class ShoppingCartController {
             @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
     })
     public ResponseEntity<List<CartItemDTO>> addProductsToMyShoppingCart(
-            @Parameter(description = "Request body containing product ID and size", required = true) @RequestBody AddProductDTO request) {
+            @RequestBody AddProductDTO request) {
         try {
-            // Obtener el usuario autenticado
             User user = getAuthenticatedUser();
 
-            // Verificar si el producto existe
             Product product = productService.findById(request.getProductId());
             if (product == null) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).build(); // 404
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
             }
 
-            // Añadir el producto al carrito
-            List<CartItem> cartItems = shoppingCartService.addProducts(user.getId(), product, request.getSize(), 1);
+            String sizeToUse = Section.ACCESSORIES.equals(product.getSection()) ? null : request.getSize();
 
-            // Mapear los elementos del carrito a DTO
+            List<CartItem> cartItems = shoppingCartService.addProducts(
+                    user.getId(),
+                    product,
+                    sizeToUse,
+                    1);
+
             List<CartItemDTO> cartItemDTOs = cartItems.stream()
                     .map(this::mapToCartItemDTO)
                     .toList();
 
-            return ResponseEntity.ok(cartItemDTOs); // 200
+            return ResponseEntity.ok(cartItemDTOs);
         } catch (AuthenticationException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build(); // 401
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build(); // 500
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 

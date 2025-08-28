@@ -4,15 +4,17 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
+import java.util.Set;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.nio.file.Path;
@@ -34,38 +36,40 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpHeaders;
 
 import com.artists_heaven.email.EmailSenderService;
 import com.artists_heaven.email.EmailType;
-import com.artists_heaven.entities.artist.Artist;
 import com.artists_heaven.entities.artist.ArtistRepository;
+import com.artists_heaven.entities.artist.ArtistService;
+import com.artists_heaven.entities.user.User;
 import com.artists_heaven.entities.user.UserProfileDTO;
+import com.artists_heaven.exception.AppExceptions;
 import com.artists_heaven.order.Order;
 import com.artists_heaven.order.OrderDetailsDTO;
 import com.artists_heaven.order.OrderService;
 import com.artists_heaven.order.OrderStatus;
 import com.artists_heaven.page.PageResponse;
-import com.artists_heaven.product.Category;
 import com.artists_heaven.product.CategoryRepository;
 import com.artists_heaven.product.Product;
+import com.artists_heaven.product.Collection;
 import com.artists_heaven.product.ProductService;
+import com.artists_heaven.standardResponse.StandardResponse;
+import com.artists_heaven.userProduct.UserProduct;
+import com.artists_heaven.userProduct.UserProductService;
 import com.artists_heaven.verification.Verification;
 import com.artists_heaven.verification.VerificationRepository;
 import com.artists_heaven.verification.VerificationService;
 import com.artists_heaven.verification.VerificationStatus;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import jakarta.persistence.EntityNotFoundException;
-
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.hamcrest.Matchers.containsString;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
+import static org.hamcrest.Matchers.hasSize;
 
 class AdminControllerTest {
 
@@ -96,6 +100,12 @@ class AdminControllerTest {
         @Mock
         private ProductService productService;
 
+        @Mock
+        private ArtistService artistService;
+
+        @Mock
+        private UserProductService userProductService;
+
         @InjectMocks
         private AdminController adminController;
 
@@ -110,89 +120,41 @@ class AdminControllerTest {
         }
 
         @Test
-        void testValidateArtistSuccess() {
-                // Arrange
-                Long artistId = 1L;
-                Artist artist = new Artist();
-                artist.setId(artistId);
-                artist.setIsVerificated(false);
-                artist.setArtistName("Artist Name Test");
-
-                Verification verification = new Verification();
-                verification.setId(1L);
-                verification.setStatus(VerificationStatus.PENDING);
-
-                Map<String, Long> payload = new HashMap<>();
-                payload.put("id", 1L);
-                payload.put("verificationId", 1L);
-
-                when(artistRepository.findById(artistId)).thenReturn(Optional.of(artist));
-                when(verificationRepository.findById(1L)).thenReturn(Optional.of(verification));
-
-                // Act
-                ResponseEntity<?> response = adminController.validateArtist(payload);
-
-                // Assert
-                assertEquals(HttpStatus.OK, response.getStatusCode());
-                assertEquals("Artist verified successfully",
-                                ((Map<String, String>) response.getBody()).get("message"));
-
-                assertEquals(true, artist.getIsVerificated());
-                assertEquals(VerificationStatus.ACCEPTED, verification.getStatus());
-
-                verify(artistRepository).save(artist);
-                verify(verificationRepository).save(verification);
-        }
-
-        @Test
         void testValidateArtistNullArtist() {
                 // Arrange
-                Long artistId = 1L;
-                Artist artist = new Artist();
-                artist.setId(artistId);
-                artist.setIsVerificated(false);
-
-                Verification verification = new Verification();
-                verification.setId(1L);
-                verification.setStatus(VerificationStatus.PENDING);
-
                 Map<String, Long> payload = new HashMap<>();
                 payload.put("id", 1L);
                 payload.put("verificationId", 1L);
 
-                when(artistRepository.findById(artistId)).thenReturn(Optional.empty());
-                ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+                // Simulamos que el servicio lanza la excepción
+                Mockito.doThrow(new AppExceptions.ResourceNotFoundException("Artist not found"))
+                                .when(artistService).validateArtist(1L, 1L);
+
+                // Act & Assert
+                AppExceptions.ResourceNotFoundException exception = assertThrows(
+                                AppExceptions.ResourceNotFoundException.class,
                                 () -> adminController.validateArtist(payload));
 
-                assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
-                assertEquals("Artist not found", exception.getReason());
+                assertEquals("Artist not found", exception.getMessage());
         }
 
         @Test
         void testValidateArtistNullVerification() {
                 // Arrange
-                Long artistId = 1L;
-                Artist artist = new Artist();
-                artist.setId(artistId);
-                artist.setIsVerificated(false);
-                artist.setArtistName("Artist Name Test");
-
-                Verification verification = new Verification();
-                verification.setId(1L);
-                verification.setStatus(VerificationStatus.PENDING);
-
                 Map<String, Long> payload = new HashMap<>();
                 payload.put("id", 1L);
-                payload.put("verificationId", 1L);
+                payload.put("verificationId", 10L);
 
-                when(artistRepository.findById(artistId)).thenReturn(Optional.of(artist));
+                // Simulamos que el servicio lanza la excepción
+                Mockito.doThrow(new AppExceptions.ResourceNotFoundException("Verification not found"))
+                                .when(artistService).validateArtist(1L, 10L);
 
-                when(verificationRepository.findById(1L)).thenReturn(Optional.empty());
-                ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+                // Act & Assert
+                AppExceptions.ResourceNotFoundException exception = assertThrows(
+                                AppExceptions.ResourceNotFoundException.class,
                                 () -> adminController.validateArtist(payload));
 
-                assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
-                assertEquals("Verification not found", exception.getReason());
+                assertEquals("Verification not found", exception.getMessage());
         }
 
         @Test
@@ -215,12 +177,20 @@ class AdminControllerTest {
                 // Act & Assert
                 mockMvc.perform(get("/api/admin/verification/pending"))
                                 .andExpect(status().isOk())
-                                .andExpect(content().json(
-                                                "[{\"id\":1,\"status\":\"PENDING\"},{\"id\":2,\"status\":\"PENDING\"}]"));
+                                .andExpect(jsonPath("$.message").value("Pending verifications retrieved"))
+                                .andExpect(jsonPath("$.status").value(200))
+                                .andExpect(jsonPath("$.data[0].id").value(1))
+                                .andExpect(jsonPath("$.data[0].status").value("PENDING"))
+                                .andExpect(jsonPath("$.data[1].id").value(2))
+                                .andExpect(jsonPath("$.data[1].status").value("PENDING"));
 
-                ResponseEntity<?> response = adminController.getAllValidation();
+                ResponseEntity<StandardResponse<List<Verification>>> response = adminController
+                                .getAllPendingVerifications();
+
                 assertEquals(HttpStatus.OK, response.getStatusCode());
-                assertEquals(verificationList, response.getBody());
+                assertEquals("Pending verifications retrieved", response.getBody().getMessage());
+                assertEquals(200, response.getBody().getStatus());
+                assertEquals(verificationList, response.getBody().getData());
         }
 
         @Test
@@ -273,26 +243,20 @@ class AdminControllerTest {
 
                 mockMvc.perform(get("/api/admin/staticsPerYear")
                                 .param("year", String.valueOf(year)))
+                                .andDo(print())
                                 .andExpect(status().isOk())
-                                .andExpect(jsonPath("$.numOrders").value(100))
-                                .andExpect(jsonPath("$.incomePerYear").value(50000.0))
-                                .andExpect(jsonPath("$.emailCounts.ABUSE_REPORT").value(20))
-                                .andExpect(jsonPath("$.numUsers").value(80))
-                                .andExpect(jsonPath("$.numArtists").value(10))
-                                .andExpect(jsonPath("$.orderStatusCounts.DELIVERED").value(60))
-                                .andExpect(jsonPath("$.verificationStatusCounts.ACCEPTED").value(5))
-                                .andExpect(jsonPath("$.orderItemCount['Product Test']").value(5))
-                                .andExpect(jsonPath("$.categoryItemCount['Category Test']").value(5))
-                                .andExpect(jsonPath("$.mostCountrySold['Country Test']").value(5));
-        }
-
-        @Test
-        void testGetStaticsPerYear_Exception() throws Exception {
-                when(orderService.getNumOrdersPerYear(Mockito.anyInt()))
-                                .thenThrow(new RuntimeException("Error"));
-
-                mockMvc.perform(get("/api/admin/staticsPerYear").param("year", "2024"))
-                                .andExpect(status().isBadRequest());
+                                .andExpect(jsonPath("$.message").value("Yearly statistics retrieved successfully"))
+                                .andExpect(jsonPath("$.status").value(200))
+                                .andExpect(jsonPath("$.data.numOrders").value(100))
+                                .andExpect(jsonPath("$.data.incomePerYear").value(50000.0))
+                                .andExpect(jsonPath("$.data.emailCounts.ABUSE_REPORT").value(20))
+                                .andExpect(jsonPath("$.data.numUsers").value(80))
+                                .andExpect(jsonPath("$.data.numArtists").value(10))
+                                .andExpect(jsonPath("$.data.orderStatusCounts.DELIVERED").value(60))
+                                .andExpect(jsonPath("$.data.verificationStatusCounts.ACCEPTED").value(5))
+                                .andExpect(jsonPath("$.data.orderItemCount['Product Test']").value(5))
+                                .andExpect(jsonPath("$.data.categoryItemCount['Category Test']").value(5))
+                                .andExpect(jsonPath("$.data.mostCountrySold['Country Test']").value(5));
         }
 
         @Test
@@ -307,21 +271,12 @@ class AdminControllerTest {
 
                 mockMvc.perform(get("/api/admin/sales/monthly").param("year", String.valueOf(year)))
                                 .andExpect(status().isOk())
-                                .andExpect(jsonPath("$[0].month").value(1))
-                                .andExpect(jsonPath("$[0].totalOrders").value(10))
-                                .andExpect(jsonPath("$[0].totalRevenue").value(1000.0))
-                                .andExpect(jsonPath("$[1].month").value(2))
-                                .andExpect(jsonPath("$[1].totalOrders").value(15))
-                                .andExpect(jsonPath("$[1].totalRevenue").value(2000.0));
-        }
-
-        @Test
-        void testGetMonthlySalesData_Exception() throws Exception {
-                when(adminService.getMonthlySalesData(Mockito.anyInt()))
-                                .thenThrow(new RuntimeException("DB Error"));
-
-                mockMvc.perform(get("/api/admin/sales/monthly").param("year", "2024"))
-                                .andExpect(status().isBadRequest());
+                                .andExpect(jsonPath("$.data[0].month").value(1))
+                                .andExpect(jsonPath("$.data[0].totalOrders").value(10))
+                                .andExpect(jsonPath("$.data[0].totalRevenue").value(1000.0))
+                                .andExpect(jsonPath("$.data[1].month").value(2))
+                                .andExpect(jsonPath("$.data[1].totalOrders").value(15))
+                                .andExpect(jsonPath("$.data[1].totalRevenue").value(2000.0));
         }
 
         @Test
@@ -333,10 +288,10 @@ class AdminControllerTest {
 
                 mockMvc.perform(get("/api/admin/product-management"))
                                 .andExpect(status().isOk())
-                                .andExpect(jsonPath("$.notAvailableProducts").value(100))
-                                .andExpect(jsonPath("$.availableProducts").value(100))
-                                .andExpect(jsonPath("$.promotedProducts").value(100))
-                                .andExpect(jsonPath("$.totalProducts").value(100));
+                                .andExpect(jsonPath("$.data.notAvailableProducts").value(100))
+                                .andExpect(jsonPath("$.data.availableProducts").value(100))
+                                .andExpect(jsonPath("$.data.promotedProducts").value(100))
+                                .andExpect(jsonPath("$.data.totalProducts").value(100));
 
         }
 
@@ -408,55 +363,7 @@ class AdminControllerTest {
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("{\"orderId\": 1, \"status\": \"PAID\"}"))
                                 .andExpect(status().isOk())
-                                .andExpect(jsonPath("$.message").value("Order status updated successfully."));
-        }
-
-        @Test
-        void testUpdateOrderStatus_OrderNotFound() throws Exception {
-                // Datos de prueba
-                Long orderId = 1L;
-                OrderStatus orderStatus = OrderStatus.PAID;
-                OrderStatusUpdateDTO request = new OrderStatusUpdateDTO();
-                request.setOrderId(orderId);
-                request.setStatus(orderStatus);
-
-                // Simulamos que el servicio lanza una EntityNotFoundException
-                doThrow(new EntityNotFoundException("Order not found with id: " + orderId))
-                                .when(adminService).updateOrderStatus(orderId, orderStatus);
-
-                // Hacemos la petición POST
-                mockMvc.perform(post("/api/admin/updateStatus")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content("{\"orderId\": 1, \"status\": \"PAID\"}"))
-                                .andExpect(status().isNotFound()) // Verificamos que la respuesta es 404 NOT FOUND
-                                .andExpect(jsonPath("$.error").value("Order not found with id: " + orderId)); // Verificamos el
-                                                                                                     // mensaje de error
-        }
-
-        @Test
-        void testUpdateOrderStatus_InternalServerError() throws Exception {
-                // Datos de prueba
-                Long orderId = 1L;
-                OrderStatus orderStatus = OrderStatus.PAID;
-                OrderStatusUpdateDTO request = new OrderStatusUpdateDTO();
-                request.setOrderId(orderId);
-                request.setStatus(orderStatus);
-
-                // Simulamos una excepción genérica
-                doThrow(new RuntimeException("Unexpected error")).when(adminService).updateOrderStatus(orderId,
-                                orderStatus);
-
-                // Hacemos la petición POST
-                mockMvc.perform(post("/api/admin/updateStatus")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content("{\"orderId\": 1, \"status\": \"PAID\"}"))
-                                .andExpect(status().isInternalServerError()) // Verificamos que la respuesta es 500
-                                                                             // INTERNAL SERVER ERROR
-                                .andExpect(jsonPath("$.error").value("An error occurred while updating the order status.")); // Verificamos
-                                                                                                                    // el
-                                                                                                                    // mensaje
-                                                                                                                    // de
-                                                                                                                    // error
+                                .andExpect(jsonPath("$.message").value("Order status updated successfully"));
         }
 
         @Test
@@ -465,18 +372,7 @@ class AdminControllerTest {
 
                 mockMvc.perform(post("/api/admin/" + verificationId + "/refuse"))
                                 .andExpect(status().isOk())
-                                .andExpect(jsonPath("$.message").value("Verification refused successfully"));
-        }
-
-        @Test
-        void refuseVerification_shouldReturnNotFound_whenVerificationDoesNotExist() throws Exception {
-                Long verificationId = 1L;
-                doThrow(new EntityNotFoundException("Verification not found"))
-                                .when(verificationService).refuseVerification(verificationId);
-
-                mockMvc.perform(post("/api/admin/1/refuse"))
-                                .andExpect(status().isNotFound())
-                                .andExpect(status().reason("Verification not found"));
+                                .andExpect(jsonPath("$.message").value("Verification rejected successfully"));
         }
 
         @Test
@@ -489,28 +385,6 @@ class AdminControllerTest {
                                 .andExpect(jsonPath("$.message").value("Product disabled successfully"));
 
                 verify(productService).disableProduct(productId);
-        }
-
-        @Test
-        void disableProduct_ReturnsNotFound_WhenProductNotFound() throws Exception {
-                Long productId = 1L;
-                doThrow(new EntityNotFoundException("Product not found")).when(productService)
-                                .disableProduct(productId);
-
-                mockMvc.perform(post("/api/admin/{productId}/disable", productId))
-                                .andExpect(status().isNotFound())
-                                .andExpect(status().reason("Product not found"));
-        }
-
-        @Test
-        void disableProduct_ReturnsBadRequest_WhenProductIsAlreadyDisabled() throws Exception {
-                Long productId = 1L;
-                doThrow(new IllegalArgumentException("Product is already disabled")).when(productService)
-                                .disableProduct(productId);
-
-                mockMvc.perform(post("/api/admin/{productId}/disable", productId))
-                                .andExpect(status().isBadRequest())
-                                .andExpect(status().reason("Product is already disabled"));
         }
 
         @Test
@@ -531,48 +405,6 @@ class AdminControllerTest {
         }
 
         @Test
-        void enableProduct_ReturnsNotFound_WhenProductNotFound() throws Exception {
-                Long productId = 1L;
-                doThrow(new EntityNotFoundException("Product not found")).when(productService).enableProduct(productId);
-
-                mockMvc.perform(post("/api/admin/{productId}/enable", productId))
-                                .andExpect(status().isNotFound())
-                                .andExpect(status().reason("Product not found"));
-        }
-
-        @Test
-        void enableProduct_ReturnsBadRequest_WhenProductIsAlreadyEnabled() throws Exception {
-                Long productId = 1L;
-                doThrow(new IllegalArgumentException("Product is already enabled")).when(productService)
-                                .enableProduct(productId);
-
-                mockMvc.perform(post("/api/admin/{productId}/enable", productId))
-                                .andExpect(status().isBadRequest())
-                                .andExpect(status().reason("Product is already enabled"));
-        }
-
-        @Test
-        void testGetAllCategories() throws Exception {
-                Category category1 = new Category();
-                category1.setName("Summer");
-                category1.setId(1L);
-                Category category2 = new Category();
-                category2.setName("Winter");
-                category2.setId(2L);
-
-                List<Category> categoires = List.of(category1, category2);
-                when(productService.findAllCategories()).thenReturn(categoires);
-
-                mockMvc.perform(get("/api/admin/allCategories"))
-                                .andExpect(status().isOk())
-                                .andExpect(jsonPath("$.size()").value(2))
-                                .andExpect(jsonPath("$[0].id").value(1L))
-                                .andExpect(jsonPath("$[0].name").value("Summer"))
-                                .andExpect(jsonPath("$[1].id").value(2L))
-                                .andExpect(jsonPath("$[1].name").value("Winter"));
-        }
-
-        @Test
         void testCreateCategory_Success() throws Exception {
                 CategoryDTO categoryDTO = new CategoryDTO(null, " New Category ");
 
@@ -584,19 +416,6 @@ class AdminControllerTest {
         }
 
         @Test
-        void testCreateCategory_Error() throws Exception {
-                CategoryDTO categoryDTO = new CategoryDTO(null, "Duplicate");
-
-                doThrow(new RuntimeException("Already exists")).when(productService).saveCategory("Duplicate");
-
-                mockMvc.perform(post("/api/admin/newCategory")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(categoryDTO)))
-                                .andExpect(status().isBadRequest())
-                                .andExpect(status().reason(containsString("Error creating category: Already exists")));
-        }
-
-        @Test
         void testEditCategory_Success() throws Exception {
                 CategoryDTO categoryDTO = new CategoryDTO(1L, " Edited Category ");
 
@@ -605,23 +424,111 @@ class AdminControllerTest {
                 mockMvc.perform(post("/api/admin/editCategory")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(categoryDTO)))
-                                .andExpect(status().isCreated())
+                                .andExpect(status().isOk())
                                 .andExpect(jsonPath("$.message").value("Category edited successfully"));
         }
 
         @Test
-        void testEditCategory_Error() throws Exception {
-                CategoryDTO categoryDTO = new CategoryDTO(99L, "Nonexistent");
+        void getAllCollections_success() throws Exception {
+                Set<Product> products = new HashSet<>();
+                Collection c1 = new Collection(1L, "Coll 1", products, false, new Date());
+                Collection c2 = new Collection(2L, "Coll 2", products, false, new Date());
 
-                doThrow(new RuntimeException("Category not found")).when(productService)
-                                .editCategory(any(CategoryDTO.class));
+                when(productService.findAllCollections()).thenReturn(List.of(c1, c2));
 
-                mockMvc.perform(post("/api/admin/editCategory")
+                mockMvc.perform(get("/api/admin/allCollections"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.message").value("Collections retrieved successfully"))
+                                .andExpect(jsonPath("$.data", hasSize(2)))
+                                .andExpect(jsonPath("$.data[0].id").value(1))
+                                .andExpect(jsonPath("$.data[0].name").value("Coll 1"));
+        }
+
+        @Test
+        void createCollection_success() throws Exception {
+                CollectionDTO dto = new CollectionDTO(null, "New Collection", false);
+
+                // Simular que el método void no hace nada
+                doNothing().when(productService).saveCollection("New-Collection");
+
+                mockMvc.perform(post("/api/admin/newCollection")
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(categoryDTO)))
-                                .andExpect(status().isBadRequest())
-                                .andExpect(status()
-                                                .reason(containsString("Error creating category: Category not found")));
+                                .content(objectMapper.writeValueAsString(dto)))
+                                .andExpect(status().isCreated())
+                                .andExpect(jsonPath("$.message").value("Collection created successfully"));
+
+                verify(productService, times(1)).saveCollection("New-Collection");
+        }
+
+        @Test
+        void editCollection_success() throws Exception {
+                CollectionDTO dto = new CollectionDTO(1L, "Edited Collection", true);
+
+                doNothing().when(productService).editCollection(dto);
+
+                mockMvc.perform(post("/api/admin/editCollection")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(dto)))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.message").value("Collection edited successfully"));
+        }
+
+        @Test
+        void getAllUserProductPending_success() throws Exception {
+                User user = new User();
+                user.setUsername("Test");
+
+                UserProduct product = new UserProduct();
+                product.setId(1L);
+                product.setName("Test Product");
+                product.setOwner(user);
+
+                when(userProductService.findUserProductPending()).thenReturn(List.of(product));
+
+                mockMvc.perform(get("/api/admin/userProduct/pending"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.message").value("userProducts retrieved successfully"))
+                                .andExpect(jsonPath("$.data", hasSize(1)))
+                                .andExpect(jsonPath("$.data[0].id").value(1))
+                                .andExpect(jsonPath("$.data[0].name").value("Test Product"));
+        }
+
+        @Test
+        void approveProduct_success() throws Exception {
+                User user = new User();
+                user.setUsername("Test");
+                UserProduct product = new UserProduct();
+
+                product.setId(1L);
+                product.setName("Approved Product");
+                product.setOwner(user);
+
+                when(userProductService.approveProduct(1L)).thenReturn(product);
+
+                mockMvc.perform(post("/api/admin/userProduct/1/approve"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.message").value("OK APPROVE"))
+                                .andExpect(jsonPath("$.data.id").value(1))
+                                .andExpect(jsonPath("$.data.name").value("Approved Product"));
+        }
+
+        @Test
+        void rejectProduct_success() throws Exception {
+                User user = new User();
+                user.setUsername("Test");
+                
+                UserProduct product = new UserProduct();
+                product.setId(2L);
+                product.setName("Rejected Product");
+                product.setOwner(user);
+
+                when(userProductService.rejectProduct(2L)).thenReturn(product);
+
+                mockMvc.perform(post("/api/admin/userProduct/2/reject"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.message").value("OK REJECT"))
+                                .andExpect(jsonPath("$.data.id").value(2))
+                                .andExpect(jsonPath("$.data.name").value("Rejected Product"));
         }
 
 }

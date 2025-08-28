@@ -2,9 +2,11 @@ package com.artists_heaven.chat;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -48,7 +50,8 @@ public class ChatbotService {
         return new RestTemplate();
     }
 
-    public ChatbotService(QARepository qaRepository, ProductService productService, @Value("classpath:chatbot/system-prompt.txt") Resource systemPromptResource,
+    public ChatbotService(QARepository qaRepository, ProductService productService,
+            @Value("classpath:chatbot/system-prompt.txt") Resource systemPromptResource,
             @Value("${chatbot.similarity-threshold:0.4}") double similarityThreshold) {
         this.qaRepository = qaRepository;
         this.productService = productService;
@@ -56,68 +59,125 @@ public class ChatbotService {
         this.similarityThreshold = similarityThreshold;
     }
 
-    private String processMessage(String text) {
-        boolean isEnglish = ChatbotUtils.isEnglish(text);
-        String messageCorrected = ChatbotUtils.correctSpelling(text.toLowerCase(), isEnglish);
-        String messageClean = ChatbotUtils.normalizeText(messageCorrected).trim();
-        return messageClean;
-    }
-
     public String searchNLPAnswer(String text) {
         if (text == null || text.isBlank())
             return null;
 
-        boolean isEnglish = ChatbotUtils.isEnglish(text);
-        String cleanedMessage = processMessage(text);
-        Set<String> messageTokens = ChatbotUtils.tokenize(cleanedMessage, isEnglish);
-        Map<String, String> predefinedQA = qaRepository.getAllQA();
+        ChatMessageContext context = new ChatMessageContext(text);
+        Set<String> messageTokens = context.getTokens();
+        String originalText = context.getOriginalText();
 
-        return predefinedQA.entrySet().stream()
+        Map<String, ChatMessageContext> predefinedQAContexts = qaRepository.getAllQAContexts();
+
+        // Calculamos las similitudes
+        List<Map.Entry<String, Double>> matches = predefinedQAContexts.entrySet().stream()
                 .map(entry -> {
-                    boolean entryIsEnglish = ChatbotUtils.isEnglish(entry.getKey());
-                    Set<String> questionTokens = ChatbotUtils.tokenize(entry.getKey(), entryIsEnglish);
+                    Set<String> questionTokens = entry.getValue().getTokens();
                     double similarity = ChatbotUtils.jaccardSimilarity(messageTokens, questionTokens);
-                    return Map.entry(entry.getValue(), similarity);
+                    return Map.entry(entry.getKey(), similarity);
                 })
                 .filter(e -> e.getValue() >= similarityThreshold)
-                .max(Map.Entry.comparingByValue())
+                .collect(Collectors.toList());
+
+        if (matches.isEmpty()) {
+            return null;
+        }
+
+        // Obtenemos la máxima similitud
+        double maxSim = matches.stream()
+                .mapToDouble(Map.Entry::getValue)
+                .max()
+                .orElse(0.0);
+
+        // Filtramos solo los que tienen esa máxima similitud
+        List<String> bestMatches = matches.stream()
+                .filter(e -> e.getValue() == maxSim)
                 .map(Map.Entry::getKey)
-                .orElse(null);
+                .collect(Collectors.toList());
+
+        // Desempate: seleccionamos la que tenga longitud más parecida a la pregunta
+        // original
+        String selected = bestMatches.stream()
+                .min(Comparator.comparingInt(q -> Math.abs(q.length() - originalText.length())))
+                .orElse(bestMatches.get(0));
+
+        return qaRepository.getAnswer(selected);
     }
 
     public String searchDynamicAnswer(String text) {
         if (text == null || text.isBlank())
             return null;
 
-        boolean isEnglish = ChatbotUtils.isEnglish(text);
-        String cleanedMessage = processMessage(text);
+        ChatMessageContext context = new ChatMessageContext(text);
 
-        String intent = detectIntent(cleanedMessage);
+        String intent = detectIntent(context.getNormalizedText());
         if (intent == null) {
             return null;
         }
 
-        return generateResponseForIntent(intent, isEnglish);
+        return generateResponseForIntent(intent, context.getLanguage() == ChatMessageContext.Language.ENGLISH);
+
     }
 
-    private String detectIntent(String cleanedMessage) {
+    private String detectIntent(String message) {
+        // Normalizamos el mensaje: minúsculas y sin tildes
+        String cleanedMessage = normalizeText(message);
+
+        // Definimos el mapa de intenciones con sinónimos ampliados
         Map<String, List<String>> intents = Map.of(
                 "recommendation", List.of(
+                        // Español
                         "recomiendame", "me recomiendas", "sugerencia", "que me aconsejas", "quiero una recomendacion",
+                        "aconsejame", "sugiere algo", "dame una sugerencia", "que me puedes sugerir",
+                        "que me recomiendas", "tienes alguna sugerencia", "que producto me sugieres",
+                        "cual me recomiendas", "me ayudas a elegir", "recomendacion de producto",
+                        "me aconsejas algo", "dame ideas", "alguna idea", "que opcion me sugieres",
+                        "elige por mi", "me das un consejo", "que deberia comprar",
+                        // Inglés
                         "recommend me", "can you recommend", "suggestion", "what do you suggest",
-                        "i want a recommendation"),
+                        "i want a recommendation",
+                        "do you suggest", "suggest me something", "give me advice", "what should i buy",
+                        "any recommendations", "which one do you recommend", "recommendation please",
+                        "can you help me choose", "help me decide", "what do you advise",
+                        "pick something for me", "what should i pick", "give me some ideas"),
                 "bestseller", List.of(
+                        // Español
                         "mas vendido", "top ventas", "producto popular", "lo que mas se vende", "mas comprado",
-                        "best seller", "top selling", "popular product", "most sold", "best selling product"));
+                        "producto mas vendido", "ventas altas", "mas pedido", "producto famoso", "producto estrella",
+                        "cual se vende mas", "que compran mas", "producto mas comprado", "lo mas popular",
+                        "lo mas pedido", "articulo mas vendido", "mas solicitado",
+                        // Inglés
+                        "best seller", "top selling", "popular product", "most sold", "best selling product",
+                        "best product",
+                        "most purchased", "most ordered", "top product", "hot item", "what sells the most",
+                        "trending product", "people are buying", "most popular", "most requested",
+                        "most wanted", "customer favorite"));
 
+        // Recorremos intenciones y verificamos coincidencias
         for (Map.Entry<String, List<String>> entry : intents.entrySet()) {
             for (String keyword : entry.getValue()) {
-                if (cleanedMessage.contains(keyword)) {
+                if (cleanedMessage.contains(normalizeText(keyword))) {
                     return entry.getKey();
                 }
             }
         }
+
         return null;
+    }
+
+    /**
+     * Normaliza texto: minúsculas, elimina tildes y caracteres especiales.
+     */
+    private String normalizeText(String text) {
+        if (text == null)
+            return "";
+        return text.toLowerCase()
+                .replaceAll("[áàäâ]", "a")
+                .replaceAll("[éèëê]", "e")
+                .replaceAll("[íìïî]", "i")
+                .replaceAll("[óòöô]", "o")
+                .replaceAll("[úùüû]", "u")
+                .replaceAll("[^a-z0-9 ]", ""); // elimina caracteres no alfanuméricos
     }
 
     private String generateResponseForIntent(String intent, boolean isEnglish) {
@@ -139,17 +199,17 @@ public class ChatbotService {
             if (isEnglish) {
                 message.append("Here are some of our top recommended products:\n");
                 for (Map.Entry<String, String> entry : recommendedProducts.entrySet()) {
-                    String name = entry.getKey();
-                    String details = entry.getValue();
-                    message.append(String.format("- %s: %s\n", name, details));
+                    String name = sanitize(entry.getKey());
+                    String details = sanitize(entry.getValue());
+                    message.append("- ").append(name).append(": ").append(details).append("\n");
                 }
                 message.append("Check them out and let us know which one you like!");
             } else {
                 message.append("Estos son algunos de nuestros productos más recomendados:\n");
                 for (Map.Entry<String, String> entry : recommendedProducts.entrySet()) {
-                    String name = entry.getKey();
-                    String details = entry.getValue();
-                    message.append(String.format("- %s: %s\n", name, details));
+                    String name = sanitize(entry.getKey());
+                    String details = sanitize(entry.getValue());
+                    message.append("- ").append(name).append(": ").append(details).append("\n");
                 }
                 message.append("¡Échales un vistazo y cuéntanos cuál te gusta más!");
             }
@@ -165,21 +225,24 @@ public class ChatbotService {
     private String getTopSellingProductMessage(boolean isEnglish) {
         Map<String, String> topProduct = productService.getTopSellingProduct();
         if (topProduct != null && !topProduct.isEmpty()) {
-            String name = topProduct.getOrDefault("nombre", "Unknown product");
-            String price = topProduct.getOrDefault("precio", "price not available");
+            String name = sanitize(topProduct.getOrDefault("nombre", "Unknown product"));
+            String price = sanitize(topProduct.getOrDefault("precio", "price not available"));
 
             return isEnglish
-                    ? String.format(
-                            "Our current best-selling product is '%s'. Final price: €%s. Take a look and see what you think!",
-                            name, price)
-                    : String.format(
-                            "El producto más vendido actualmente es '%s'. Precio final: %s€. ¡Échale un vistazo y a ver qué te parece!",
-                            name, price);
+                    ? "Our current best-selling product is '" + name + "'. Final price: €" + price
+                            + ". Take a look and see what you think!"
+                    : "El producto más vendido actualmente es '" + name + "'. Precio final: " + price
+                            + "€. ¡Échale un vistazo y a ver qué te parece!";
         } else {
             return isEnglish
                     ? "Sorry, I don’t have information about our best-selling product at the moment."
                     : "Lo siento, no tengo información sobre el producto más vendido en este momento.";
         }
+    }
+
+    // Método para sanitizar (ejemplo básico)
+    private String sanitize(String input) {
+        return input == null ? "" : input.replaceAll("%", "%%"); // Escapa % para evitar interpretaciones
     }
 
     public boolean isApiKeyConfigured() {

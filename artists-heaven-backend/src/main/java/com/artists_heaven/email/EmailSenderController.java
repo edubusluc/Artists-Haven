@@ -6,6 +6,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.artists_heaven.standardResponse.StandardResponse;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -26,25 +28,20 @@ public class EmailSenderController {
         this.emailService = emailService;
     }
 
+    @PostMapping("/send")
     @Operation(summary = "Send an email", description = "Sends an email report using the provided email details.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Email sent successfully", content = @Content(mediaType = "text/plain", schema = @Schema(example = "Email sent successfully!"))),
-            @ApiResponse(responseCode = "500", description = "Failed to send email", content = @Content(mediaType = "text/plain", schema = @Schema(example = "Failed to send email. Error: ...")))
+            @ApiResponse(responseCode = "200", description = "Email sent successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
+            @ApiResponse(responseCode = "500", description = "Failed to send email", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
     })
-    @PostMapping("/send")
-    public ResponseEntity<String> sendEmail(
+    public ResponseEntity<StandardResponse<String>> sendEmail(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Email object containing the recipient, subject, body, and other details", required = true, content = @Content(mediaType = "application/json", schema = @Schema(implementation = Email.class))) @RequestBody Email email) {
-        try {
-            // Set the creation date and send the email
-            email.setCreatedAt(new Date());
-            emailService.sendReportEmail(email);
 
-            return ResponseEntity.ok("Email sent successfully!");
-        } catch (Exception e) {
-            return ResponseEntity
-                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Failed to send email. Error: " + e.getMessage());
-        }
+        email.setCreatedAt(new Date());
+        emailService.sendReportEmail(email);
+
+        return ResponseEntity.ok(
+                new StandardResponse<>("Email sent successfully!", "Email sent successfully!", HttpStatus.OK.value()));
     }
 
 }

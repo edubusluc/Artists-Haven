@@ -4,134 +4,218 @@ import Footer from './Footer';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import 'swiper/css';
 import { Autoplay } from 'swiper/modules';
+import React from 'react';
+import ConcertMap from './Event/ConcertMap';
+import { useTranslation } from 'react-i18next';
+import userProduct from '../util-image/userproduct1.png';
+import ProductCard from './product/ProductCard';
+
 
 const TshirtViewer = lazy(() => import('./TshirtViewer'));
 
+// Constantes de API
+const API = {
+  sorted12: '/api/product/sorted12Product',
+  mainArtists: '/api/artists/main',
+  collections: '/api/product/promoted-collections',
+  collection: (name) => `/api/product/collection/${name}`,
+};
+
+// Componente de tarjeta de producto
+
+// Lista de 12 productos destacados
+const Product12List = React.memo(({ products }) => (
+  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1 w-full">
+    {products.map((product, index) => (
+      <Link to={`/product/details/${product.id}`} key={index}>
+        <div className="flex justify-center mt-5">
+          <ProductCard product={product} />
+        </div>
+      </Link>
+    ))}
+  </div>
+));
+
 const HomePage = () => {
-  const [activeSection, setActiveSection] = useState('intro');
   const [product12, setProducts12] = useState([]);
   const [artists, setArtists] = useState([]);
+  const [isVisible, setIsVisible] = useState(false);
+  const [collections, setCollections] = useState([]);
+  const [displayedProducts, setDisplayedProducts] = useState([]);
+  const [activeCollection, setActiveCollection] = useState(null);
+  const [fade, setFade] = useState(true);
+  const [loadingCollection, setLoadingCollection] = useState(false);
+  const { t, i18n } = useTranslation();
+  const language = i18n.language;
+
+  // Funciones de fetch
+  const fetchData = useCallback(async (url) => {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Error al obtener datos de ${url}`);
+    return await res.json();
+  }, []);
 
   const fetch12Products = useCallback(async () => {
     try {
-      const response = await fetch('/api/product/sorted12Product');
-      if (!response.ok) throw new Error('Error al obtener los productos');
-      const data = await response.json();
-      setProducts12(data);
+      const response = await fetchData(API.sorted12);
+      setProducts12(response.data);
     } catch (error) {
       console.error(error.message);
     }
-  }, []);
+  }, [fetchData]);
 
   const fetchMainArtists = useCallback(async () => {
     try {
-      const response = await fetch('/api/artists/main');
-      if (!response.ok) throw new Error('Error al obtener los artistas');
-      const data = await response.json();
-      setArtists(data);
+      const response = await fetchData(API.mainArtists);
+      setArtists(response.data);
     } catch (error) {
       console.error(error.message);
     }
-  }, []);
+  }, [fetchData]);
 
+  const handleCollectionChange = async (collectionName) => {
+    setFade(false);
+    setLoadingCollection(true);
+    try {
+      const response = await fetchData(API.collection(collectionName));
+      setTimeout(() => {
+        setActiveCollection(collectionName);
+        setDisplayedProducts(response.data);
+        setFade(true);
+        setLoadingCollection(false);
+      }, 300);
+    } catch (error) {
+      console.error(error.message);
+      setLoadingCollection(false);
+    }
+  };
+
+  // Efectos
   useEffect(() => {
     fetch12Products();
     fetchMainArtists();
-
-    const sections = document.querySelectorAll('section');
-    const observerOptions = { root: null, rootMargin: '0px', threshold: 0.6 };
-
-    const observerCallback = (entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          const cls = entry.target.classList;
-          if (cls.contains('section-1')) setActiveSection('intro');
-          if (cls.contains('section-2')) setActiveSection('shop');
-          if (cls.contains('section-3')) setActiveSection('artistes');
-          if (cls.contains('section-4')) setActiveSection('quize');
-        }
-      });
-    };
-
-    const observer = new IntersectionObserver(observerCallback, observerOptions);
-    sections.forEach((s) => observer.observe(s));
-    return () => sections.forEach((s) => observer.unobserve(s));
   }, [fetch12Products, fetchMainArtists]);
 
-  const ProductCard = ({ product }) => (
-    <div className="w-full group">
-      <div className="relative w-full h-[300px] md:h-[600px] flex items-center justify-center bg-gray-100 overflow-hidden">
-        <img
-          src={`/api/product${product.images[0]}`}
-          alt={product.name}
-          loading="lazy"
-          className="absolute object-contain transition-all duration-500 ease-in-out group-hover:opacity-0 group-hover:scale-95"
-        />
-        {product.images[1] && (
-          <img
-            src={`/api/product${product.images[1]}`}
-            alt={`${product.name} hover`}
-            loading="lazy"
-            className="absolute object-contain opacity-0 transition-all duration-500 ease-in-out group-hover:opacity-100 group-hover:scale-100"
-          />
-        )}
-      </div>
-      <div className="mt-3 text-left">
-        <p className="custom-font-shop-regular" style={{ color: 'black' }}>{product.name}</p>
-        {product.onPromotion && product.discount > 0 ? (
-          <div className="flex items-center gap-2">
-            <span className="custom-font-shop-regular line-through" style={{ color: '#909497', fontSize: '15px' }}>{(product.price / ((100 - product.discount) / 100)).toFixed(2)}€</span>
-            <span className="custom-font-shop-regular" style={{ color: 'red' }}>
-              {product.price.toFixed(2)}€
-            </span>
-          </div>
-        ) : (
-          <span className="custom-font-shop-regular" style={{ color: '#909497', fontSize: '15px' }}>{product.price.toFixed(2)}€</span>
-        )}
-      </div>
-    </div>
-  );
+  useEffect(() => {
+    const loadCollections = async () => {
+      try {
+        const response = await fetchData(API.collections);
+        setCollections(response.data);
+        // Solo si hay colecciones promocionadas, elegir la primera para mostrar productos
+        const promotedCollections = response.data.filter(c => c.isPromoted);
+        if (promotedCollections.length > 0) {
+          setActiveCollection(promotedCollections[0].name);
+          handleCollectionChange(promotedCollections[0].name);
+        } else {
+          // No hay colecciones promocionadas: limpiar productos y colección activa
+          setActiveCollection(null);
+          setDisplayedProducts([]);
+        }
+      } catch (error) {
+        console.error(error.message);
+      }
+    };
+    loadCollections();
+  }, [fetchData]);
 
-  const NavigationLink = ({ to, children, textSize = 'text-4xl' }) => (
-    <Link to={to} className="transition-transform duration-300 transform hover:scale-105">
-      <p className={`custom-font-shop ${textSize} text-gray-700 hover:text-black transition-colors duration-300`}>
-        {children}
-      </p>
-    </Link>
-  );
-
-  console.log(artists)
+  useEffect(() => {
+    if (!product12.length) return;
+    const imageUrls = product12.flatMap(p => p.images.map(img => `/api/product${img}`));
+    Promise.all(imageUrls.map(src => new Promise(res => {
+      const img = new Image();
+      img.src = src;
+      img.onload = img.onerror = res;
+    }))).then(() => setTimeout(() => setIsVisible(true), 30));
+  }, [product12]);
 
   return (
     <>
-      <div className="bg-white">
+      <div
+        className="bg-white"
+        style={{
+          opacity: isVisible ? 1 : 0,
+          transition: 'opacity 0.7s ease-in-out',
+        }}
+      >
         <Suspense fallback={<div className="text-center">Cargando camiseta...</div>}>
           <TshirtViewer />
         </Suspense>
 
-        <div className='p-6'>
+        <div className="p-6">
+          {/* Navegación colecciones */}
+          <div className="flex flex-col sm:flex-row sm:justify-between gap-4 sm:gap-0">
+            {/* Colecciones: scroll horizontal en móvil */}
+            <div className="flex overflow-x-auto gap-4 scrollbar-hide sm:overflow-visible">
+              {collections.filter(coll => coll.isPromoted).map((coll) => (
+                <button
+                  key={coll.name}
+                  onClick={() => {
+                    if (coll.name !== activeCollection) {
+                      handleCollectionChange(coll.name);
+                    }
+                  }}
+                  className={coll.name === activeCollection ? '' : 'hover:scale-105'}
+                  style={{ flex: '0 0 auto' }} // evita que se contraigan
+                >
+                  <p
+                    className={`custom-font-shop text-2xl sm:text-3xl whitespace-nowrap transition-transform duration-300 transform ${coll.name === activeCollection ? 'custom-font-shop-black' : 'text-gray-400'
+                      }`}
+                  >
+                    {coll.name}
+                  </p>
+                </button>
+              ))}
+            </div>
 
-          <div className="flex justify-between mt-10 overflow-y-hidden">
-            <div className='flex gap-4'>
-              <NavigationLink to="/shop">ALL</NavigationLink>
-              <NavigationLink to="/shop/camisetas">CAMISETAS</NavigationLink>
-              <NavigationLink to="/shop/pantalones">PANTALONES</NavigationLink>
-              <NavigationLink to="/shop/accesorios">ACCESORIOS</NavigationLink>
+            {/* Enlace "Ver TODO" */}
+            <div className="flex justify-end sm:justify-start mt-2 sm:mt-0">
+              {displayedProducts.length > 0 && (
+                <Link to={`/shop/${activeCollection}`}>
+                  <p className="custom-font-shop custom-font-shop-black text-base sm:text-lg">
+                    {t('homepage.viewAll')}
+                  </p>
+                </Link>
+              )}
             </div>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1 w-full">
-            {product12.map((product, index) => (
-              <Link to={`/product/details/${product.id}`} key={index}>
-                <div className="flex justify-center">
-                  <ProductCard product={product} />
-                </div>
-              </Link>
-            ))}
+          {/* Productos colección activa con efecto escalera */}
+
+          {activeCollection && displayedProducts.length > 0 && (
+            <div
+              className={`grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1 w-full transition-opacity duration-500 ${fade ? 'opacity-100' : 'opacity-0'}`}
+            >
+              {displayedProducts.map((product, idx) => (
+                <Link to={`/product/details/${product.id}`} key={idx}>
+                  <div
+                    className={`translate-y-5 ${loadingCollection ? 'opacity-50' : 'opacity-100'}`}
+                    style={{
+                      animation: loadingCollection ? 'none' : `staggerFade 0.4s ease forwards`,
+                      animationDelay: loadingCollection ? '0s' : `${idx * 0.1}s`,
+                    }}
+                  >
+                    <ProductCard product={product} />
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+
+          {/* Navegación categorías */}
+          <div className="flex gap-4 mt-6 overflow-y-auto custom-font-shop text-3xl">
+            <Link to="/shop" className="transition-all duration-300 transform  hover:scale-105 hover:text-black focus:scale-105 focus:text-black active:scale-105 active:text-black">ALL</Link>
+            <Link to="/shop/camisetas" className="transition-all duration-300 transform hover:scale-105 hover:text-black focus:scale-105 focus:text-black active:scale-105 active:text-black">{t('t-shirts')}</Link>
+            <Link to="/shop/pantalones" className="transition-all duration-300 transform hover:scale-105 hover:text-black focus:scale-105 focus:text-black active:scale-105 active:text-black">{t('t-shirts')}</Link>
+            <Link to="/shop/sudaderas" className="transition-all duration-300 transform hover:scale-105 hover:text-black focus:scale-105 focus:text-black active:scale-105 active:text-black">{t('t-shirts')}</Link>
+            <Link to="/shop/accesorios" className="transition-all duration-300 transform hover:scale-105 hover:text-black focus:scale-105 focus:text-black active:scale-105 active:text-black">{t('t-shirts')}</Link>
           </div>
 
+          {/* Lista 12 productos */}
+          <Product12List products={product12} />
+
+          {/* Carrusel artistas */}
           <div className="mt-12 space-y-4">
-            <p className="text-lg font-medium text-gray-700">Artistas</p>
+            <p className="custom-font-shop custom-font-shop-black text-3xl">{t('artists')}</p>
             <Swiper
               modules={[Autoplay]}
               spaceBetween={20}
@@ -177,9 +261,31 @@ const HomePage = () => {
               ))}
             </Swiper>
           </div>
+          <div className="relative w-full h-[600px] md:h-[800px] mt-5 overflow-hidden">
+            <img
+              src={userProduct}
+              alt="Producto"
+              className="w-full h-full object-cover"
+            />
+            {/* Botón de orden */}
+            <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-10">
+              <Link to="/forFan">
+              <button className="button-yellow-border">
+                UPLOAD YOUR ART
+              </button>
+              </Link>
+            </div>
+          </div>
+
+          <div className='mt-5'>
+            <p className='custom-font-shop text-3xl custom-font-shop-black mb-5'>{t('upCommingEvents')}</p>
+            <ConcertMap />
+          </div>
         </div>
-      </div>
-      <Footer />
+
+      </div >
+      {isVisible && <Footer />
+      }
     </>
   );
 };

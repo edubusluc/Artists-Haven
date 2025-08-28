@@ -1,11 +1,16 @@
 package com.artists_heaven.event;
 
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDate;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
@@ -14,12 +19,24 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import com.artists_heaven.entities.artist.Artist;
 import com.artists_heaven.entities.artist.ArtistRepository;
+import com.artists_heaven.exception.AppExceptions;
+import com.artists_heaven.exception.AppExceptions.BadRequestException;
+import com.artists_heaven.exception.AppExceptions.InvalidInputException;
+import com.artists_heaven.exception.AppExceptions.ResourceNotFoundException;
+
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 
 @Service
 public class EventService {
 
     private final EventRepository eventRepository;
     private final ArtistRepository artistRepository;
+
+    private final OkHttpClient httpClient = new OkHttpClient();
 
     public EventService(EventRepository eventRepository, ArtistRepository artistRepository) {
         this.eventRepository = eventRepository;
@@ -35,7 +52,7 @@ public class EventService {
      */
     public Event getEventById(Long id) {
         return eventRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Event not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Event not found"));
     }
 
     /**
@@ -56,7 +73,7 @@ public class EventService {
     public void deleteEvent(Long id) {
         // Retrieve the event by ID, throw an exception if not found
         Event event = eventRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Event not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Event not found"));
 
         // Delete the retrieved event
         eventRepository.delete(event);
@@ -87,12 +104,12 @@ public class EventService {
     private void validateEventDate(LocalDate eventDate) {
         // Check if the event date is null
         if (eventDate == null) {
-            throw new IllegalArgumentException("Event date cannot be null");
+            throw new BadRequestException("Event date cannot be null");
         }
 
         // Check if the event date is in the past
         if (eventDate.isBefore(LocalDate.now())) {
-            throw new IllegalArgumentException("Event date cannot be in the past");
+            throw new BadRequestException("Event date cannot be in the past");
         }
     }
 
@@ -106,33 +123,67 @@ public class EventService {
      *                                  is invalid, or any other error occurs.
      */
     public Event newEvent(EventDTO eventDTO) {
-        try {
-            // Fetch the artist associated with the event
-            Artist artist = artistRepository.findById(eventDTO.getArtistId())
-                    .orElseThrow(() -> new IllegalArgumentException("Artist not found"));
+        // 1. Validar que el artista existe
+        Artist artist = artistRepository.findById(eventDTO.getArtistId())
+                .orElseThrow(() -> new AppExceptions.ResourceNotFoundException("Artist not found"));
 
-            // Validate the event date
-            validateEventDate(eventDTO.getDate());
+        // 2. Validar la fecha del evento
+        validateEventDate(eventDTO.getDate());
 
-            // Validate the artist is verified
-            if (!artist.getIsVerificated()) {
-                throw new IllegalArgumentException("Artist is not verified");
+        // 3. Validar que el artista está verificado
+        if (!artist.getIsVerificated()) {
+            throw new AppExceptions.ForbiddenActionException("Artist is not verified to create events");
+        }
+
+        // 4. Mapear el DTO a la entidad Event
+        Event event = new Event();
+        event.setName(eventDTO.getName());
+        event.setDescription(eventDTO.getDescription());
+        event.setDate(eventDTO.getDate());
+        event.setLocation(eventDTO.getLocation());
+        event.setMoreInfo(eventDTO.getMoreInfo());
+        event.setImage(eventDTO.getImage());
+        event.setArtist(artist);
+
+        // 5. Obtener coordenadas
+        getCoordinatesFromEvent(event);
+
+        // 6. Guardar el evento
+        return eventRepository.save(event);
+    }
+
+    private void getCoordinatesFromEvent(Event event) {
+        String location = URLEncoder.encode(event.getLocation(), StandardCharsets.UTF_8);
+        Request request = new Request.Builder()
+                .url("https://nominatim.openstreetmap.org/search?format=json&q=" + location)
+                .header("User-Agent", "ArtistsHeaven/1.0 (contacto@tuemail.com)") // Identificación válida
+                .build();
+
+        try (Response response = httpClient.newCall(request).execute()) {
+            if (!response.isSuccessful()) {
+                throw new IOException("Unexpected code " + response);
             }
 
-            // Map the EventDTO to an Event entity
-            Event event = new Event();
-            event.setName(eventDTO.getName());
-            event.setDescription(eventDTO.getDescription());
-            event.setDate(eventDTO.getDate());
-            event.setLocation(eventDTO.getLocation());
-            event.setMoreInfo(eventDTO.getMoreInfo());
-            event.setImage(eventDTO.getImage());
-            event.setArtist(artist);
+            // 1️⃣ Leer el cuerpo como String
+            String json = response.body().string();
 
-            // Save and return the event
-            return eventRepository.save(event);
+            // 2️⃣ Parsear la respuesta como lista de mapas
+            Gson gson = new Gson();
+            List<Map<String, Object>> list = gson.fromJson(json, new TypeToken<List<Map<String, Object>>>() {
+            }.getType());
+
+            // 3️⃣ Extraer latitud y longitud si hay resultados
+            if (list != null && !list.isEmpty()) {
+                double lat = Double.parseDouble(list.get(0).get("lat").toString());
+                double lon = Double.parseDouble(list.get(0).get("lon").toString());
+                event.setLatitude(lat);
+                event.setLongitude(lon);
+            } else {
+                throw new InvalidInputException("No se pudo geocodificar la dirección");
+            }
+
         } catch (Exception e) {
-            throw new IllegalArgumentException(e.getMessage());
+            throw new InvalidInputException("Error al obtener coordenadas");
         }
     }
 
@@ -193,14 +244,26 @@ public class EventService {
         event.setMoreInfo(eventDTO.getMoreInfo());
         event.setImage(eventDTO.getImage());
 
+        getCoordinatesFromEvent(event);
+
         // Save the updated event to the repository
         eventRepository.save(event);
     }
 
     public List<Event> findEventThisYearByArtist(Long artistId) {
-        LocalDate now = LocalDate.now();
-        return eventRepository.findArtistEventThisYear(artistId, now.getYear());
+        if (artistId == null) {
+            return Collections.emptyList();
+        }
+        int year = LocalDate.now().getYear();
+        return eventRepository.findArtistEventThisYear(artistId, year);
+    }
 
+    public List<Event> findFutureEventsByArtist(Long artistId) {
+        return eventRepository.findFutureEventsByArtist(artistId, LocalDate.now());
+    }
+
+    public List<Event> findFutureEvents() {
+        return eventRepository.findFutureEvents(LocalDate.now());
     }
 
 }

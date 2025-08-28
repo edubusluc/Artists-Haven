@@ -2,6 +2,7 @@ package com.artists_heaven.auth;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Service;
 import com.artists_heaven.entities.user.User;
 import com.artists_heaven.entities.user.UserRepository;
 import com.artists_heaven.entities.user.UserRole;
+import com.artists_heaven.exception.AppExceptions;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.artists_heaven.configuration.JwtTokenProvider;
 
@@ -27,7 +29,8 @@ public class AuthService {
 
     private final TokenVerifier tokenVerifier;
 
-    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtTokenProvider jwtTokenProvider,
+    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder,
+            JwtTokenProvider jwtTokenProvider,
             TokenVerifier tokenVerifier) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
@@ -49,11 +52,18 @@ public class AuthService {
     public String login(String email, String password) {
 
         // Retrieve the user from the database by email
-        User user = userRepository.findByEmail(email);
+        Optional<User> optionalUser = userRepository.findByEmail(email);
+
+        if (!optionalUser.isPresent()) {
+            // Throw an exception if the user is not found
+            throw new AppExceptions.ResourceNotFoundException("User not found with this email");
+        }
+
+        User user = optionalUser.get();
 
         // Check if the user exists and if the provided password matches the stored
         // hashed password
-        if (user == null || !passwordEncoder.matches(password, user.getPassword())) {
+        if (!passwordEncoder.matches(password, user.getPassword())) {
             throw new IllegalArgumentException(invalidCredentialsMessage);
         }
 
@@ -101,37 +111,37 @@ public class AuthService {
      *                                  or user creation process
      */
     public Map<String, String> handleGoogleLogin(String idTokenString) throws Exception {
-        // Verify the Google ID token using a token verifier
+        // Verificar el token de Google
         GoogleIdToken idToken = tokenVerifier.verifyToken(idTokenString);
-
-        // Check if the ID token is null (verification failed)
         if (idToken == null) {
             throw new IllegalArgumentException(invalidCredentialsMessage);
         }
 
-        // Extract the payload from the verified ID token
+        // Extraer el payload y el email
         GoogleIdToken.Payload payload = idToken.getPayload();
         String email = payload.getEmail();
 
-        // Check if the user exists in the repository
-        User user = userRepository.findByEmail(email);
+        // Buscar usuario por email
+        Optional<User> optionalUser = userRepository.findByEmail(email);
+        User user;
 
-        // If the user doesn't exist, create a new user and save it to the repository
-        if (user == null) {
+        if (optionalUser.isPresent()) {
+            user = optionalUser.get();
+        } else {
             user = createNewUser(payload, email);
             userRepository.save(user);
         }
 
-        // Create an Authentication object for the user with a default "USER" role
+        // Crear Authentication con el rol del usuario
         Authentication authentication = new UsernamePasswordAuthenticationToken(
                 user,
                 null,
-                AuthorityUtils.createAuthorityList("USER"));
+                AuthorityUtils.createAuthorityList(user.getRole().toString()));
 
-        // Generate a JWT token for the authenticated user
+        // Generar JWT
         String token = jwtTokenProvider.generateToken(authentication);
 
-        // Prepare the response map with the token and user's email
+        // Respuesta con token, email y rol
         Map<String, String> response = new HashMap<>();
         response.put("token", token);
         response.put("email", email);
@@ -160,6 +170,10 @@ public class AuthService {
         user.setRole(UserRole.USER);
 
         return user;
+    }
+
+    public String generateToken(User user) {
+        return jwtTokenProvider.generateTokenUser(user);
     }
 
 }

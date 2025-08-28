@@ -3,10 +3,11 @@ import twitter from '../util-image/twitter.png';
 import instagram from '../util-image/instagram.png';
 import tiktok from '../util-image/tiktok.png';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 const Footer = () => {
-  // Estado para controlar ancho de pantalla
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+  const { t } = useTranslation();
 
   useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);
@@ -14,13 +15,12 @@ const Footer = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Decide estilos basados en ancho
   const isMobile = windowWidth <= 768;
 
   return (
     <footer
       style={{
-        backgroundColor: '#ebebeb',
+        backgroundColor: '#ffffff',
         padding: '4rem 2rem',
         textAlign: 'center',
         color: 'white',
@@ -30,6 +30,7 @@ const Footer = () => {
         flexDirection: 'column',
       }}
     >
+      {/* Contenedor principal */}
       <div
         className="w-full max-w-6xl mx-auto"
         style={{
@@ -37,104 +38,102 @@ const Footer = () => {
           borderRadius: '24px',
           padding: '2rem',
           boxShadow: '0 4px 15px rgba(0,0,0,0.15)',
-          color: '#333',
+          color: '#fff',
           display: 'flex',
           flexDirection: isMobile ? 'column' : 'row',
-          gap: isMobile ? '1.5rem' : '2rem',
+          gap: isMobile ? '2rem' : '4rem',
           alignItems: isMobile ? 'center' : 'flex-start',
           justifyContent: 'space-between',
         }}
       >
-        {/* Texto a la izquierda (o arriba en móvil) */}
-        <p
-          className="custom-font-footer text-white"
-          style={{
-            width: isMobile ? '100%' : 'calc(100% - 25rem)',
-            minWidth: isMobile ? 'auto' : '250px',
-            textAlign: isMobile ? 'center' : 'left',
-          }}
-        >
-          STAY UP TO DATE ABOUT OUR LATEST OFFERS
-        </p>
-
-        {/* Columna con dos divs a la derecha (o debajo en móvil) */}
-        <div
-          className="flex flex-col gap-4"
-          style={{
-            width: isMobile ? '100%' : '25rem',
-            minWidth: isMobile ? 'auto' : '25rem',
-            flexDirection: 'column',
-            alignItems: 'center',
-          }}
-        >
-          <div
-            style={{
-              backgroundColor: 'white',
-              borderRadius: '24px',
-              padding: '1rem',
-              height: '4rem',
-              width: '100%',
-              textAlign: 'center',
-              boxSizing: 'border-box',
-            }}
+        {/* Columna izquierda */}
+        <div style={{ flex: 1, textAlign: isMobile ? 'center' : 'left' }}>
+          <h2
+            className="custom-font-footer"
+            style={{ fontSize: '1.5rem', fontWeight: '700', marginBottom: '1rem' }}
           >
-            Promo 1
-          </div>
+            ARTISTS' - HEAVEN
+          </h2>
+          <p style={{ fontSize: '0.95rem', lineHeight: '1.5' }}>
+            {t('footer.description')}
+          </p>
 
-          <div
-            style={{
-              backgroundColor: 'white',
-              borderRadius: '24px',
-              padding: '1rem',
-              height: '4rem',
-              width: '100%',
-              textAlign: 'center',
-              boxSizing: 'border-box',
+        </div>
 
-            }}
-          >
-            <p className="custom-font-footer" style={{ color: 'black' }}>subscribe</p>
-          </div>
+        {/* Columna enlaces rápidos */}
+        <div style={{ flex: 1, textAlign: isMobile ? 'center' : 'left' }}>
+          <h3 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '1rem' }}>
+            {t('footer.quickLinks')}
+          </h3>
+          <ul style={{ listStyle: 'none', padding: 0, margin: 0, lineHeight: '2' }}>
+            <li><Link to="/about" style={{ color: 'white' }}>{t('footer.aboutUs')}</Link></li>
+            <li><Link to="/FAQ" style={{ color: 'white' }}>{t('footer.faq')}</Link></li>
+          </ul>
+        </div>
+
+        {/* Columna legal */}
+        <div style={{ flex: 1, textAlign: isMobile ? 'center' : 'left' }}>
+          <h3 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '1rem' }}>
+            {t('footer.legal')}
+          </h3>
+          <ul style={{ listStyle: 'none', padding: 0, margin: 0, lineHeight: '2' }}>
+            <li><Link to="/privacy" style={{ color: 'white' }}>{t('footer.privacyPolicy')}</Link></li>
+            <li><Link to="/terms" style={{ color: 'white' }}>{t('footer.termsAndConditions')}</Link></li>
+          </ul>
+        </div>
+
+        {/* Columna contacto */}
+        <div style={{ flex: 1, textAlign: isMobile ? 'center' : 'left' }}>
+          <h3 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '1rem' }}>
+            {t('footer.contactUs')}
+          </h3>
+          <p style={{ fontSize: '0.85rem' }}>{t('footer.email')}</p>
+          <p style={{ fontSize: '0.85rem' }}>{t('footer.location')}</p>
+
         </div>
       </div>
 
-      {/* Contenedor para las imágenes con mismo ancho y centrado que el div negro */}
+      {/* Redes sociales */}
       <div
         className="w-full max-w-6xl mx-auto"
         style={{
-          marginTop: '1.5rem',
+          marginTop: '2rem',
           display: 'flex',
           flexDirection: 'column',
-          gap: '0.5rem',
-
+          gap: '1rem',
         }}
       >
-        <div className='flex justify-between'>
-          <p className="custom-font-footer" style={{ color: 'black', textAlign: isMobile ? 'center' : 'left', fontSize: '20px' }}>
-            ARTISTS' - HEAVEN
-          </p>
-          <Link to="/FAQ">
-            <p className="custom-font-footer" style={{ color: 'black', textAlign: isMobile ? 'center' : 'right', fontSize: '20px' }}>FAQ</p>
-          </Link>
-        </div>
-        <div style={{ display: 'flex', gap: '1rem', justifyContent: isMobile ? 'center' : 'flex-start' }}>
-          <img src={twitter} alt="twitter" style={{ height: '32px', cursor: 'pointer' }} />
-          <a href="https://www.tiktok.com/@thisis.argentina?lang=es" target="_blank" rel="noopener noreferrer">
-            <img src={tiktok} alt="tiktok" style={{ height: '32px', cursor: 'pointer' }} />
+        <div
+          style={{
+            display: 'flex',
+            gap: '1rem',
+            justifyContent: isMobile ? 'center' : 'flex-start',
+          }}
+        >
+          <a href="https://www.tiktok.com/@thisis.argentina?lang=es" target="_blank" rel="noopener noreferrer" aria-label="Tiktok">
+            <img
+              src={tiktok}
+              alt="tiktok"
+              style={{ height: '32px', cursor: 'pointer', transition: '0.3s' }}
+              onMouseOver={(e) => (e.currentTarget.style.transform = 'scale(1.1)')}
+              onMouseOut={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+            />
           </a>
-          <img src={instagram} alt="instagram" style={{ height: '32px', cursor: 'pointer' }} />
+          <a href="https://www.instagram.com/thisis.argentina/" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+            <img
+              src={instagram}
+              alt="instagram"
+              style={{ height: '32px', cursor: 'pointer', transition: '0.3s' }}
+              onMouseOver={(e) => (e.currentTarget.style.transform = 'scale(1.1)')}
+              onMouseOut={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+            />
+          </a>
         </div>
       </div>
 
-      <p
-        style={{
-          marginTop: '3rem',
-          fontSize: '0.9rem',
-          color: '#444',
-          textAlign: 'center',
-        }}
-      >
-        © 2025 Mi Sitio Web. Todos los derechos reservados.
+      {/* Copyright */}
+      <p style={{ marginTop: '2rem', fontSize: '0.9rem', color: '#444', textAlign: 'center' }}>
+        {t('footer.copyright')}
       </p>
     </footer>
   );

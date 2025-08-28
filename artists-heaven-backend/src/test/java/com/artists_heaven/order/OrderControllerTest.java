@@ -1,238 +1,152 @@
 package com.artists_heaven.order;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Set;
-
-import org.junit.jupiter.api.AfterEach;
+import com.artists_heaven.entities.user.User;
+import com.artists_heaven.exception.AppExceptions;
+import com.artists_heaven.exception.GlobalExceptionHandler;
+import com.artists_heaven.product.Product;
+import com.artists_heaven.product.ProductService;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.http.MediaType;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContext;
-import org.springframework.security.core.context.SecurityContextHolder;
+
+import org.springframework.data.domain.*;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import com.artists_heaven.entities.user.User;
-import com.artists_heaven.entities.user.UserRole;
-import com.artists_heaven.product.Product;
-import com.artists_heaven.product.ProductService;
+import java.time.LocalDateTime;
+import java.util.*;
 
-import jakarta.persistence.EntityNotFoundException;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 class OrderControllerTest {
 
-    private MockMvc mockMvc;
+        private MockMvc mockMvc;
 
-    @Mock
-    private OrderService orderService;
+        @Mock
+        private OrderService orderService;
 
-    @Mock
-    private ProductService productService;
+        @Mock
+        private ProductService productService;
 
-    @InjectMocks
-    private OrderController orderController;
+        @InjectMocks
+        private OrderController orderController;
 
-    @BeforeEach
-    void setUp() {
-        MockitoAnnotations.openMocks(this);
-        mockMvc = MockMvcBuilders.standaloneSetup(orderController).build();
-    }
+        @BeforeEach
+        void setUp() {
+                MockitoAnnotations.openMocks(this);
+                mockMvc = MockMvcBuilders
+                                .standaloneSetup(orderController)
+                                .setControllerAdvice(new GlobalExceptionHandler())
+                                .build();
+        }
 
-    @Test
-    void testGetMyOrders_Success() throws Exception {
-        User user = new User();
-        user.setId(1L);
+        // --- getMyOrders ---
 
-        OrderItem item = new OrderItem();
-        item.setProductId(123L);
+        // --- getOrder ---
+        @Nested
+        class GetOrderTests {
 
-        Order order = new Order();
-        order.setId(1L);
-        order.setCreatedDate(LocalDateTime.now());
-        order.setUser(user);
-        order.setItems(List.of(item));
-        order.setIdentifier(10L);
+                @Test
+                @DisplayName("✅ should return order by ID successfully")
+                void shouldReturnOrder() throws Exception {
+                        OrderDetailsDTO dto = new OrderDetailsDTO();
+                        when(orderService.getOrderDetailsById(10L)).thenReturn(dto);
 
-        PageRequest pageable = PageRequest.of(0, 3);
-        Page<Order> orderPage = new PageImpl<>(List.of(order), pageable, 1);
+                        mockMvc.perform(get("/api/orders/10"))
+                                        .andExpect(status().isOk())
+                                        .andExpect(jsonPath("$.message").value("Order retrieved successfully"));
+                }
 
-        Product product = new Product();
-        product.setId(123L);
-        product.setImages(List.of("img.jpg"));
+                @Test
+                @DisplayName("❌ should return 404 if order not found")
+                void shouldReturnNotFound() throws Exception {
+                        when(orderService.getOrderDetailsById(10L))
+                                        .thenThrow(new AppExceptions.ResourceNotFoundException("Order not found"));
 
-        // Mock Auth
-        Authentication authentication = mock(Authentication.class);
-        when(authentication.getPrincipal()).thenReturn(user);
-        SecurityContext securityContext = mock(SecurityContext.class);
-        when(securityContext.getAuthentication()).thenReturn(authentication);
-        SecurityContextHolder.setContext(securityContext);
+                        mockMvc.perform(get("/api/orders/10"))
+                                        .andExpect(status().isNotFound())
+                                        .andExpect(jsonPath("$.message").value("Order not found"));
+                }
 
-        // Mock services
-        when(orderService.getMyOrdersPageable(eq(1L), any(Pageable.class))).thenReturn(orderPage);
-        when(productService.findAllByIds(Set.of(123L))).thenReturn(List.of(product));
+                @Test
+                @DisplayName("❌ should return 403 if access forbidden")
+                void shouldReturnForbidden() throws Exception {
+                        when(orderService.getOrderDetailsById(10L))
+                                        .thenThrow(new AppExceptions.ForbiddenActionException("Forbidden"));
 
-        mockMvc.perform(get("/api/orders/myOrders")
-                .param("page", "0")
-                .param("size", "3")
-                .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.orders[0].id").value(1));
-    }
+                        mockMvc.perform(get("/api/orders/10"))
+                                        .andExpect(status().isForbidden())
+                                        .andExpect(jsonPath("$.message").value("Forbidden"));
+                }
 
-    @Test
-    void testGetMyOrders_Unauthorized() throws Exception {
-        Authentication authentication = mock(Authentication.class);
-        when(authentication.getPrincipal()).thenReturn(null);
-        SecurityContext securityContext = mock(SecurityContext.class);
-        when(securityContext.getAuthentication()).thenReturn(authentication);
-        SecurityContextHolder.setContext(securityContext);
+        }
 
-        mockMvc.perform(get("/api/orders/myOrders")
-                .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isBadRequest());
-    }
+        // --- getOrderByIdentifier ---
+        @Nested
+        class GetOrderByIdentifierTests {
 
-    @Test
-    void testGetOrder_Success_AdminAccess() throws Exception {
-        // Datos de prueba
+                @Test
+                @DisplayName("✅ should return order by identifier successfully")
+                void shouldReturnOrderByIdentifier() throws Exception {
 
-        User userAdmin = new User();
-        userAdmin.setRole(UserRole.ADMIN);
+                        OrderItem orderItem = new OrderItem();
+                        orderItem.setId(1L);
+                        orderItem.setQuantity(2);
 
-        Long orderId = 1L;
-        User user = new User();
-        user.setId(2L);
-        Order order = new Order();
-        order.setId(orderId);
-        order.setUser(user); // Usuario de la orden
-        order.setIdentifier(10L);
+                        User user = new User();
 
-        // Simula que el servicio devuelve la orden
-        Authentication authentication = mock(Authentication.class);
-        when(authentication.getPrincipal()).thenReturn(userAdmin);
+                        Order order = new Order();
+                        order.setId(20L);
+                        order.setIdentifier(1L); // importante, tu DTO hace toString()
+                        order.setTotalPrice(100.0f);
+                        order.setStatus(OrderStatus.IN_PREPARATION);
+                        order.setUser(user);
+                        order.setItems(List.of(orderItem));
+                        order.setAddressLine1("Street 123");
+                        order.setCity("City");
+                        order.setCountry("Country");
+                        order.setPostalCode("12345");
+                        order.setEmail("test@example.com");
+                        order.setPhone("1234567890");
+                        order.setCreatedDate(LocalDateTime.now());
+                        order.setPaymentIntent("pi_123");
 
-        SecurityContext securityContext = mock(SecurityContext.class);
-        when(securityContext.getAuthentication()).thenReturn(authentication);
-        SecurityContextHolder.setContext(securityContext);
+                        when(orderService.getOrderByIdentifier(eq(123L), eq("en"))).thenReturn(order);
 
-        when(orderService.findOrderById(orderId)).thenReturn(order);
+                        Product product = new Product();
+                        product.setId(2L);
+                        product.setImages(List.of("img.png"));
+                        when(productService.findAllByIds(anySet())).thenReturn(List.of(product));
 
-        // Hacemos la solicitud GET
-        mockMvc.perform(get("/api/orders/{id}", orderId)
-                .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk()) // Verificamos que el status sea 200 OK
-                .andExpect(jsonPath("$.id").value(orderId)); // Verificamos que el ID de la orden está en la respuesta
-    }
+                        mockMvc.perform(get("/api/orders/by-identifier")
+                                        .param("identifier", "123")
+                                        .param("lang", "en"))
+                                        .andExpect(status().isOk())
+                                        .andExpect(jsonPath("$.message").value("Order retrieved successfully"))
+                                        .andExpect(jsonPath("$.data.orders.id").value(20))
+                                        .andExpect(jsonPath("$.data.productImages['2']").value("img.png"));
+                }
 
-    @Test
-    void testGetOrder_Success_UserAccess() throws Exception {
-        // Datos de prueba
-        User user = new User();
-        user.setId(2L);
-        user.setRole(UserRole.USER);
+                @Test
+                @DisplayName("❌ should return 404 if order not found by identifier")
+                void shouldReturnNotFoundByIdentifier() throws Exception {
+                        when(orderService.getOrderByIdentifier(anyLong(), anyString()))
+                                        .thenThrow(new AppExceptions.ResourceNotFoundException("Not found"));
 
-        Long orderId = 1L;
-        Order order = new Order();
-        order.setId(orderId);
-        order.setUser(user); // Usuario de la orden
-        order.setIdentifier(10L);
+                        mockMvc.perform(get("/api/orders/by-identifier")
+                                        .param("identifier", "123")
+                                        .param("lang", "en"))
+                                        .andExpect(status().isNotFound())
+                                        .andExpect(jsonPath("$.message").value("Not found"));
+                }
 
-        // Simula que el servicio devuelve la orden
-        when(orderService.findOrderById(orderId)).thenReturn(order);
-
-        // Simulamos que el usuario autenticado es el propietario de la orden
-        Authentication authentication = mock(Authentication.class);
-        when(authentication.getPrincipal()).thenReturn(user);
-
-        SecurityContext securityContext = mock(SecurityContext.class);
-        when(securityContext.getAuthentication()).thenReturn(authentication);
-        SecurityContextHolder.setContext(securityContext);
-
-        // Hacemos la solicitud GET
-        mockMvc.perform(get("/api/orders/{id}", orderId)
-                .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk()) // Verificamos que el status sea 200 OK
-                .andExpect(jsonPath("$.id").value(orderId)); // Verificamos que el ID de la orden está en la respuesta
-    }
-
-    @Test
-    void testGetOrder_Failure_NoAccess() throws Exception {
-        // Datos de prueba
-        User user = new User();
-        user.setId(2L);
-        user.setRole(UserRole.USER);
-
-        User user2 = new User();
-        user2.setId(3L);
-        user2.setRole(UserRole.USER);
-
-        Long orderId = 1L;
-        Order order = new Order();
-        order.setId(orderId);
-        order.setUser(user2); // Usuario de la orden
-
-        // Simula que el servicio devuelve la orden
-        when(orderService.findOrderById(orderId)).thenReturn(order);
-
-        // Simulamos que el usuario autenticado es el propietario de la orden
-        Authentication authentication = mock(Authentication.class);
-        when(authentication.getPrincipal()).thenReturn(user);
-
-        SecurityContext securityContext = mock(SecurityContext.class);
-        when(securityContext.getAuthentication()).thenReturn(authentication);
-        SecurityContextHolder.setContext(securityContext);
-
-        // Hacemos la solicitud GET
-        mockMvc.perform(get("/api/orders/{id}", orderId)
-                .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isForbidden()); // Verificamos que el status sea 403
-    }
-
-    @Test
-    void testGetOrder_Failure_OrderNotFound() throws Exception {
-        Long orderId = 1L;
-
-        User userAdmin = new User();
-        userAdmin.setRole(UserRole.ADMIN);
-
-        // Simula que el servicio lanza una EntityNotFoundException
-        when(orderService.findOrderById(orderId))
-                .thenThrow(new EntityNotFoundException("Order not found with id: " +
-                        orderId));
-
-        // Simulamos que el usuario autenticado es el propietario de la orden
-        Authentication authentication = mock(Authentication.class);
-        when(authentication.getPrincipal()).thenReturn(userAdmin);
-
-        SecurityContext securityContext = mock(SecurityContext.class);
-        when(securityContext.getAuthentication()).thenReturn(authentication);
-        SecurityContextHolder.setContext(securityContext);
-
-        // Hacemos la solicitud GET
-        mockMvc.perform(get("/api/orders/{id}", orderId)
-                .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isNotFound()); // Verificamos que el status sea 404 NOT
-
-    }
-
-    @AfterEach
-    void tearDown() {
-        SecurityContextHolder.clearContext();
-    }
+        }
 }

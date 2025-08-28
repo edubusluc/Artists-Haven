@@ -13,16 +13,33 @@ const makeRequest = async (url, method = 'GET', body = null, authToken) => {
         body: body ? JSON.stringify(body) : undefined,
     });
 
+    // Función para parsear el body según si es JSON o texto plano
+    const parseBody = async (response) => {
+        const text = await response.text();
+        try {
+            return JSON.parse(text);
+        } catch {
+            return { message: text };
+        }
+    };
+
+    const data = await parseBody(res);
+
     if (!res.ok) {
-        const message = await res.text();
-        throw new Error(message || 'Error en la petición');
+        const errorMessage = data.message || data.error || 'Unknown error';
+        throw new Error(errorMessage);
     }
 
-    return res.json();
+    return data;
+
 };
 
+
 // Obtener todas las categorías
-export const getAllCategories = (authToken) => makeRequest(`${API_BASE}/allCategories`, 'GET', null, authToken);
+export const getAllCategories = (authToken) => makeRequest(`/api/product/categories`, 'GET', null, authToken);
+
+// Obtner todas las colecciones
+export const getAllCollections = (authToken) => makeRequest(`${API_BASE}/allCollections`, 'GET', null, authToken);
 
 // Obtener gestión de productos
 export const getProductManagement = (authToken) => makeRequest(`${API_BASE}/product-management`, 'GET', null, authToken);
@@ -40,7 +57,7 @@ export const toggleProductAvailability = (authToken, id, shouldEnable) => {
 };
 
 // Degradar el producto
-export const demoteProduct = (authToken, id) => makeRequest(`/api/product/demote/${id}`, 'PUT', null, authToken);
+export const demoteProduct = (authToken, id, language) => makeRequest(`/api/product/demote/${id}?lang=${language}`, 'PUT', null, authToken);
 
 // Crear una nueva categoría
 export const createCategory = (authToken, name) => {
@@ -52,6 +69,18 @@ export const createCategory = (authToken, name) => {
 export const editCategory = (authToken, id, name) => {
     const body = { id, name };
     return makeRequest(`${API_BASE}/editCategory`, 'POST', body, authToken);
+};
+
+// Crear una nueva collecion
+export const createCollection = (authToken, name) => {
+    const body = { name };
+    return makeRequest(`${API_BASE}/newCollection`, 'POST', body, authToken);
+};
+
+// Editar una collecion
+export const editCollection = (authToken, id, name, isPromoted) => {
+    const body = { id, name, isPromoted };
+    return makeRequest(`${API_BASE}/editCollection`, 'POST', body, authToken);
 };
 
 // Obtener estadísticas del año (como ingresos, etc.)
@@ -67,6 +96,15 @@ export const getUsers = (authToken, page, pageSize, searchTerm = '') => {
 // Obtener las verificaciones pendientes de artistas
 export const getPendingVerifications = (authToken) =>
     makeRequest('/api/admin/verification/pending', 'GET', null, authToken);
+
+export const getPendingUserProducts = (authToken) =>
+    makeRequest('/api/admin/userProduct/pending', 'GET', null, authToken);
+
+export const approveUserProduct = (authToken, productId) =>
+    makeRequest(`/api/admin/userProduct/${productId}/approve`, 'POST', null, authToken);
+
+export const rejectUserProduct  = (authToken, productId) =>
+    makeRequest(`/api/admin/userProduct/${productId}/reject`, 'POST', null, authToken);
 
 // Verificar un artista
 export const getVerifyArtist = (authToken, id, verificationId) => {

@@ -1,9 +1,6 @@
 package com.artists_heaven.entities.user;
 
 import java.security.Principal;
-import java.util.List;
-import java.util.Map;
-
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -11,15 +8,16 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.client.HttpClientErrorException.Unauthorized;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.artists_heaven.images.ImageServingUtil;
+import com.artists_heaven.standardResponse.StandardResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -41,82 +39,75 @@ public class UserController {
         this.imageServingUtil = imageServingUtil;
     }
 
-    @Operation(summary = "Retrieve all users", description = "Fetches a list of all registered users.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "List of users retrieved successfully", content = @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = User.class))))
-    })
-    @GetMapping("/list")
-    public List<User> getAllUsers() {
-        return userService.getAllUsers();
-    }
-
     @Operation(summary = "Register a new user", description = "Registers a new user with the provided user details.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "User successfully registered", content = @Content(mediaType = "application/json", schema = @Schema(implementation = User.class))),
-            @ApiResponse(responseCode = "400", description = "Invalid user data", content = @Content(mediaType = "application/json"))
+            @ApiResponse(responseCode = "201", description = "User successfully registered", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid user data", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
     })
     @PostMapping("/register")
-    public ResponseEntity<User> registerUser(
-            @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "User object containing the user details", required = true, content = @Content(mediaType = "application/json", schema = @Schema(implementation = User.class))) @RequestBody User user) {
-        try {
-            User registeredUser = userService.registerUser(user);
-            return new ResponseEntity<>(registeredUser, HttpStatus.CREATED);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(null);
-        }
+    public ResponseEntity<StandardResponse<User>> registerUser(
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "User object containing the registration details", required = true,
+             content = @Content(mediaType = "application/json",
+              schema = @Schema(implementation = UserRegisterDTO.class))) @RequestBody UserRegisterDTO userRegisterDTO, @RequestParam String lang) {
+
+        User registeredUser = userService.registerUser(userRegisterDTO, lang);
+
+        StandardResponse<User> response = new StandardResponse<>(
+                "User successfully registered",
+                registeredUser,
+                HttpStatus.CREATED.value());
+
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
     @Operation(summary = "Get authenticated user's profile", description = "Retrieves the profile information of the currently authenticated user.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "User profile retrieved successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = UserProfileDTO.class))),
+            @ApiResponse(responseCode = "200", description = "User profile retrieved successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
             @ApiResponse(responseCode = "401", description = "Unauthorized - user is not authenticated", content = @Content(mediaType = "application/json", schema = @Schema(example = "\"User is not authenticated\""))),
             @ApiResponse(responseCode = "500", description = "Internal server error while retrieving user profile", content = @Content(mediaType = "application/json", schema = @Schema(example = "\"Error retrieving user profile\"")))
     })
     @GetMapping("/profile")
-    public ResponseEntity<Object> getUserProfile(Principal principal) {
-        try {
-            UserProfileDTO userProfileDTO = userService.getUserProfile(principal);
-            return ResponseEntity.ok(userProfileDTO);
-        } catch (Unauthorized e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error retrieving user profile");
-        }
+    public ResponseEntity<StandardResponse<UserProfileDTO>> getUserProfile(Principal principal) {
+        UserProfileDTO userProfileDTO = userService.getUserProfile(principal);
+
+        StandardResponse<UserProfileDTO> response = new StandardResponse<>(
+                "User profile retrieved successfully",
+                userProfileDTO,
+                HttpStatus.OK.value());
+
+        return ResponseEntity.ok(response);
     }
 
     @Operation(summary = "Update authenticated user's profile", description = "Updates the profile information of the currently authenticated user.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "User profile updated successfully", content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"message\": \"Profile updated successfully\"}"))),
-            @ApiResponse(responseCode = "401", description = "Unauthorized - user is not authenticated", content = @Content(mediaType = "application/json", schema = @Schema(example = "\"User is not authenticated\""))),
-            @ApiResponse(responseCode = "500", description = "Internal server error while updating user profile", content = @Content(mediaType = "application/json", schema = @Schema(example = "\"Error updating user profile\"")))
+            @ApiResponse(responseCode = "200", description = "User profile updated successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class), examples = @ExampleObject(value = "{\"message\": \"Profile updated successfully\", \"data\": null, \"status\": 200}"))),
+            @ApiResponse(responseCode = "401", description = "Unauthorized - user is not authenticated", content = @Content(mediaType = "application/json", examples = @ExampleObject(value = "{\"message\": \"User is not authenticated\", \"data\": null, \"status\": 401}"))),
+            @ApiResponse(responseCode = "404", description = "User not found", content = @Content(mediaType = "application/json", examples = @ExampleObject(value = "{\"message\": \"User not found\", \"data\": null, \"status\": 404}"))),
+            @ApiResponse(responseCode = "500", description = "Internal server error while updating user profile", content = @Content(mediaType = "application/json", examples = @ExampleObject(value = "{\"message\": \"Unexpected error occurred\", \"data\": null, \"status\": 500}")))
     })
     @PutMapping("/profile/edit")
-    public ResponseEntity<Object> updateUserProfile(
+    public ResponseEntity<StandardResponse<Void>> updateUserProfile(
             @ModelAttribute UserProfileUpdateDTO userProfileDTO,
-            Principal principal) {
-        try {
-            String mainImage = "";
-            String banner = "";
+            Principal principal,
+            @RequestParam String lang) {
 
-            MultipartFile image = userProfileDTO.getImage();
-            MultipartFile bannerImage = userProfileDTO.getBannerImage();
+        String mainImage = "";
+        String banner = "";
 
-            if (image != null && !image.isEmpty()) {
-                mainImage = imageServingUtil.saveImages(image, UPLOAD_DIR, "/mainArtist_media/", false);
-            }
-            if (bannerImage != null && !bannerImage.isEmpty()) {
-                banner = imageServingUtil.saveImages(bannerImage, UPLOAD_DIR, "/mainArtist_media/", false);
-            }
+        MultipartFile image = userProfileDTO.getImage();
+        MultipartFile bannerImage = userProfileDTO.getBannerImage();
 
-            userService.updateUserProfile(userProfileDTO, principal, mainImage, banner);
-            return ResponseEntity.ok(Map.of("message", "Profile updated successfully"));
-        } catch (Unauthorized e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error updating user profile");
+        if (image != null && !image.isEmpty()) {
+            mainImage = imageServingUtil.saveImages(image, UPLOAD_DIR, "/mainArtist_media/", false);
         }
+        if (bannerImage != null && !bannerImage.isEmpty()) {
+            banner = imageServingUtil.saveImages(bannerImage, UPLOAD_DIR, "/mainArtist_media/", false);
+        }
+        
+
+        userService.updateUserProfile(userProfileDTO, principal, mainImage, banner, lang);
+
+        return ResponseEntity.ok(new StandardResponse<>("Profile updated successfully", 200));
     }
 
 }

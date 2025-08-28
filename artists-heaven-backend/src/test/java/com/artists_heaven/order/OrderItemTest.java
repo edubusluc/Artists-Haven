@@ -5,6 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import org.junit.jupiter.api.Test;
 
+import com.artists_heaven.product.Section;
+
 class OrderItemTest {
 
     @Test
@@ -23,8 +25,8 @@ class OrderItemTest {
 
         Order order = new Order();
         order.setId(1L);
-
-        OrderItem orderItem = new OrderItem(productId, quantity, size, name, price, order);
+        Section section = Section.ACCESSORIES;
+        OrderItem orderItem = new OrderItem(productId, quantity, size, name, price, order,section);
 
         assertNotNull(orderItem);
         assertEquals(productId, orderItem.getProductId());

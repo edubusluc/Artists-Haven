@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from 'react-router-dom';
+import Footer from '../Footer'
+import { useTranslation } from 'react-i18next';
 
 const ArtistForm = () => {
   const [formData, setFormData] = useState({
@@ -12,18 +14,22 @@ const ArtistForm = () => {
     color: "#ffffff"
   });
 
+  const { t, i18n } = useTranslation();
+  const currentLang = i18n.language;
+
+
   const [errorMessage, setErrorMessage] = useState("");
   const navigate = useNavigate();
   const [images, setImages] = useState([]);
   const [bannerImage, setBannerImage] = useState([]);
-  const [validationError, setValidationError] = useState("");
+  const [validationErrors, setValidationErrors] = useState({});
 
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files);
     const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/bmp", "image/webp"];
     const invalidFiles = files.filter(file => !allowedTypes.includes(file.type));
     if (invalidFiles.length > 0) {
-      setErrorMessage("Solo se permiten archivos de imagen válidos (jpg, png, gif, bmp, webp).");
+      setErrorMessage(t('artistForm.error.invalidImage'));
       setImages([]);
       return;
     }
@@ -36,7 +42,7 @@ const ArtistForm = () => {
     const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/bmp", "image/webp"];
     const invalidFiles = files.filter(file => !allowedTypes.includes(file.type));
     if (invalidFiles.length > 0) {
-      setErrorMessage("Solo se permiten archivos de imagen válidos (jpg, png, gif, bmp, webp).");
+      setErrorMessage(t('artistForm.error.invalidImage'));
       setBannerImage([]);
       return;
     }
@@ -55,11 +61,34 @@ const ArtistForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMessage("");
-    setValidationError("");
+    setValidationErrors({});
 
-    // Validar que haya imágenes
-    if (images.length === 0 || bannerImage === 0) {
-      setValidationError("Debes seleccionar al menos una imagen válida.");
+    let errors = {};
+
+    if (!formData.firstName) errors.firstName = t('form.error.requiredFirstName');
+    if (!formData.lastName) errors.lastName = t('form.error.requiredLastName');
+    if (!formData.email) errors.email = t('form.error.requiredEmail');
+    if (!formData.password) errors.password = t('form.error.requiredPassword');
+    if (!formData.artistName) errors.artistName = t('artistForm.error.requiredArtistName');
+    if (!formData.url) errors.url = t('artistForm.error.requiredUrl');
+
+    if (images.length === 0) errors.images = t('artistForm.error.requiredImage');
+    if (bannerImage.length === 0) errors.bannerImage = t('artistForm.error.requiredBanner');
+
+
+
+    const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/bmp", "image/webp"];
+
+    const invalidMainImages = images.filter(file => !allowedTypes.includes(file.type));
+    const invalidBannerImages = bannerImage.filter(file => !allowedTypes.includes(file.type));
+
+    if (invalidMainImages.length > 0 || invalidBannerImages.length > 0) {
+      setValidationErrors(t('artistForm.error.invalidImage'));
+      return;
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
       return;
     }
 
@@ -70,20 +99,22 @@ const ArtistForm = () => {
       data.append(key, formData[key]);
     });
 
-    data.append("image", images[0]); // Asegúrate de que el backend espere `image`
-    data.append("bannerImage", bannerImage[0]);
+    data.append("image", images);
+    data.append("bannerImage", bannerImage);
 
     try {
-      const response = await fetch("/api/artists/register", {
+      const response = await fetch(`/api/artists/register?lang=${currentLang}`, {
         method: "POST",
         body: data,
       });
 
-      if (!response.ok) {
-        throw new Error("Error al registrar el artista");
-      }
+      const result = await response.json();
+      const errorMessage = result.message;
 
-      await response.json();
+      if (!response.ok) {
+        throw new Error(errorMessage);
+
+      }
 
       // Limpiar estado tras registro
       setFormData({
@@ -103,10 +134,12 @@ const ArtistForm = () => {
     }
   };
 
+  console.log("EO")
+
   return (
-    <div className="max-w-3xl mx-auto mt-10 p-8 bg-white shadow-2xl rounded-2xl">
+    <><div className="max-w-3xl mx-auto mt-28 p-6 bg-white shadow-2xl rounded-2xl mb-10">
       <h2 className="text-3xl font-bold text-center text-purple-700 mb-6">
-        Registro de Artista
+        {t('artistForm.title')}
       </h2>
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -114,7 +147,7 @@ const ArtistForm = () => {
           {/* Nombre */}
           <div>
             <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
-              Nombre <span className="text-red-500">*</span>
+              {t('artistForm.firstName')} <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -122,15 +155,16 @@ const ArtistForm = () => {
               name="firstName"
               value={formData.firstName}
               onChange={handleChange}
-              required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-            />
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500" />
+            {validationErrors.firstName && (
+              <p className="text-red-600 text-sm">{validationErrors.firstName}</p>
+            )}
           </div>
 
           {/* Apellido */}
           <div>
             <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">
-              Apellido <span className="text-red-500">*</span>
+              {t('artistForm.lastName')} <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -138,16 +172,17 @@ const ArtistForm = () => {
               name="lastName"
               value={formData.lastName}
               onChange={handleChange}
-              required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-            />
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500" />
+            {validationErrors.lastName && (
+              <p className="text-red-600 text-sm">{validationErrors.lastName}</p>
+            )}
           </div>
         </div>
 
         {/* Email */}
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-            Correo electrónico <span className="text-red-500">*</span>
+            {t('artistForm.email')} <span className="text-red-500">*</span>
           </label>
           <input
             type="email"
@@ -155,15 +190,16 @@ const ArtistForm = () => {
             name="email"
             value={formData.email}
             onChange={handleChange}
-            required
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-          />
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500" />
+          {validationErrors.email && (
+            <p className="text-red-600 text-sm">{validationErrors.email}</p>
+          )}
         </div>
 
         {/* Contraseña */}
         <div>
           <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-            Contraseña <span className="text-red-500">*</span>
+            {t('artistForm.password')} <span className="text-red-500">*</span>
           </label>
           <input
             type="password"
@@ -171,15 +207,16 @@ const ArtistForm = () => {
             name="password"
             value={formData.password}
             onChange={handleChange}
-            required
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-          />
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500" />
+          {validationErrors.password && (
+            <p className="text-red-600 text-sm">{validationErrors.password}</p>
+          )}
         </div>
 
         {/* Nombre artístico */}
         <div>
           <label htmlFor="artistName" className="block text-sm font-medium text-gray-700 mb-1">
-            Nombre artístico <span className="text-red-500">*</span>
+            {t('artistForm.artistName')} <span className="text-red-500">*</span>
           </label>
           <input
             type="text"
@@ -187,15 +224,16 @@ const ArtistForm = () => {
             name="artistName"
             value={formData.artistName}
             onChange={handleChange}
-            required
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-          />
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500" />
+          {validationErrors.artistName && (
+            <p className="text-red-600 text-sm">{validationErrors.artistName}</p>
+          )}
         </div>
 
         {/* URL del artista */}
         <div>
           <label htmlFor="url" className="block text-sm font-medium text-gray-700 mb-1">
-            URL del artista <span className="text-red-500">*</span>
+            {t('artistForm.url')} <span className="text-red-500">*</span>
           </label>
           <input
             type="url"
@@ -203,75 +241,74 @@ const ArtistForm = () => {
             name="url"
             value={formData.url}
             onChange={handleChange}
-            required
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-          />
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500" />
+          {validationErrors.url && (
+            <p className="text-red-600 text-sm">{validationErrors.url}</p>
+          )}
         </div>
 
         {/* Color picker */}
         <div className="relative">
           <label htmlFor="color" className="block text-sm font-medium text-gray-700 mb-2">
-            Color preferido
+            {t('artistForm.color')}
           </label>
           <div className="flex items-center space-x-2">
-            {/* Color preview */}
             <div
               className="w-8 h-8 rounded-full border border-gray-300"
               style={{ backgroundColor: formData.color }}
             ></div>
-            {/* Color picker input */}
             <input
               type="color"
               id="color"
               name="color"
               value={formData.color}
               onChange={handleChange}
-              className="w-full h-10 px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-            />
+              className="w-full h-10 px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500" />
           </div>
         </div>
 
         <div>
           <div className="mb-2">
-            <label className="block font-semibold text-sm text-gray-600">Imágen Principal</label>
-            <label className="text-xs"> Se recomienda un tamaño de 730x1300</label>
+            <label className="block font-semibold text-sm text-gray-600">{t('artistForm.mainImage')}</label>
+            <label className="text-xs"> {t('artistForm.mainImageHint')}</label>
           </div>
 
           <input
             type="file"
             onChange={handleImageChange}
             className="block w-full text-sm text-gray-500"
-            required
-            accept="image/*"
-
-          />
+            accept="image/*" />
+          {validationErrors.images && (
+            <p className="text-red-600 text-sm">{validationErrors.images}</p>
+          )}
         </div>
 
         <div>
           <div className="mb-2">
-            <label className="block font-semibold text-sm text-gray-600">Banner</label>
+            <label className="block font-semibold text-sm text-gray-600">{t('artistForm.banner')}</label>
           </div>
 
           <input
             type="file"
             onChange={handleBannerImage}
             className="block w-full text-sm text-gray-500"
-            accept="image/*"
-          />
+            accept="image/*" />
+          {validationErrors.bannerImage && (
+            <p className="text-red-600 text-sm">{validationErrors.bannerImage}</p>
+          )}
         </div>
 
         {/* Mensaje de error */}
         {errorMessage && (
           <p className="text-red-600 text-sm font-medium text-center">{errorMessage}</p>
         )}
-
         {/* Botón de envío */}
         <div className="flex justify-center">
           <button
             type="submit"
             className="bg-purple-600 hover:bg-purple-700 text-white font-semibold w-full md:w-1/2 py-3 rounded-xl shadow transition-all"
           >
-            Registrar Artista
+            {t('artistForm.submit')}
           </button>
         </div>
 
@@ -282,9 +319,9 @@ const ArtistForm = () => {
         onClick={() => navigate('/auth/login')}
         className="mt-6 text-sm text-purple-600 hover:underline block text-center"
       >
-        Volver al inicio
+        {t('artistForm.backToLogin')}
       </button>
-    </div>
+    </div><Footer /></>
   );
 };
 
