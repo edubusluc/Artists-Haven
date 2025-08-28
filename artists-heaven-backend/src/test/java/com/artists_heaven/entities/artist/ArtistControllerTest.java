@@ -186,7 +186,6 @@ class ArtistControllerTest {
 
                 mockMvc.perform(get("/api/artists/main"))
                                 .andExpect(status().isOk())
-                                .andDo(print())
                                 .andExpect(jsonPath("$.data[0].name").value("Test Artist"));
         }
 
@@ -254,7 +253,6 @@ class ArtistControllerTest {
                 mockMvc.perform(get("/api/artists/{artistId}", artistId)
                                 .contentType(MediaType.APPLICATION_JSON))
                                 .andExpect(status().isOk())
-                                .andDo(print())
                                 .andExpect(jsonPath("$.data.artistName").value("Duki"))
                                 .andExpect(jsonPath("$.data.artistProducts[0].name").value("Camiseta Tour"))
                                 .andExpect(jsonPath("$.data.artistProducts[1].name").value("Gorra"))

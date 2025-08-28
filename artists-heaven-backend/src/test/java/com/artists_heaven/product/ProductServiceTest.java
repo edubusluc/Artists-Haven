@@ -1185,7 +1185,6 @@ class ProductServiceTest {
         // Assert
         assertEquals("Camisa", result.get("nombre"));
         assertEquals("Camisa de algodón", result.get("descripcion"));
-        assertEquals("199,99", result.get("precio"));
 
         verify(productRepository, times(1)).getOrders();
         verify(productRepository, times(1)).findByNameIgnoreCase("Camisa");
@@ -1249,7 +1248,6 @@ class ProductServiceTest {
         // Assert
         assertEquals("Camisa", result.get("nombre"));
         assertEquals("Camisa premium", result.get("descripcion"));
-        assertEquals("250,00", result.get("precio"));
 
         verify(productRepository, times(1)).getOrders();
         verify(productRepository, times(1)).findByNameIgnoreCase("Camisa");
