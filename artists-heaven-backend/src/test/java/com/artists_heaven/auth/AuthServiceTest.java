@@ -27,6 +27,7 @@ import com.artists_heaven.configuration.JwtTokenProvider;
 import com.artists_heaven.entities.user.User;
 import com.artists_heaven.entities.user.UserRepository;
 import com.artists_heaven.entities.user.UserRole;
+import com.artists_heaven.exception.AppExceptions;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 
 import java.lang.reflect.Method;
@@ -86,7 +87,7 @@ class AuthServiceTest {
 
         when(userRepository.findByEmail(email)).thenReturn(Optional.empty());
 
-        UsernameNotFoundException exception = assertThrows(UsernameNotFoundException.class, () -> {
+        AppExceptions.ResourceNotFoundException exception = assertThrows(AppExceptions.ResourceNotFoundException.class, () -> {
             authService.login(email, password);
         });
 

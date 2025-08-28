@@ -36,6 +36,7 @@ import com.artists_heaven.page.PageResponse;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.context.MessageSource;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 
@@ -53,6 +54,8 @@ public class ProductService {
     private final CollectionRepository collectionRepository;
 
     private final MessageSource messageSource;
+
+    private static final ThreadLocalRandom TL_RANDOM = ThreadLocalRandom.current();
 
     private static final String UPLOAD_DIR = "artists-heaven-backend/src/main/resources/product_media/";
     private static final Path TARGET_PATH = new File(UPLOAD_DIR).toPath().normalize();
@@ -73,6 +76,8 @@ public class ProductService {
      * @throws IllegalArgumentException if there is an error while saving the
      *                                  product.
      */
+    // Uso intencional de PRNG no criptográfico: referencia visible, no sensible
+    // (java:S2245)
     public Product registerProduct(ProductDTO productDTO) {
         if (productDTO.getName() == null || productDTO.getName().trim().isEmpty()) {
             throw new AppExceptions.InvalidInputException("Product name is required.");
@@ -103,14 +108,19 @@ public class ProductService {
             product.setSize(productDTO.getSizes());
         }
 
-        Long referencia;
-        do {
-            referencia = ThreadLocalRandom.current().nextLong(10_000L, 1_000_000_000L);
-        } while (productRepository.existsByReference(referencia));
+        for (int i = 0; i < 5; i++) { // reintenta algunas veces
+            product.setReference(generarReferencia());
+            try {
+                return productRepository.save(product);
+            } catch (DataIntegrityViolationException e) {
+                // colisión de referencia: reintenta
+            }
+        }
+        throw new IllegalStateException("A unique reference could not be generated after several attempts.");
+    }
 
-        product.setReference(referencia);
-
-        return productRepository.save(product);
+    private long generarReferencia() {
+        return TL_RANDOM.nextLong(10_000L, 1_000_000_000L);
     }
 
     /**
@@ -627,39 +637,38 @@ public class ProductService {
         return productRepository.findByCollectionName(collectionName);
     }
 
-public PageResponse<ProductDTO> getProducts(int page, int size, String search) {
-    if (size == -1) {
-        List<Product> products = findAllProducts();
+    public PageResponse<ProductDTO> getProducts(int page, int size, String search) {
+        if (size == -1) {
+            List<Product> products = findAllProducts();
 
-        // Convertimos todos los Product a ProductDTO
-        List<ProductDTO> productDTOs = products.stream()
-                .map(ProductDTO::new)
-                .collect(Collectors.toList());
+            // Convertimos todos los Product a ProductDTO
+            List<ProductDTO> productDTOs = products.stream()
+                    .map(ProductDTO::new)
+                    .collect(Collectors.toList());
 
-        return new PageResponse<>(
-                productDTOs,
-                0,
-                productDTOs.size(),
-                productDTOs.size(),
-                1,
-                true);
+            return new PageResponse<>(
+                    productDTOs,
+                    0,
+                    productDTOs.size(),
+                    productDTOs.size(),
+                    1,
+                    true);
+        }
+
+        PageRequest pageRequest = PageRequest.of(page, size);
+        Page<Product> result;
+
+        if (search != null && !search.isEmpty()) {
+            result = searchProducts(search, pageRequest);
+        } else {
+            result = productRepository.findAll(pageRequest);
+        }
+
+        // Convertimos el contenido del Page<Product> a Page<ProductDTO>
+        Page<ProductDTO> dtoPage = result.map(ProductDTO::new);
+
+        return new PageResponse<>(dtoPage);
     }
-
-    PageRequest pageRequest = PageRequest.of(page, size);
-    Page<Product> result;
-
-    if (search != null && !search.isEmpty()) {
-        result = searchProducts(search, pageRequest);
-    } else {
-        result = productRepository.findAll(pageRequest);
-    }
-
-    // Convertimos el contenido del Page<Product> a Page<ProductDTO>
-    Page<ProductDTO> dtoPage = result.map(ProductDTO::new);
-
-    return new PageResponse<>(dtoPage);
-}
-
 
     public String saveModel(MultipartFile modelFile) {
         // Validate that the model file is valid before proceeding

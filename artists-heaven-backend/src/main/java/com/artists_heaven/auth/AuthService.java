@@ -8,13 +8,13 @@ import java.util.UUID;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.AuthorityUtils;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.artists_heaven.entities.user.User;
 import com.artists_heaven.entities.user.UserRepository;
 import com.artists_heaven.entities.user.UserRole;
+import com.artists_heaven.exception.AppExceptions;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.artists_heaven.configuration.JwtTokenProvider;
 
@@ -56,7 +56,7 @@ public class AuthService {
 
         if (!optionalUser.isPresent()) {
             // Throw an exception if the user is not found
-            throw new UsernameNotFoundException("User not found with this email");
+            throw new AppExceptions.ResourceNotFoundException("User not found with this email");
         }
 
         User user = optionalUser.get();
