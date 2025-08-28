@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.SecureRandom;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -41,7 +42,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 
 import java.util.UUID;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 @Service
@@ -55,7 +55,7 @@ public class ProductService {
 
     private final MessageSource messageSource;
 
-    private static final ThreadLocalRandom TL_RANDOM = ThreadLocalRandom.current();
+    private static final SecureRandom TL_RANDOM = new SecureRandom();
 
     private static final String UPLOAD_DIR = "artists-heaven-backend/src/main/resources/product_media/";
     private static final Path TARGET_PATH = new File(UPLOAD_DIR).toPath().normalize();
