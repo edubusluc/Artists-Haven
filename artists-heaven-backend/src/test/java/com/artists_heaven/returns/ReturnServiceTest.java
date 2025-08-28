@@ -23,6 +23,8 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import com.artists_heaven.entities.user.User;
+import com.artists_heaven.exception.AppExceptions.DuplicateActionException;
+import com.artists_heaven.exception.AppExceptions.ForbiddenActionException;
 import com.artists_heaven.order.Order;
 import com.artists_heaven.order.OrderService;
 
@@ -76,7 +78,7 @@ class ReturnServiceTest {
         order.setEmail("test@example.com");
         order.setCreatedDate(LocalDateTime.now().minusDays(40));
 
-        IllegalStateException exception = assertThrows(IllegalStateException.class, () -> {
+        ForbiddenActionException exception = assertThrows(ForbiddenActionException.class, () -> {
             returnService.createReturnForOrder(order, "Producto tarde", "test@example.com");
         });
 
@@ -92,7 +94,7 @@ class ReturnServiceTest {
         order.setCreatedDate(LocalDateTime.now().minusDays(10));
         order.setReturnRequest(returns);
 
-        IllegalStateException exception = assertThrows(IllegalStateException.class, () -> {
+        DuplicateActionException exception = assertThrows(DuplicateActionException.class, () -> {
             returnService.createReturnForOrder(order, "Motivo duplicado", "test@example.com");
         });
 
@@ -135,11 +137,11 @@ class ReturnServiceTest {
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
-        IllegalStateException exception = assertThrows(IllegalStateException.class, () -> {
+        ForbiddenActionException exception = assertThrows(ForbiddenActionException.class, () -> {
             returnService.createReturnForOrder(order, "Razón inválida", "user@otrodominio.com");
         });
 
-        assertEquals("Email inválido", exception.getMessage());
+        assertEquals("Invalid email or unauthenticated user", exception.getMessage());
     }
 
     @Test

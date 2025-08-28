@@ -83,4 +83,8 @@ public class OrderDetailsDTO {
         this.phone = order.getPhone();
         this.paymentIntent = order.getPaymentIntent();
     }
+
+    public OrderDetailsDTO() {
+
+    }
 }

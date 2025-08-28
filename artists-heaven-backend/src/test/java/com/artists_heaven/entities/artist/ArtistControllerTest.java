@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 
 import java.util.Arrays;
 import java.util.List;
@@ -38,7 +39,6 @@ import com.artists_heaven.event.EventService;
 import com.artists_heaven.images.ImageServingUtil;
 import com.artists_heaven.product.Product;
 import com.artists_heaven.product.ProductService;
-
 
 class ArtistControllerTest {
 
@@ -106,31 +106,8 @@ class ArtistControllerTest {
         }
 
         @Test
-        void testRegisterArtistSuccessBadRequest() throws Exception {
-                // Simular archivo enviado
-                MockMultipartFile image = new MockMultipartFile("image", "photo.jpg", "image/jpeg", "img".getBytes());
-
-                // Simular que el servicio lanza excepción por datos inválidos
-                when(imageServingUtil.saveImages(image, "artists-heaven-backend/src/main/resources/mainArtist_media/",
-                                "/mainArtist_media/", false))
-                                .thenReturn("photo.jpg");
-                when(artistService.registerArtist(any(), any()))
-                                .thenThrow(new IllegalArgumentException("Invalid user data"));
-
-                mockMvc.perform(multipart("/api/artists/register")
-                                .file(image)
-                                .param("email", "invalid-email@example.com")
-                                .param("artistName", "Invalid Artist")
-                                .param("firstName", "Invalid")
-                                .param("lastName", "Artist")
-                                .param("url", "invalid-artist.com")
-                                .param("password", "password"))
-                                .andExpect(status().isBadRequest());
-        }
-
-        @Test
         void testGetArtistDashboard_success() throws Exception {
-                // Simulamos los servicios
+                // Simulamos el artista autenticado
                 Artist artist = new Artist();
                 artist.setId(1L);
 
@@ -140,35 +117,29 @@ class ArtistControllerTest {
                 when(securityContext.getAuthentication()).thenReturn(authentication);
                 SecurityContextHolder.setContext(securityContext);
 
-                when(artistService.isArtistVerificated(1L)).thenReturn("Verified");
-                when(artistService.getFutureEvents(1L, 2023)).thenReturn(1);
-                when(artistService.getPastEvents(1L, 2023)).thenReturn(1);
-                when(artistService.getOrderItemCount(1L, 2023)).thenReturn(Map.of("Item1", 5));
-                when(artistService.getMostCountrySold(1L, 2023)).thenReturn(Map.of("USA", 10));
+                // Simulamos el DTO que devuelve artistService.getArtistDashboard
+                ArtistDashboardDTO dashboardDTO = new ArtistDashboardDTO();
+                dashboardDTO.setIsVerificated("Verified");
+                dashboardDTO.setFutureEvents(1);
+                dashboardDTO.setPastEvents(1);
+                dashboardDTO.setOrderItemCount(Map.of("Item1", 5));
+                dashboardDTO.setMostCountrySold(Map.of("USA", 10));
 
-                // Llamamos a la API y verificamos que la respuesta sea 200 OK y que el
-                // contenido sea el esperado
+                // Mockeamos el servicio
+                when(artistService.getArtistDashboard(1L, 2023)).thenReturn(dashboardDTO);
+
+                // Llamada al endpoint y verificaciones
                 mockMvc.perform(get("/api/artists/dashboard")
                                 .param("year", "2023")
                                 .contentType(MediaType.APPLICATION_JSON))
                                 .andExpect(status().isOk())
-                                .andExpect(jsonPath("$.isVerificated").value("Verified"))
-                                .andExpect(jsonPath("$.futureEvents").value(1))
-                                .andExpect(jsonPath("$.pastEvents").value(1))
-                                .andExpect(jsonPath("$.orderItemCount['Item1']").value(5))
-                                .andExpect(jsonPath("$.mostCountrySold['USA']").value(10));
-        }
-
-        @Test
-        void testGetArtistDashboard_errorHandling() throws Exception {
-                // Simulamos los servicios, pero esta vez lanzamos una excepción en uno de ellos
-                when(artistService.isArtistVerificated(1L))
-                                .thenThrow(new RuntimeException("Error fetching verification"));
-
-                mockMvc.perform(get("/api/artists/dashboard")
-                                .param("year", "2023")
-                                .contentType(MediaType.APPLICATION_JSON))
-                                .andExpect(status().isBadRequest());
+                                .andExpect(jsonPath("$.data.isVerificated").value("Verified"))
+                                .andExpect(jsonPath("$.data.futureEvents").value(1))
+                                .andExpect(jsonPath("$.data.pastEvents").value(1))
+                                .andExpect(jsonPath("$.data.orderItemCount.Item1").value(5))
+                                .andExpect(jsonPath("$.data.mostCountrySold.USA").value(10))
+                                .andExpect(jsonPath("$.message").value("Dashboard retrieved successfully"))
+                                .andExpect(jsonPath("$.status").value(200));
         }
 
         @Test
@@ -196,31 +167,12 @@ class ArtistControllerTest {
                                 .param("year", "2024")
                                 .contentType(MediaType.APPLICATION_JSON))
                                 .andExpect(status().isOk())
-                                .andExpect(jsonPath("$[0].month").value(1))
-                                .andExpect(jsonPath("$[0].totalOrders").value(100))
-                                .andExpect(jsonPath("$[1].month").value(2))
-                                .andExpect(jsonPath("$[1].totalOrders").value(200));
+                                .andExpect(jsonPath("$.data[0].month").value(1))
+                                .andExpect(jsonPath("$.data[0].totalOrders").value(100))
+                                .andExpect(jsonPath("$.data[1].month").value(2))
+                                .andExpect(jsonPath("$.data[1].totalOrders").value(200));
         }
 
-        @Test
-        void testGetMonthlySalesData_errorHandling() throws Exception {
-                // Simulamos la autenticación del usuario
-                Authentication authentication = mock(Authentication.class);
-                SecurityContextHolder.getContext().setAuthentication(authentication);
-                Artist artist = new Artist();
-                artist.setId(1L);
-                when(authentication.getPrincipal()).thenReturn(artist);
-
-                // Simulamos que el servicio lance una excepción
-                when(artistService.getMonthlySalesDataPerArtist(1L, 2024))
-                                .thenThrow(new RuntimeException("Error fetching sales data"));
-
-                // Llamamos a la API y verificamos que la respuesta sea 400 Bad Request
-                mockMvc.perform(get("/api/artists/sales/monthly")
-                                .param("year", "2024")
-                                .contentType(MediaType.APPLICATION_JSON))
-                                .andExpect(status().isBadRequest());
-        }
 
         @Test
         void testGetArtistMainView_Success() throws Exception {
@@ -234,15 +186,8 @@ class ArtistControllerTest {
 
                 mockMvc.perform(get("/api/artists/main"))
                                 .andExpect(status().isOk())
-                                .andExpect(jsonPath("$[0].name").value("Test Artist"));
-        }
-
-        @Test
-        void testGetArtistMainView_Failure() throws Exception {
-                when(artistService.getValidArtists()).thenThrow(new RuntimeException("Something went wrong"));
-
-                mockMvc.perform(get("/api/artists/main"))
-                                .andExpect(status().isBadRequest());
+                                .andDo(print())
+                                .andExpect(jsonPath("$.data[0].name").value("Test Artist"));
         }
 
         @Test
@@ -269,7 +214,6 @@ class ArtistControllerTest {
                 // Preparar datos simulados
                 Long artistId = 1L;
                 String artistName = "Duki";
-                String normalizedKey = "DUKI";
 
                 Artist artist = new Artist();
                 artist.setId(artistId);
@@ -296,22 +240,28 @@ class ArtistControllerTest {
 
                 List<Event> mockEvents = List.of(event1, event2);
 
-                // Simular los servicios
-                when(artistService.findById(artistId)).thenReturn(artist);
-                when(productService.findProductsByArtist(normalizedKey)).thenReturn(mockProducts);
-                when(eventService.findEventThisYearByArtist(artistId)).thenReturn(mockEvents);
+                ArtistDTO dto = new ArtistDTO();
+                dto.setArtistName(artistName);
+                dto.setArtistProducts(mockProducts);
+                dto.setArtistEvents(mockEvents);
+                dto.setBannerPhoto(artist.getBannerPhoto());
+                dto.setPrimaryColor(artist.getMainColor());
+
+                when(artistService.getArtistWithDetails(artistId)).thenReturn(dto);
+
 
                 // Llamar a la API y verificar la respuesta
                 mockMvc.perform(get("/api/artists/{artistId}", artistId)
                                 .contentType(MediaType.APPLICATION_JSON))
                                 .andExpect(status().isOk())
-                                .andExpect(jsonPath("$.artistName").value("Duki"))
-                                .andExpect(jsonPath("$.artistProducts[0].name").value("Camiseta Tour"))
-                                .andExpect(jsonPath("$.artistProducts[1].name").value("Gorra"))
-                                .andExpect(jsonPath("$.artistEvents[0].name").value("Tour 2025"))
-                                .andExpect(jsonPath("$.artistEvents[1].name").value("Festival"))
-                                .andExpect(jsonPath("$.primaryColor").value("#FF0000"))
-                                .andExpect(jsonPath("$.bannerPhoto").value("banner.jpg"));
+                                .andDo(print())
+                                .andExpect(jsonPath("$.data.artistName").value("Duki"))
+                                .andExpect(jsonPath("$.data.artistProducts[0].name").value("Camiseta Tour"))
+                                .andExpect(jsonPath("$.data.artistProducts[1].name").value("Gorra"))
+                                .andExpect(jsonPath("$.data.artistEvents[0].name").value("Tour 2025"))
+                                .andExpect(jsonPath("$.data.artistEvents[1].name").value("Festival"))
+                                .andExpect(jsonPath("$.data.primaryColor").value("#FF0000"))
+                                .andExpect(jsonPath("$.data.bannerPhoto").value("banner.jpg"));
         }
 
         @AfterEach

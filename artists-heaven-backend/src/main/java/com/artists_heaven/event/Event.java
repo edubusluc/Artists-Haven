@@ -43,4 +43,7 @@ public class Event {
 
     private String image;
 
+    private double latitude;
+
+    private double longitude;
 }

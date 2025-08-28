@@ -1,5 +1,7 @@
 package com.artists_heaven.shopping_cart;
 
+import com.artists_heaven.product.Section;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
@@ -27,4 +29,6 @@ public class ProductItemDTO {
 
     @Schema(description = "URL of the product image", example = "https://example.com/images/product1.jpg")
     private String imageUrl;
+
+    private Section section;
 }

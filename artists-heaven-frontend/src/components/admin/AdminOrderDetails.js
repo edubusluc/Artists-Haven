@@ -1,6 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { updateOrderStatus } from "../../services/adminServices";
+import { checkTokenExpiration } from "../../utils/authUtils";
+import NonAuthorise from "../NonAuthorise";
+import SessionExpired from "../SessionExpired";
+import { useTranslation } from "react-i18next";
 
 const OrderDetails = () => {
     const { id } = useParams();
@@ -10,6 +14,7 @@ const OrderDetails = () => {
     const [errorMessage, setErrorMessage] = useState("");
     const [authToken] = useState(localStorage.getItem("authToken"));
     const rol = localStorage.getItem("role");
+    const {t} = useTranslation();
 
     const orderStatuses = [
         "PAID",
@@ -22,31 +27,52 @@ const OrderDetails = () => {
     ];
 
     useEffect(() => {
-        if (rol !== "ADMIN") {
-            setErrorMessage("No tienes permisos para acceder a esta página.");
-            setLoading(false);
-            return;
-        }
+        const fetchOrder = async () => {
+            setLoading(true);
+            setErrorMessage("");
 
-        fetch(`/api/orders/${id}`, {
-            headers: {
-                Authorization: `Bearer ${authToken}`,
-            },
-        })
-            .then((res) => {
-                if (!res.ok) throw new Error("Error al obtener el pedido");
-                return res.json();
-            })
-            .then((data) => {
-                setOrder(data);
-                setLoading(false);
-            })
-            .catch((err) => {
+            try {
+                const res = await fetch(`/api/orders/${id}`, {
+                    headers: {
+                        Authorization: `Bearer ${authToken}`,
+                    },
+                });
+
+                if (res.status === 403) {
+                    setErrorMessage("No tienes permisos para acceder a este pedido.");
+                    setLoading(false);
+                    return;
+                }
+
+                if (res.status === 404) {
+                    setErrorMessage("Pedido no encontrado.");
+                    setLoading(false);
+                    return;
+                }
+
+                if (!res.ok) {
+                    throw new Error("Error al obtener el pedido");
+                }
+
+                const response = await res.json();
+                setOrder(response.data);
+            } catch (err) {
                 console.error(err);
                 setErrorMessage("No se pudo cargar el pedido.");
+            } finally {
                 setLoading(false);
-            });
+            }
+        };
+
+        // Solo permitir acceso si el rol es ADMIN
+        if (rol === "ADMIN" && checkTokenExpiration()) {
+            fetchOrder();
+        } else {
+            setErrorMessage("No tienes permisos para acceder a esta página.");
+            setLoading(false);
+        }
     }, [id, rol, authToken]);
+
 
     const handleUpdateOrdeStatus = async (orderId, newStatus) => {
         try {
@@ -58,9 +84,15 @@ const OrderDetails = () => {
         }
     };
 
+    if (!rol || rol !== 'ADMIN') {
+        return <NonAuthorise />;
+    } else if (!checkTokenExpiration()) {
+        return <SessionExpired />;
+    }
+
     if (loading)
         return (
-            <div className="p-6 text-center text-gray-500 text-lg animate-pulse">Cargando pedido...</div>
+            <div className="p-6 text-center text-gray-500 text-lg animate-pulse">{t('adminOrderDetails.loadOrder')}</div>
         );
 
     if (!order)
@@ -74,34 +106,34 @@ const OrderDetails = () => {
                 {/* COLUMNA 1 */}
                 <div className="w-full bg-white rounded-xl shadow-2xl p-8 space-y-6 ring-1 ring-gray-200">
                     <p className="text-3xl font-bold text-gray-800">
-                        Gestión de Pedido - {order.identifier} - {order.status}
+                        {t('adminOrderDetails.orderManagemente')} - {order.identifier} - {order.status}
                     </p>
 
                     {/* Card de Información del Pedido */}
-                    <div className="bg-gray-50 p-6 rounded-xl shadow-lg space-y-6">
-                        <h3 className="text-xl font-semibold text-gray-800">Detalles del Pedido</h3>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-                            <p className="text-gray-700">ID Interno: <span className="font-medium">{order.id}</span></p>
-                            <p className="text-gray-700">Identificador: <span className="font-medium">{order.identifier}</span></p>
-                            <p className="text-gray-700">Total: <span className="font-medium">€{order.totalPrice.toFixed(2)}</span></p>
-                            <p className="text-gray-700">Fecha de compra: <span className="font-medium">{new Date(order.createdDate).toLocaleDateString()}</span></p>
+                    <div className="bg-gray-50 p-6 rounded-xl shadow-lg space-y-4">
+                        <h3 className="text-xl font-semibold text-gray-800">{t('adminOrderDetails.orderDetails')}</h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <p className="text-gray-700">{t('adminOrderDetails.internalId')}: <span className="font-medium">{order.id}</span></p>
+                            <p className="text-gray-700">{t('adminOrderDetails.identifier')}: <span className="font-medium">{order.identifier}</span></p>
+                            <p className="text-gray-700">{t('adminOrderDetails.totalPrice')}: <span className="font-medium">€{order.totalPrice.toFixed(2)}</span></p>
+                            <p className="text-gray-700">{t('adminOrderDetails.createdDate')}: <span className="font-medium">{new Date(order.createdDate).toLocaleDateString()}</span></p>
                         </div>
                     </div>
 
                     {/* Card de Dirección */}
                     <div className="bg-gray-50 p-6 rounded-xl shadow-lg space-y-4">
-                        <h3 className="text-xl font-semibold text-gray-800">Información del comprador</h3>
+                        <h3 className="text-xl font-semibold text-gray-800">{t('adminOrderDetails.buyerInformation')}</h3>
                         <p className="text-gray-700">
-                            Dirección de envio: <span className="font-medium">{order.addressLine1} - {order.addressLine2} {order.postalCode}, {order.city}, {order.country}</span>
+                            {t('adminOrderDetails.shippingAddress')}: <span className="font-medium">{order.addressLine1} - {order.addressLine2} {order.postalCode}, {order.city}, {order.country}</span>
                         </p>
-                        <p className="text-gray-700">Email: <span className="font-medium">{order.email}</span></p>
-                        <p className="text-gray-700">Teléfono: <span className="font-medium">{order.phone}</span></p>
+                        <p className="text-gray-700">{t('adminOrderDetails.email')}: <span className="font-medium">{order.email}</span></p>
+                        <p className="text-gray-700">{t('adminOrderDetails.phone')}: <span className="font-medium">{order.phone}</span></p>
                     </div>
 
                     {/* Actualizar Estado */}
                     <div className="bg-gray-50 p-6 rounded-xl shadow-lg mt-6">
                         <label htmlFor="status-select" className="block text-sm font-semibold text-gray-800 mb-2">
-                            Actualizar Estado
+                            {t('adminOrderDetails.updateStatus')}
                         </label>
                         <select
                             id="status-select"
@@ -123,14 +155,14 @@ const OrderDetails = () => {
                             onClick={() => navigate("/admin/orders")}
                             className="bg-yellow-500 hover:bg-yellow-600 text-white font-medium py-2 px-6 rounded-full shadow-lg transition-all duration-300 transform hover:scale-105"
                         >
-                            ← Volver a Pedidos
+                           {t('adminOrderDetails.returnToOrders')}
                         </button>
                     </div>
                 </div>
 
                 {/* COLUMNA 2 */}
                 <section className="bg-white rounded-3xl shadow-xl p-10 max-h-[600px] overflow-y-auto ring-1 ring-gray-100">
-                    <h3 className="text-2xl font-bold text-gray-800 mb-6">Productos del Pedido</h3>
+                    <h3 className="text-2xl font-bold text-gray-800 mb-6">{t('adminOrderDetails.orderBreakdown')}</h3>
                     <ul className="space-y-4">
                         {order.items.map((item, idx) => (
                             <li
@@ -139,11 +171,11 @@ const OrderDetails = () => {
                             >
                                 <div className="mb-3 sm:mb-0">
                                     <p className="text-gray-800 font-semibold">{item.name}</p>
-                                    <p className="text-sm text-gray-600">Talla: {item.size}</p>
+                                    <p className="text-sm text-gray-600">{t('adminOrderDetails.size')}: {item.size}</p>
                                 </div>
                                 <div className="flex gap-6 text-sm text-gray-700">
-                                    <p><span className="font-medium">Cantidad:</span> {item.quantity}</p>
-                                    <p><span className="font-medium">Precio Unitario:</span> €{item.price.toFixed(2)}</p>
+                                    <p><span className="font-medium">{t('adminOrderDetails.quantity')}:</span> {item.quantity}</p>
+                                    <p><span className="font-medium">{t('adminOrderDetails.price')}:</span> €{item.price.toFixed(2)}</p>
                                 </div>
                             </li>
                         ))}

@@ -1,48 +1,27 @@
 package com.artists_heaven.event;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.*;
-import static org.hamcrest.Matchers.*;
+import com.artists_heaven.entities.artist.Artist;
+import com.artists_heaven.exception.GlobalExceptionHandler;
+import com.artists_heaven.images.ImageServingUtil;
+import org.junit.jupiter.api.*;
+import org.mockito.*;
+import org.springframework.data.domain.*;
+import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.test.web.servlet.*;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-import org.springframework.http.MediaType;
-import org.springframework.mock.web.MockMultipartFile;
-import org.springframework.security.core.Authentication;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.http.HttpHeaders;
-import org.springframework.security.core.context.SecurityContext;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-
-import com.artists_heaven.entities.artist.Artist;
-import com.artists_heaven.entities.user.User;
-import com.artists_heaven.entities.user.UserRole;
-import com.artists_heaven.images.ImageServingUtil;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 class EventControllerTest {
 
@@ -60,393 +39,351 @@ class EventControllerTest {
         @Mock
         private ImageServingUtil imageServingUtil;
 
-        private static final String UPLOAD_DIR = "artists-heaven-backend/src/main/resources/event_media/";
+        private Artist artist;
+        private Event event;
 
         @BeforeEach
         void setUp() {
                 MockitoAnnotations.openMocks(this);
-                mockMvc = MockMvcBuilders.standaloneSetup(eventController).build();
+                mockMvc = MockMvcBuilders
+                                .standaloneSetup(eventController)
+                                .setControllerAdvice(new GlobalExceptionHandler())
+                                .build();
                 SecurityContextHolder.clearContext();
-        }
 
-        @Test
-        void testGetAllEvents() throws Exception {
-                List<Event> events = new ArrayList<>();
-                when(eventService.getAllEvents()).thenReturn(events);
-
-                mockMvc.perform(get("/api/event/allEvents"))
-                                .andExpect(status().isOk())
-                                .andExpect(jsonPath("$", hasSize(0)));
-
-                verify(eventService, times(1)).getAllEvents();
-        }
-
-        @Test
-        void testNewEvent() throws Exception {
-                EventDTO eventDTO = new EventDTO();
-                eventDTO.setName("Test Event");
-                eventDTO.setDescription("Test Description");
-                eventDTO.setDate(LocalDate.parse("2024-12-27"));
-                eventDTO.setLocation("Test Location");
-                eventDTO.setMoreInfo("Test More Info");
-
-                MockMultipartFile image = new MockMultipartFile("images", "test.jpg", MediaType.IMAGE_JPEG_VALUE,
-                                "test image content".getBytes());
-
-                Artist artist = new Artist();
+                artist = new Artist();
                 artist.setId(1L);
+                artist.setIsVerificated(true);
 
-                when(authentication.getPrincipal()).thenReturn(artist);
-                SecurityContextHolder.getContext().setAuthentication(authentication);
-
-                when(imageServingUtil.saveImages(image, UPLOAD_DIR, "/event_media/", false))
-                                .thenReturn("/product_media/test.jpg");
-                when(eventService.newEvent(any(EventDTO.class))).thenReturn(new Event());
-
-                MockMultipartFile eventJson = new MockMultipartFile("event", "", "application/json",
-                                "{\"name\": \"Test Event\", \"description\": \"Test Description\", \"date\": \"2024-12-27\", \"location\": \"Test Location\", \"moreInfo\": \"Test More Info\"}"
-                                                .getBytes());
-
-                mockMvc.perform(multipart("/api/event/new")
-                                .file(eventJson)
-                                .file(image))
-                                .andExpect(status().isCreated());
-
-                verify(imageServingUtil, times(1)).saveImages(image, UPLOAD_DIR, "/event_media/", false);
-                verify(eventService, times(1)).newEvent(any(EventDTO.class));
-        }
-
-        @Test
-        void testNewEventUserNotArtist() throws Exception {
-                EventDTO eventDTO = new EventDTO();
-                eventDTO.setName("Test Event");
-                eventDTO.setDescription("Test Description");
-                eventDTO.setDate(LocalDate.parse("2024-12-27"));
-                eventDTO.setLocation("Test Location");
-                eventDTO.setMoreInfo("Test More Info");
-
-                MockMultipartFile image = new MockMultipartFile("images", "test.jpg", MediaType.IMAGE_JPEG_VALUE,
-                                "test image content".getBytes());
-
-                when(authentication.getPrincipal()).thenReturn(null);
-                SecurityContextHolder.getContext().setAuthentication(authentication);
-
-                MockMultipartFile eventJson = new MockMultipartFile("event", "", "application/json",
-                                "{\"name\": \"Test Event\", \"description\": \"Test Description\", \"date\": \"2024-12-27\", \"location\": \"Test Location\", \"moreInfo\": \"Test More Info\"}"
-                                                .getBytes());
-
-                mockMvc.perform(multipart("/api/event/new")
-                                .file(eventJson)
-                                .file(image))
-                                .andExpect(status().isBadRequest());
-
-                verify(imageServingUtil, times(0)).saveImages(image, UPLOAD_DIR, "/event_media/", false);
-                verify(eventService, times(0)).newEvent(any(EventDTO.class));
-                SecurityContextHolder.clearContext();
-        }
-
-        @Test
-        void testGetAllMyEvents() throws Exception {
-                Artist artist = new Artist();
-                artist.setId(1L);
-
-                Event event = new Event();
-
-                int page = 0;
-                int size = 6;
-                PageRequest pageable = PageRequest.of(page, size);
-
-                Page<Event> eventPage = new PageImpl<>(List.of(event), pageable, 1);
-
-                when(authentication.getPrincipal()).thenReturn(artist);
-                SecurityContextHolder.getContext().setAuthentication(authentication);
-                when(eventService.isArtist()).thenReturn(true);
-                when(eventService.getAllMyEvents(artist.getId(), pageable)).thenReturn(eventPage);
-
-                mockMvc.perform(get("/api/event/allMyEvents"))
-                                .andExpect(status().isOk())
-                                .andExpect(jsonPath("$.content", hasSize(1)));
-
-                verify(eventService, times(1)).isArtist();
-                verify(eventService, times(1)).getAllMyEvents(artist.getId(), pageable);
-        }
-
-        @Test
-        void testGetAllMyEventsNotArtist() throws Exception {
-                Artist artist = new Artist();
-                artist.setId(1L);
-
-                int page = 0;
-                int size = 6;
-                PageRequest pageable = PageRequest.of(page, size);
-
-                when(authentication.getPrincipal()).thenReturn(artist);
-                SecurityContextHolder.getContext().setAuthentication(authentication);
-                when(eventService.isArtist()).thenReturn(false);
-
-                mockMvc.perform(get("/api/event/allMyEvents"))
-                                .andExpect(status().isBadRequest());
-
-                verify(eventService, times(1)).isArtist();
-                verify(eventService, times(0)).getAllMyEvents(1L, pageable);
-        }
-
-        @Test
-        void testDeleteEvent() throws Exception {
-                Artist artist = new Artist();
-                artist.setId(1L);
-
-                Event event = new Event();
-                event.setId(1L);
+                event = new Event();
+                event.setId(100L);
+                event.setName("Test Event");
                 event.setArtist(artist);
-
-                when(authentication.getPrincipal()).thenReturn(artist);
-                SecurityContextHolder.getContext().setAuthentication(authentication);
-                when(eventService.isArtist()).thenReturn(true);
-                when(eventService.getEventById(1L)).thenReturn(event);
-
-                mockMvc.perform(delete("/api/event/delete/1"))
-                                .andExpect(status().isOk())
-                                .andExpect(jsonPath("$", is("Event deleted successfully")));
-
-                verify(eventService, times(1)).isArtist();
-                verify(eventService, times(1)).getEventById(1L);
-                verify(eventService, times(1)).deleteEvent(1L);
+                event.setImage("test.png");
         }
 
-        @Test
-        void testDeleteEventNotArtist() throws Exception {
-                User user = new User();
-                user.setId(1L);
-                when(eventService.isArtist()).thenReturn(false);
-                when(authentication.getPrincipal()).thenReturn(user);
-                SecurityContextHolder.getContext().setAuthentication(authentication);
-
-                mockMvc.perform(delete("/api/event/delete/1"))
-                                .andExpect(status().isBadRequest())
-                                .andExpect(jsonPath("$", is("User is not an artist")));
-
-                verify(eventService, times(1)).isArtist();
-                verify(eventService, times(0)).getEventById(anyLong());
-                verify(eventService, times(0)).deleteEvent(anyLong());
-        }
-
-        @Test
-        void testDeleteEventNotBelongToArtist() throws Exception {
-                Artist artist = new Artist();
-                artist.setId(1L);
-
-                Artist anotherArtist = new Artist();
-                anotherArtist.setId(2L);
-
-                Event event = new Event();
-                event.setId(1L);
-                event.setArtist(anotherArtist);
-
-                when(authentication.getPrincipal()).thenReturn(artist);
-                SecurityContextHolder.getContext().setAuthentication(authentication);
-                when(eventService.isArtist()).thenReturn(true);
-                when(eventService.getEventById(1L)).thenReturn(event);
-
-                mockMvc.perform(delete("/api/event/delete/1"))
-                                .andExpect(status().isNotFound())
-                                .andExpect(jsonPath("$", is("This event does not belong to you")));
-
-                verify(eventService, times(1)).isArtist();
-                verify(eventService, times(1)).getEventById(1L);
-                verify(eventService, times(0)).deleteEvent(1L);
-        }
-
-        @Test
-        void testDeleteEventThrowsException() throws Exception {
-                Artist artist = new Artist();
-                artist.setId(1L);
-
-                when(authentication.getPrincipal()).thenReturn(artist);
-                SecurityContextHolder.getContext().setAuthentication(authentication);
-                when(eventService.isArtist()).thenReturn(true);
-                when(eventService.getEventById(1L)).thenThrow(new IllegalArgumentException("Event not found"));
-
-                mockMvc.perform(delete("/api/event/delete/1"))
-                                .andExpect(status().isBadRequest())
-                                .andExpect(jsonPath("$", is("Event not found")));
-
-                verify(eventService, times(1)).isArtist();
-                verify(eventService, times(1)).getEventById(1L);
-                verify(eventService, times(0)).deleteEvent(1L);
-        }
-
-        @Test
-        void testEventDetailsSuccess() throws Exception {
-                Event event = new Event();
-                event.setId(1L);
-
-                when(eventService.getEventById(1L)).thenReturn(event);
-
-                mockMvc.perform(get("/api/event/details/1"))
-                                .andExpect(status().isOk())
-                                .andExpect(jsonPath("$.id", is(1)));
-
-                verify(eventService, times(1)).getEventById(1L);
-        }
-
-        @Test
-        void testEventDetailsNotFound() throws Exception {
-                when(eventService.getEventById(1L)).thenThrow(new IllegalArgumentException("Event not found"));
-
-                mockMvc.perform(get("/api/event/details/1"))
-                                .andExpect(status().isNotFound());
-
-                verify(eventService, times(1)).getEventById(1L);
-        }
-
-        @Test
-        void testUpdateEventSuccess() throws Exception {
-                Artist artist = new Artist();
-                artist.setId(1L);
-
-                Event event = new Event();
-                event.setId(1L);
-                event.setArtist(artist);
-
-                EventDTO eventDTO = new EventDTO();
-                eventDTO.setName("Updated Event");
-                eventDTO.setDescription("Updated Description");
-
-                MockMultipartFile eventJson = new MockMultipartFile("event", "", "application/json",
-                                "{\"name\": \"Updated Event\", \"description\": \"Updated Description\"}".getBytes());
-                MockMultipartFile image = new MockMultipartFile("image", "test.jpg", "image/jpeg",
-                                "test image content".getBytes());
-
-                when(authentication.getPrincipal()).thenReturn(artist);
-                SecurityContextHolder.getContext().setAuthentication(authentication);
-                when(eventService.isArtist()).thenReturn(true);
-                when(eventService.getEventById(1L)).thenReturn(event);
-
-                mockMvc.perform(MockMvcRequestBuilders.multipart("/api/event/edit/{id}", event.getId())
-                                .file(eventJson)
-                                .file(image)
-                                .with(request -> {
-                                        request.setMethod("PUT");
-                                        return request;
-                                }))
-                                .andExpect(status().isOk())
-                                .andExpect(jsonPath("$", is("Event updated successfully")));
-
-                verify(eventService, times(1)).isArtist();
-                verify(eventService, times(1)).getEventById(1L);
-                verify(imageServingUtil, times(1)).saveImages(image, UPLOAD_DIR, "/event_media/", false);
-                verify(eventService, times(1)).updateEvent(any(Event.class), any(EventDTO.class));
-        }
-
-        @Test
-        void testUpdateEventNotArtist() throws Exception {
-                EventDTO eventDTO = new EventDTO();
-                eventDTO.setName("Updated Event");
-                eventDTO.setDescription("Updated Description");
-
-                User user = new User();
-                user.setId(1L);
-                user.setRole(UserRole.USER);
-
-                MockMultipartFile eventJson = new MockMultipartFile("event", "", "application/json",
-                                "{\"name\": \"Updated Event\", \"description\": \"Updated Description\"}".getBytes());
-
-                when(eventService.isArtist()).thenReturn(false);
-
-                Authentication authentication = mock(Authentication.class);
-                when(authentication.getPrincipal()).thenReturn(user);
+        private void mockAuthenticatedArtist() {
                 when(authentication.isAuthenticated()).thenReturn(true);
-                SecurityContext securityContext = mock(SecurityContext.class);
-                when(securityContext.getAuthentication()).thenReturn(authentication);
-                SecurityContextHolder.setContext(securityContext);
-
-                mockMvc.perform(MockMvcRequestBuilders.multipart("/api/event/edit/1")
-                                .file(eventJson)
-                                .with(request -> {
-                                        request.setMethod("PUT");
-                                        return request;
-                                }))
-                                .andExpect(status().isBadRequest())
-                                .andExpect(jsonPath("$", is("User is not an artist")));
-
-                verify(eventService, times(1)).isArtist();
-                verify(eventService, times(0)).getEventById(anyLong());
-                verify(eventService, times(0)).deleteImages(anyString());
-                verify(eventService, times(0)).updateEvent(any(Event.class), any(EventDTO.class));
-        }
-
-        @Test
-        void testUpdateEventNotBelongToArtist() throws Exception {
-                Artist artist = new Artist();
-                artist.setId(1L);
-
-                Artist anotherArtist = new Artist();
-                anotherArtist.setId(2L);
-
-                Event event = new Event();
-                event.setId(1L);
-                event.setArtist(anotherArtist);
-
-                EventDTO eventDTO = new EventDTO();
-                eventDTO.setName("Updated Event");
-                eventDTO.setDescription("Updated Description");
-
-                MockMultipartFile eventJson = new MockMultipartFile("event", "", "application/json",
-                                "{\"name\": \"Updated Event\", \"description\": \"Updated Description\"}".getBytes());
-
                 when(authentication.getPrincipal()).thenReturn(artist);
                 SecurityContextHolder.getContext().setAuthentication(authentication);
-                when(eventService.isArtist()).thenReturn(true);
-                when(eventService.getEventById(1L)).thenReturn(event);
-
-                mockMvc.perform(MockMvcRequestBuilders.multipart("/api/event/edit/1")
-                                .file(eventJson)
-                                .with(request -> {
-                                        request.setMethod("PUT");
-                                        return request;
-                                }))
-                                .andExpect(status().isNotFound())
-                                .andExpect(jsonPath("$", is("This event does not belong to you")));
-
-                verify(eventService, times(1)).isArtist();
-                verify(eventService, times(1)).getEventById(1L);
-                verify(eventService, times(0)).deleteImages(anyString());
-                verify(eventService, times(0)).updateEvent(any(Event.class), any(EventDTO.class));
         }
 
-        @Test
-        void testGetProductImageSuccess() throws Exception {
-                String fileName = UUID.randomUUID() + "test.jpg";
-                String basePath = System.getProperty("user.dir")
-                                + "/artists-heaven-backend/src/main/resources/event_media/";
-                Path filePath = Paths.get(basePath, fileName);
-
-                // Ensure the directory exists
-                Files.createDirectories(filePath.getParent());
-
-                // Create the file for the test
-                Files.createFile(filePath);
-
-                mockMvc.perform(get("/api/event/event_media/" + fileName))
-                                .andExpect(status().isOk())
-                                .andExpect(header().string(HttpHeaders.CONTENT_TYPE, "image/png"));
-
-                // Clean up the created file
-                Files.deleteIfExists(filePath);
+        private void mockAuthenticatedUser(Object principal) {
+                when(authentication.isAuthenticated()).thenReturn(true);
+                when(authentication.getPrincipal()).thenReturn(principal);
+                SecurityContextHolder.getContext().setAuthentication(authentication);
         }
 
-        @Test
-        void testGetProductImageNotFound() throws Exception {
-                String fileName = "nonexistent.jpg";
-
-                mockMvc.perform(get("/api/event/event_media/" + fileName))
-                                .andExpect(status().isNotFound());
+        private void mockUnauthenticated() {
+                when(authentication.isAuthenticated()).thenReturn(false);
+                SecurityContextHolder.getContext().setAuthentication(authentication);
         }
 
-        @AfterEach
-        void tearDown() {
-                SecurityContextHolder.clearContext();
+        @Nested
+        class GetAllFutureEvents {
+                @Test
+                void shouldReturn200WithEvents() throws Exception {
+                        when(eventService.findFutureEvents()).thenReturn(List.of(event));
+                        mockMvc.perform(get("/api/event/allFutureEvents"))
+                                        .andExpect(status().isOk())
+                                        .andExpect(jsonPath("$.message").value("Future events retrieved successfully"));
+                }
+
+                @Test
+                void shouldReturn204WhenNoEvents() throws Exception {
+                        when(eventService.findFutureEvents()).thenReturn(List.of());
+                        mockMvc.perform(get("/api/event/allFutureEvents"))
+                                        .andExpect(status().isNoContent())
+                                        .andExpect(jsonPath("$.message").value("No future events found"));
+                }
         }
 
+        @Nested
+        class GetFutureEventsByArtist {
+                @Test
+                void shouldReturn200WithEvents() throws Exception {
+                        when(eventService.findFutureEventsByArtist(1L)).thenReturn(List.of(event));
+                        mockMvc.perform(get("/api/event/futureEvents/1"))
+                                        .andExpect(status().isOk())
+                                        .andExpect(jsonPath("$.message").value("Future events retrieved successfully"));
+                }
+
+                @Test
+                void shouldReturn204WhenNoEvents() throws Exception {
+                        when(eventService.findFutureEventsByArtist(1L)).thenReturn(List.of());
+                        mockMvc.perform(get("/api/event/futureEvents/1"))
+                                        .andExpect(status().isNoContent())
+                                        .andExpect(jsonPath("$.message")
+                                                        .value("No future events found for the artist"));
+                }
+        }
+
+        @Nested
+        class IsVerified {
+                @Test
+                void shouldReturn401WhenNotAuthenticated() throws Exception {
+                        mockUnauthenticated();
+                        mockMvc.perform(get("/api/event/isVerified"))
+                                        .andExpect(status().isUnauthorized())
+                                        .andExpect(jsonPath("$.message").value("User is not authenticated"));
+                }
+
+                @Test
+                void shouldReturn200WhenArtistVerified() throws Exception {
+                        mockAuthenticatedArtist();
+                        mockMvc.perform(get("/api/event/isVerified"))
+                                        .andExpect(status().isOk())
+                                        .andExpect(jsonPath("$.data").value(true));
+                }
+
+                @Test
+                void shouldReturn403WhenNotArtist() throws Exception {
+                        mockAuthenticatedUser(new Object());
+                        mockMvc.perform(get("/api/event/isVerified"))
+                                        .andExpect(status().isForbidden())
+                                        .andExpect(jsonPath("$.message").value("User is not an artist"));
+                }
+        }
+
+        @Nested
+        class NewEvent {
+                @Test
+                void shouldCreateEvent() throws Exception {
+                        mockAuthenticatedArtist();
+                        MockMultipartFile eventPart = new MockMultipartFile("event", "", "application/json",
+                                        "{\"name\":\"New Event\"}".getBytes());
+                        MockMultipartFile image = new MockMultipartFile("images", "test.png", "image/png",
+                                        "fake".getBytes());
+
+                        when(imageServingUtil.saveImages(any(), anyString(), anyString(), anyBoolean()))
+                                        .thenReturn("test.png");
+                        when(eventService.newEvent(any(EventDTO.class))).thenReturn(event);
+
+                        mockMvc.perform(multipart("/api/event/new")
+                                        .file(eventPart)
+                                        .file(image))
+                                        .andExpect(status().isCreated())
+                                        .andExpect(jsonPath("$.message").value("Event created successfully"));
+                }
+
+                @Test
+                void shouldFailWhenNotAuthenticated() throws Exception {
+                        mockUnauthenticated();
+                        MockMultipartFile eventPart = new MockMultipartFile("event", "", "application/json",
+                                        "{\"name\":\"New Event\"}".getBytes());
+                        MockMultipartFile image = new MockMultipartFile("images", "test.png", "image/png",
+                                        "fake".getBytes());
+
+                        mockMvc.perform(multipart("/api/event/new")
+                                        .file(eventPart)
+                                        .file(image))
+                                        .andExpect(status().isUnauthorized());
+                }
+
+                @Test
+                void shouldFailWhenNotArtist() throws Exception {
+                        mockAuthenticatedUser(new Object());
+                        MockMultipartFile eventPart = new MockMultipartFile("event", "", "application/json",
+                                        "{\"name\":\"New Event\"}".getBytes());
+                        MockMultipartFile image = new MockMultipartFile("images", "test.png", "image/png",
+                                        "fake".getBytes());
+
+                        mockMvc.perform(multipart("/api/event/new")
+                                        .file(eventPart)
+                                        .file(image))
+                                        .andExpect(status().isForbidden());
+                }
+        }
+
+        @Nested
+        class GetAllMyEvents {
+                @Test
+                void shouldReturnEventsForArtist() throws Exception {
+                        mockAuthenticatedArtist();
+                        Page<Event> page = new PageImpl<>(List.of(event));
+                        when(eventService.getAllMyEvents(eq(1L), any(PageRequest.class))).thenReturn(page);
+
+                        mockMvc.perform(get("/api/event/allMyEvents?page=0&size=6"))
+                                        .andExpect(status().isOk())
+                                        .andExpect(jsonPath("$.message").value("Events retrieved successfully"));
+                }
+
+                @Test
+                void shouldFailWhenNotArtist() throws Exception {
+                        mockAuthenticatedUser(new Object());
+                        mockMvc.perform(get("/api/event/allMyEvents?page=0&size=6"))
+                                        .andExpect(status().isForbidden());
+                }
+
+                @Test
+                void shouldFailWhenNotAuthenticated() throws Exception {
+                        mockUnauthenticated();
+                        mockMvc.perform(get("/api/event/allMyEvents"))
+                                        .andExpect(status().isUnauthorized());
+                }
+        }
+
+        @Nested
+        class DeleteEvent {
+                @Test
+                void shouldDeleteOwnEvent() throws Exception {
+                        mockAuthenticatedArtist();
+                        when(eventService.getEventById(100L)).thenReturn(event);
+
+                        mockMvc.perform(delete("/api/event/delete/100"))
+                                        .andExpect(status().isOk())
+                                        .andExpect(jsonPath("$.message").value("Event deleted successfully"));
+
+                        verify(eventService).deleteEvent(100L);
+                }
+
+                @Test
+                void shouldFailWhenEventNotFound() throws Exception {
+                        mockAuthenticatedArtist();
+                        when(eventService.getEventById(100L)).thenReturn(null);
+
+                        mockMvc.perform(delete("/api/event/delete/100"))
+                                        .andExpect(status().isNotFound());
+                }
+
+                @Test
+                void shouldFailWhenEventNotBelongsToArtist() throws Exception {
+                        Artist anotherArtist = new Artist();
+                        anotherArtist.setId(2L);
+                        event.setArtist(anotherArtist);
+
+                        mockAuthenticatedArtist();
+                        when(eventService.getEventById(100L)).thenReturn(event);
+
+                        mockMvc.perform(delete("/api/event/delete/100"))
+                                        .andExpect(status().isNotFound());
+                }
+        }
+
+        @Nested
+        class EventDetails {
+                @Test
+                void shouldReturnEventDetails() throws Exception {
+                        Artist artist = new Artist();
+                        artist.setId(1L);
+
+                        Authentication authentication = mock(Authentication.class);
+                        when(authentication.isAuthenticated()).thenReturn(true);
+                        when(authentication.getPrincipal()).thenReturn(artist);
+                        SecurityContext securityContext = mock(SecurityContext.class);
+                        when(securityContext.getAuthentication()).thenReturn(authentication);
+                        SecurityContextHolder.setContext(securityContext);
+                        when(eventService.getEventById(100L)).thenReturn(event);
+
+                        mockMvc.perform(get("/api/event/details/100"))
+                                        .andExpect(status().isOk())
+                                        .andExpect(jsonPath("$.message").value("Event retrieved successfully"));
+                }
+
+                @Test
+                void shouldReturn404WhenEventNotFound() throws Exception {
+                        Artist artist = new Artist();
+                        artist.setId(1L);
+
+                        Authentication authentication = mock(Authentication.class);
+                        when(authentication.isAuthenticated()).thenReturn(true);
+                        when(authentication.getPrincipal()).thenReturn(artist);
+                        SecurityContext securityContext = mock(SecurityContext.class);
+                        when(securityContext.getAuthentication()).thenReturn(authentication);
+                        SecurityContextHolder.setContext(securityContext);
+                        when(eventService.getEventById(100L)).thenReturn(null);
+
+                        mockMvc.perform(get("/api/event/details/100"))
+                                        .andExpect(status().isNotFound());
+                }
+        }
+
+        @Nested
+        class UpdateEvent {
+                @Test
+                void shouldUpdateEventWithImage() throws Exception {
+                        mockAuthenticatedArtist();
+                        when(eventService.isArtist()).thenReturn(true);
+                        when(eventService.getEventById(100L)).thenReturn(event);
+                        when(imageServingUtil.saveImages(any(), anyString(), anyString(), anyBoolean()))
+                                        .thenReturn("new.png");
+
+                        MockMultipartFile eventPart = new MockMultipartFile("event", "", "application/json",
+                                        "{\"name\":\"Updated Event\"}".getBytes());
+                        MockMultipartFile image = new MockMultipartFile("image", "new.png", "image/png",
+                                        "fake".getBytes());
+
+                        mockMvc.perform(multipart("/api/event/edit/100")
+                                        .file(eventPart)
+                                        .file(image)
+                                        .with(request -> {
+                                                request.setMethod("PUT");
+                                                return request;
+                                        }))
+                                        .andExpect(status().isOk())
+                                        .andExpect(jsonPath("$.message").value("Event updated successfully"));
+                }
+
+                @Test
+                void shouldFailWhenNotArtist() throws Exception {
+                        mockAuthenticatedArtist();
+                        when(eventService.isArtist()).thenReturn(false);
+
+                        MockMultipartFile eventPart = new MockMultipartFile("event", "", "application/json",
+                                        "{\"name\":\"Updated Event\"}".getBytes());
+
+                        mockMvc.perform(multipart("/api/event/edit/100")
+                                        .file(eventPart)
+                                        .with(request -> {
+                                                request.setMethod("PUT");
+                                                return request;
+                                        }))
+                                        .andExpect(status().isUnauthorized());
+                }
+
+                @Test
+                void shouldFailWhenEventNotFound() throws Exception {
+                        mockAuthenticatedArtist();
+                        when(eventService.isArtist()).thenReturn(true);
+                        when(eventService.getEventById(100L)).thenReturn(null);
+
+                        MockMultipartFile eventPart = new MockMultipartFile("event", "", "application/json",
+                                        "{\"name\":\"Updated Event\"}".getBytes());
+
+                        mockMvc.perform(multipart("/api/event/edit/100")
+                                        .file(eventPart)
+                                        .with(request -> {
+                                                request.setMethod("PUT");
+                                                return request;
+                                        }))
+                                        .andExpect(status().isNotFound());
+                }
+        }
+
+        // GENERA UNA CARPETA MAL
+        @Nested
+        class GetEventMedia {
+                @Test
+                void shouldReturnImageWhenExists() throws Exception {
+                        // Directorio que el controlador usa
+                        String basePath = System.getProperty("user.dir")
+                                        + "/artists-heaven-backend/src/main/resources/event_media/";
+                        Path directory = Paths.get(basePath);
+                        Files.createDirectories(directory);
+
+                        // Crear archivo de prueba dentro de esa carpeta
+                        Path testFile = directory.resolve("event_image.png");
+                        Files.write(testFile, "fake".getBytes());
+
+                        mockMvc.perform(get("/api/event/event_media/event_image.png"))
+                                        .andExpect(status().isOk())
+                                        .andExpect(header().string("Content-Type", "image/png"));
+                }
+
+                @Test
+                void shouldReturn404WhenFileNotExists() throws Exception {
+                        mockMvc.perform(get("/api/event/event_media/nonexistent.png"))
+                                        .andExpect(status().isNotFound());
+                }
+        }
 }

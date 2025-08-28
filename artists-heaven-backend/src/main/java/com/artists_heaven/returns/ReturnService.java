@@ -22,6 +22,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import com.artists_heaven.exception.AppExceptions;
 import com.artists_heaven.order.Order;
 
 @Service
@@ -31,14 +32,9 @@ public class ReturnService {
 
     private final OrderService orderService;
 
-    private final PdfFont bold;
-    private final PdfFont regular;
-
-    public ReturnService(ReturnRepository returnRepository, OrderService orderService) throws Exception {
+    public ReturnService(ReturnRepository returnRepository, OrderService orderService) {
         this.returnRepository = returnRepository;
         this.orderService = orderService;
-        this.bold = PdfFontFactory.createFont(StandardFonts.HELVETICA_BOLD);
-        this.regular = PdfFontFactory.createFont(StandardFonts.HELVETICA);
     }
 
     public void save(Return returnRequest) {
@@ -52,14 +48,16 @@ public class ReturnService {
         boolean isEmailMismatch = !order.getEmail().equals(email);
 
         if (isUnauthenticated && isEmailMismatch) {
-            throw new IllegalStateException("Email inválido");
+            throw new AppExceptions.ForbiddenActionException("Invalid email or unauthenticated user");
         }
+
         if (order.getReturnRequest() != null) {
-            throw new IllegalStateException("This order already has a return request.");
+            throw new AppExceptions.DuplicateActionException("This order already has a return request.");
         }
 
         if (order.getCreatedDate().isBefore(LocalDateTime.now().minusDays(30))) {
-            throw new IllegalStateException("Return request can only be created within 30 days of order creation.");
+            throw new AppExceptions.ForbiddenActionException(
+                    "Return request can only be created within 30 days of order creation.");
         }
 
         Return returnRequest = new Return();
@@ -70,7 +68,6 @@ public class ReturnService {
         order.setStatus(OrderStatus.RETURN_REQUEST);
         order.setLastUpdateDateTime(LocalDateTime.now());
         orderService.save(order);
-
     }
 
     public byte[] generateReturnLabelPdf(Long orderId) {
@@ -82,6 +79,8 @@ public class ReturnService {
         Document document = new Document(pdfDoc);
 
         try {
+            PdfFont bold = PdfFontFactory.createFont(StandardFonts.HELVETICA_BOLD);
+            PdfFont regular = PdfFontFactory.createFont(StandardFonts.HELVETICA);
             // Title
             Paragraph title = new Paragraph("Etiqueta de Devolución")
                     .setFont(bold)
@@ -112,7 +111,7 @@ public class ReturnService {
 
             // Return Address
             Paragraph returnAddress = new Paragraph(
-                    "Dirección de devolución:\nYourCompany\nCalle de ejemplo 123\nCiudad, País")
+                    "Dirección de devolución:\nArtists Heaven\nCalle Verdejo 114\nSevilla, España")
                     .setFont(regular)
                     .setFontSize(12)
                     .setBorder(new SolidBorder(ColorConstants.LIGHT_GRAY, 1))

@@ -1,14 +1,23 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { useTranslation } from "react-i18next";
 
 const SalesChart = ({ year }) => {
-    const [salesData, setSalesData] = useState([]);
+    const [rawData, setRawData] = useState([]);
     const [authToken] = useState(localStorage.getItem("authToken"));
+    const { t, i18n } = useTranslation();
+    const language = i18n.language;
 
-    const months = [
-        "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-        "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
-    ];
+    const months = {
+        es: [
+            "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+            "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+        ],
+        en: [
+            "January", "February", "March", "April", "May", "June",
+            "July", "August", "September", "October", "November", "December"
+        ]
+    };
 
     const role = localStorage.getItem("role")?.toLowerCase();
     const rolePath = role === "artist" ? "artists" : role;
@@ -22,16 +31,20 @@ const SalesChart = ({ year }) => {
         })
             .then(response => response.json())
             .then(data => {
-                const mappedData = data.map(item => ({
-                    ...item,
-                    month: months[item.month - 1]
-                }));
-                setSalesData(mappedData);
+                setRawData(data.data); 
             })
             .catch(error => {
                 console.error("Hubo un error al obtener los datos", error);
             });
-    }, [year, authToken]);
+    }, [year, authToken, rolePath]);
+
+    const salesData = useMemo(() => {
+        const monthNames = months[language] || months.en;
+        return rawData.map(item => ({
+            ...item,
+            month: monthNames[item.month - 1]
+        }));
+    }, [rawData, language]);
 
     return (
         <ResponsiveContainer width="100%" height={400}>
@@ -51,18 +64,24 @@ const SalesChart = ({ year }) => {
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Area type="monotone" dataKey="totalOrders" name="Ventas Realizadas" stroke="#8884d8" fillOpacity={1} fill="url(#colorOrders)" />
+                <Area
+                    type="monotone"
+                    dataKey="totalOrders"
+                    name={t('adminSalesChart.totalSales')}
+                    stroke="#8884d8"
+                    fillOpacity={1}
+                    fill="url(#colorOrders)"
+                />
                 {role === 'admin' && (
                     <Area
                         type="monotone"
                         dataKey="totalRevenue"
-                        name="Ingresos Obtenidos"
+                        name={t('adminSalesChart.revenueEarned')}
                         stroke="#82ca9d"
                         fillOpacity={1}
                         fill="url(#colorRevenue)"
                     />
                 )}
-
             </AreaChart>
         </ResponsiveContainer>
     );

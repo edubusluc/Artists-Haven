@@ -16,6 +16,9 @@ import com.artists_heaven.order.Order;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 
+import com.artists_heaven.exception.AppExceptions;
+import com.artists_heaven.exception.AppExceptions.EmailSendException;
+
 @Service
 public class EmailSenderService {
 
@@ -41,16 +44,20 @@ public class EmailSenderService {
      * @param email the email object containing report details
      */
     public void sendReportEmail(Email email) {
-        // Save the email details to the database for record-keeping
+        // Save email record
         emailSenderRepository.save(email);
 
-        // Create the subject line and body content for the report email
+        // Build email content
         String subject = email.getId() + " [" + email.getType() + "] User: " + email.getUsername();
         String body = "Username: " + email.getUsername()
                 + "\n\nDescription:\n" + email.getDescription();
 
-        // Send the email to the moderator
-        sendEmail(MODERATOR_EMAIL, subject, body);
+        // Send the email
+        try {
+            sendEmail(MODERATOR_EMAIL, subject, body);
+        } catch (Exception e) {
+            throw new EmailSendException("Failed to send email to moderator", e);
+        }
     }
 
     /**
@@ -60,16 +67,19 @@ public class EmailSenderService {
      * @param artist the artist object containing artist details
      */
     public void sendVerificationEmail(Artist artist) {
-        // Create the subject line and body content for the report email
-        String subject = "NEW [ARTIST_VERIFICATION] " + artist.getArtistName();
-        String body = "Username: " + artist.getArtistName()
-                + "\n\nDescription:\n" + "Ha solicitado un proceso para revisar el estado de su cuenta";
+        try {
+            String subject = "NEW [ARTIST_VERIFICATION] " + artist.getArtistName();
+            String body = "Username: " + artist.getArtistName()
+                    + "\n\nDescription:\n" + "Ha solicitado un proceso para revisar el estado de su cuenta";
 
-        // Send the email to the moderator
-        sendEmail(MODERATOR_EMAIL, subject, body);
+            sendEmail(MODERATOR_EMAIL, subject, body);
+        } catch (Exception e) {
+            throw new AppExceptions.EmailSendException(
+                    "Failed to send verification email for artist: " + artist.getArtistName(), e);
+        }
     }
 
-    public void sendPurchaseConfirmationEmail(String userEmail, Order order) throws MessagingException {
+    public void sendPurchaseConfirmationEmail(String userEmail, Order order, Long discount) throws MessagingException {
         MimeMessage message = mailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(message, true);
 
@@ -81,7 +91,7 @@ public class EmailSenderService {
         helper.setText("Gracias por tu compra. Adjuntamos tu factura.");
 
         // Generar PDF
-        byte[] pdfBytes = pdfGeneratorService.generateInvoice(orderReference, order, total);
+        byte[] pdfBytes = pdfGeneratorService.generateInvoice(orderReference, order, total, discount);
         InputStreamSource pdfSource = new ByteArrayResource(pdfBytes);
 
         // Adjuntar PDF al correo
@@ -118,11 +128,19 @@ public class EmailSenderService {
         Map<EmailType, Integer> emailCountMap = new HashMap<>();
 
         for (Object[] row : result) {
-            EmailType type = (EmailType) row[0]; 
-            Long count = (Long) row[1]; 
+            EmailType type = (EmailType) row[0];
+            Long count = (Long) row[1];
             emailCountMap.put(type, count.intValue());
         }
 
         return emailCountMap;
+    }
+
+    public void sendPasswordResetEmail(String to, String link) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(to);
+        message.setSubject("Restablece tu contraseña");
+        message.setText("Haz clic en el siguiente enlace para restablecer tu contraseña: " + link);
+        mailSender.send(message);
     }
 }

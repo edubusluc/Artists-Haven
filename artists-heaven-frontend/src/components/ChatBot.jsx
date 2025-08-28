@@ -1,13 +1,21 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 
 const Chatbot = () => {
+  const { t, i18n } = useTranslation();
+  const language = i18n.language;
   const [messages, setMessages] = useState([
-    { text: "Hola! Soy Quavi tu asistente de confianza, ¿en qué puedo ayudarte?", from: "bot" },
+    { text: t('quavi.message'), from: "bot" },
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const messagesEndRef = useRef(null);
+
+
+  useEffect(() => {
+    setMessages([{ text: t('quavi.message'), from: "bot" }]);
+  }, [language, t]);
 
   const sendMessage = async () => {
     if (!input.trim() || loading) return;
@@ -40,7 +48,7 @@ const Chatbot = () => {
   };
 
   useEffect(() => {
-    if(open) messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (open) messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, open]);
 
   return (

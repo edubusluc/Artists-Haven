@@ -2,9 +2,24 @@ import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, useGLTF } from '@react-three/drei';
 import { Suspense, useEffect, useRef, useMemo } from 'react';
 import bgMainShop from '../util-image/bgMainShop.png';
+import { useState } from 'react';
 
 const TshirtModel = () => {
   const { scene } = useGLTF('/models/tshirt.glb');
+  const modelRef = useRef();
+  const [scale, setScale] = useState(() =>
+  typeof window !== 'undefined' && window.innerWidth < 768 ? 1.8 : 1.95
+  //typeof window !== 'undefined' && window.innerWidth < 768 ? 8 : 10
+  );
+
+  useEffect(() => {
+    const handleResize = () => {
+      setScale(window.innerWidth < 768 ? 1.8 : 1.95);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   useMemo(() => {
     scene.traverse((child) => {
       if (child.isMesh) {
@@ -13,7 +28,6 @@ const TshirtModel = () => {
       }
     });
   }, [scene]);
-  const modelRef = useRef();
 
   useFrame((state, delta) => {
     if (modelRef.current) {
@@ -21,7 +35,15 @@ const TshirtModel = () => {
     }
   });
 
-  return <primitive ref={modelRef} object={scene} scale={2} position={[0, -48, 0]} />;
+  return (
+    <primitive
+      ref={modelRef}
+      object={scene}
+      scale={scale}
+      position={[0, -48, 0]}
+      //position={[0, -20, 0]}
+    />
+  );
 };
 
 const TshirtViewer = () => {
@@ -49,6 +71,7 @@ const TshirtViewer = () => {
       <Canvas
         shadows
         camera={{ position: [0, 0, 200], fov: 45 }}
+        //camera={{ position: [0, 0, 50], fov: 45 }}
         gl={{ preserveDrawingBuffer: true }}
       >
         <ambientLight intensity={0.5} />

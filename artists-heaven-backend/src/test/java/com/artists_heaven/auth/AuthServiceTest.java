@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 import static org.mockito.ArgumentMatchers.any;
 
 import java.util.Map;
+import java.util.Optional;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,6 +20,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.artists_heaven.configuration.JwtTokenProvider;
@@ -65,7 +67,7 @@ class AuthServiceTest {
         user.setPassword("hashedPassword");
         user.setRole(UserRole.USER);
 
-        when(userRepository.findByEmail(email)).thenReturn(user);
+        when(userRepository.findByEmail(email)).thenReturn(Optional.of(user));
         when(passwordEncoder.matches(password, "hashedPassword")).thenReturn(true);
         when(jwtTokenProvider.generateToken(any(Authentication.class))).thenReturn("jwtToken");
 
@@ -82,13 +84,13 @@ class AuthServiceTest {
         String email = "test@example.com";
         String password = "password";
 
-        when(userRepository.findByEmail(email)).thenReturn(null);
+        when(userRepository.findByEmail(email)).thenReturn(Optional.empty());
 
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+        UsernameNotFoundException exception = assertThrows(UsernameNotFoundException.class, () -> {
             authService.login(email, password);
         });
 
-        assertEquals("Credenciales inválidas", exception.getMessage());
+        assertEquals("User not found with this email", exception.getMessage());
     }
 
     @Test
@@ -100,11 +102,15 @@ class AuthServiceTest {
         payload.set("family_name", "User");
         payload.set("name", "Test User");
 
+        User user = new User();
+        user.setId(1l);
+        user.setRole(UserRole.USER);
+
         GoogleIdToken idToken = mock(GoogleIdToken.class);
         when(idToken.getPayload()).thenReturn(payload);
 
         when(tokenVerifier.verifyToken(idTokenString)).thenReturn(idToken);
-        when(userRepository.findByEmail("test@example.com")).thenReturn(null);
+        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.encode(anyString())).thenReturn("encodedPassword");
         when(jwtTokenProvider.generateToken(any(Authentication.class))).thenReturn("jwtToken");
 
@@ -113,7 +119,32 @@ class AuthServiceTest {
         assertNotNull(response);
         assertEquals("jwtToken", response.get("token"));
         assertEquals("test@example.com", response.get("email"));
-        verify(userRepository).save(any(User.class));
+
+    }
+
+    @Test
+    void testHandleGoogleLoginSuccessWithNullUser() throws Exception {
+        String idTokenString = "idToken";
+        GoogleIdToken.Payload payload = new GoogleIdToken.Payload();
+        payload.setEmail("test@example.com");
+        payload.set("given_name", "Test");
+        payload.set("family_name", "User");
+        payload.set("name", "Test User");
+
+        GoogleIdToken idToken = mock(GoogleIdToken.class);
+        when(idToken.getPayload()).thenReturn(payload);
+
+        when(tokenVerifier.verifyToken(idTokenString)).thenReturn(idToken);
+        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.empty());
+        when(passwordEncoder.encode(anyString())).thenReturn("encodedPassword");
+        when(jwtTokenProvider.generateToken(any(Authentication.class))).thenReturn("jwtToken");
+
+        Map<String, String> response = authService.handleGoogleLogin(idTokenString);
+
+        assertNotNull(response);
+        assertEquals("jwtToken", response.get("token"));
+        assertEquals("test@example.com", response.get("email"));
+
     }
 
     @Test
@@ -145,6 +176,19 @@ class AuthServiceTest {
     void testMapRoleToAuthority_Admin() throws Exception {
         String authority = (String) mapRoleToAuthorityMethod.invoke(authService, UserRole.ADMIN);
         assertEquals("ROLE_ADMIN", authority);
+    }
+
+    @Test
+    void generateToken_WithUser_CallsJwtTokenProvider() {
+        User user = new User();
+        String expectedToken = "mocked-jwt-token";
+
+        when(jwtTokenProvider.generateTokenUser(user)).thenReturn(expectedToken);
+
+        String token = authService.generateToken(user);
+
+        assertEquals(expectedToken, token);
+        verify(jwtTokenProvider).generateTokenUser(user);
     }
 
     @AfterEach

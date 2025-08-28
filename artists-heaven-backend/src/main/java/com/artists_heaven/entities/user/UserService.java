@@ -2,10 +2,15 @@ package com.artists_heaven.entities.user;
 
 import java.security.Principal;
 import java.util.List;
+import java.util.Locale;
 
 import org.springframework.stereotype.Service;
 import com.artists_heaven.entities.artist.Artist;
+import com.artists_heaven.exception.AppExceptions;
+import com.artists_heaven.exception.AppExceptions.DuplicateActionException;
+import com.artists_heaven.exception.AppExceptions.ResourceNotFoundException;
 
+import org.springframework.context.MessageSource;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -15,8 +20,11 @@ public class UserService {
 
     private final UserRepository userRepository;
 
-    public UserService(UserRepository userRepository) {
+    private final MessageSource messageSource;
+
+    public UserService(UserRepository userRepository, MessageSource messageSource) {
         this.userRepository = userRepository;
+        this.messageSource = messageSource;
     }
 
     private PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
@@ -26,7 +34,7 @@ public class UserService {
     }
 
     public User getUserById(Long id) {
-        return userRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+        return userRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
     }
 
     /**
@@ -37,11 +45,34 @@ public class UserService {
      * @return The registered user with their password encrypted and default role
      *         set.
      */
-    public User registerUser(User user) {
-        user.setPassword(passwordEncoder.encode(user.getPassword()));
-        user.setRole(UserRole.USER);
-        return userRepository.save(user);
+    public User registerUser(UserRegisterDTO userDTO, String lang) {
+        User user = new User();
 
+        Locale locale = new Locale(lang);
+
+        userRepository.findByEmail(userDTO.getEmail()).ifPresent(u -> {
+            String msg = messageSource.getMessage("email.duplicate", null, locale);
+            throw new DuplicateActionException(msg);
+        });
+
+        if (userRepository.existsByUsername(userDTO.getUsername())) {
+            String msg = messageSource.getMessage("username.alreadyExists", null, locale);
+            throw new DuplicateActionException(msg);
+        }
+
+        user.setUsername(userDTO.getUsername());
+        user.setEmail(userDTO.getEmail());
+        user.setPassword(passwordEncoder.encode(userDTO.getPassword()));
+        user.setRole(UserRole.USER);
+        user.setFirstName(userDTO.getFirstName());
+        user.setLastName(userDTO.getLastName());
+        user.setPhone(userDTO.getPhone());
+        user.setCountry(userDTO.getCountry());
+        user.setPostalCode(userDTO.getPostalCode());
+        user.setCity(userDTO.getCity());
+        user.setAddress(userDTO.getAddress());
+
+        return userRepository.save(user);
     }
 
     /**
@@ -53,21 +84,17 @@ public class UserService {
      * @throws IllegalArgumentException if the user is not authenticated.
      */
     public UserProfileDTO getUserProfile(Principal principal) {
-        // Extract the authenticated user
         User user = extractAuthenticatedUser(principal);
-        // Create a UserProfileDTO object from the user data
-        UserProfileDTO userProfileDTO = new UserProfileDTO(user);
+        UserProfileDTO dto = new UserProfileDTO(user);
 
-        // If the user is an artist, include additional details like the artist's name
         if (user instanceof Artist artist) {
-            userProfileDTO.setArtistName(artist.getArtistName());
-            userProfileDTO.setBannerImage(artist.getBannerPhoto());
-            userProfileDTO.setColor(artist.getMainColor());
-            userProfileDTO.setImage(artist.getMainViewPhoto());
+            dto.setArtistName(artist.getArtistName());
+            dto.setBannerImage(artist.getBannerPhoto());
+            dto.setColor(artist.getMainColor());
+            dto.setImage(artist.getMainViewPhoto());
         }
 
-        // Return the user profile DTO
-        return userProfileDTO;
+        return dto;
     }
 
     /**
@@ -79,38 +106,52 @@ public class UserService {
      * @throws IllegalArgumentException if the user is not authenticated.
      */
     public void updateUserProfile(UserProfileUpdateDTO userProfileDTO, Principal principal, String image,
-            String bannerImage) {
-        // Extract the authenticated user
+            String bannerImage, String lang) {
+
+        Locale locale = new Locale(lang);
+
+        if (principal == null) {
+            throw new AppExceptions.UnauthorizedActionException("User is not authenticated");
+        }
+
         User user = getUserById(userProfileDTO.getId());
 
-        // Update the user's first and last name
+        // Validate that the authenticated user matches the user to be edited
+        if (!principal.getName().equals(user.getUsername())) {
+            throw new AppExceptions.ForbiddenActionException("You cannot edit another user's profile");
+            }
+
+        if (!user.getUsername().equals(userProfileDTO.getUsername()) && userRepository.existsByUsername(userProfileDTO.getUsername())) {
+            String msg = messageSource.getMessage("username.alreadyExists", null, locale);
+            throw new DuplicateActionException(msg);
+        }
+
+        // Data update
         user.setFirstName(userProfileDTO.getFirstName());
         user.setLastName(userProfileDTO.getLastName());
-
         user.setUsername(userProfileDTO.getUsername());
-
         user.setEmail(userProfileDTO.getEmail());
         user.setPhone(userProfileDTO.getPhone());
         user.setCity(userProfileDTO.getCity());
         user.setAddress(userProfileDTO.getAddress());
         user.setPostalCode(userProfileDTO.getPostalCode());
         user.setCountry(userProfileDTO.getCountry());
+            
 
-        // If the user is an artist, update the artist name if it's provided
-        if (user instanceof Artist artist && userProfileDTO.getArtistName() != null) {
-            artist.setArtistName(userProfileDTO.getArtistName());
-            artist.setMainColor(userProfileDTO.getColor());
+        if (user instanceof Artist artist) {
+            if (userProfileDTO.getArtistName() != null) {
+                artist.setArtistName(userProfileDTO.getArtistName());
+                artist.setMainColor(userProfileDTO.getColor());
+            }
             if (!bannerImage.isEmpty()) {
                 artist.setBannerPhoto(bannerImage);
             }
             if (!image.isEmpty()) {
                 artist.setMainViewPhoto(image);
             }
-
         }
-
-        // Save the updated user data to the repository
         userRepository.save(user);
+        
     }
 
     /**
@@ -123,17 +164,20 @@ public class UserService {
      *                                  authenticated.
      */
     public User extractAuthenticatedUser(Principal principal) {
-        // Check if the principal is an authenticated instance
-        if (!(principal instanceof Authentication authentication)) {
-            throw new IllegalArgumentException("Usuario no autenticado");
-        }
-        // Extract the user from the authentication object
-        Object principalUser = authentication.getPrincipal();
-        if (!(principalUser instanceof User user)) {
-            throw new IllegalArgumentException("Usuario no autenticado");
+        if (principal == null) {
+            throw new IllegalArgumentException("Usuario no autenticado: principal es null");
         }
 
-        // Return the authenticated user
+        if (!(principal instanceof Authentication authentication)) {
+            throw new IllegalArgumentException("Usuario no autenticado: no es una autenticación válida");
+        }
+
+        Object principalUser = authentication.getPrincipal();
+
+        if (!(principalUser instanceof User user)) {
+            throw new IllegalArgumentException("Usuario no autenticado: tipo de usuario inválido");
+        }
+
         return user;
     }
 }

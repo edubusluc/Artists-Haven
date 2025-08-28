@@ -6,9 +6,84 @@ import {
     getStatisticsPerYear,
     getUsers,
     getPendingVerifications,
+    getPendingUserProducts,
     getVerifyArtist,
     doRefuseArtist,
+    approveUserProduct,
+    rejectUserProduct
 } from '../../services/adminServices';
+
+import { checkTokenExpiration } from '../../utils/authUtils';
+import SessionExpired from '../SessionExpired';
+import { useTranslation } from "react-i18next";
+
+const UserProductImages = ({ images, productName }) => {
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [currentIndex, setCurrentIndex] = useState(0);
+
+    if (!images || images.length === 0) return "No image";
+
+    const openModal = (index) => {
+        setCurrentIndex(index);
+        setIsModalOpen(true);
+    };
+
+    const closeModal = () => setIsModalOpen(false);
+
+    const nextImage = () => setCurrentIndex((prev) => (prev + 1) % images.length);
+    const prevImage = () => setCurrentIndex((prev) => (prev - 1 + images.length) % images.length);
+
+    return (
+        <>
+            <div className="flex gap-2">
+                {images.map((img, index) => (
+                    <img
+                        key={index}
+                        src={`/api/user-products${img}`}
+                        alt={`${productName} ${index + 1}`}
+                        className="w-16 h-16 object-cover rounded cursor-pointer hover:scale-105 transition"
+                        onClick={() => openModal(index)}
+                    />
+                ))}
+            </div>
+
+            {isModalOpen && (
+                <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+                    <div className="relative">
+                        <img
+                            src={`/api/user-products${images[currentIndex]}`}
+                            alt={`${productName} ${currentIndex + 1}`}
+                            className="max-w-[90vw] max-h-[80vh] object-contain rounded shadow-lg"
+                        />
+                        {images.length > 1 && (
+                            <>
+                                <button
+                                    onClick={prevImage}
+                                    className="absolute top-1/2 left-2 -translate-y-1/2 text-white text-2xl font-bold"
+                                >
+                                    ‹
+                                </button>
+                                <button
+                                    onClick={nextImage}
+                                    className="absolute top-1/2 right-2 -translate-y-1/2 text-white text-2xl font-bold"
+                                >
+                                    ›
+                                </button>
+                            </>
+                        )}
+                        
+                    </div>
+                    <button
+                            onClick={closeModal}
+                            className="absolute top-10 right-10 bg-black/60 hover:bg-black/80 text-white rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold shadow-md"
+                        >
+                            ✕
+                        </button>
+                </div>
+            )}
+        </>
+    );
+};
 
 const AdminClient = () => {
     const currentYear = new Date().getFullYear();
@@ -26,12 +101,15 @@ const AdminClient = () => {
     const [error, setError] = useState(null);
     const [users, setUsers] = useState([]);
 
+    const [userProducts, setUserProducts] = useState([]);
+
     const [videoBlobsCache, setVideoBlobsCache] = useState({});
     const pendingFetches = React.useRef({});
+    const { t } = useTranslation();
 
     // Fetch statistics and users
     useEffect(() => {
-        if (!authToken || role !== 'ADMIN') return;
+        if (!checkTokenExpiration || role !== 'ADMIN') return;
 
         const fetchData = async () => {
             try {
@@ -53,12 +131,14 @@ const AdminClient = () => {
 
     // Fetch pending verifications
     useEffect(() => {
-        if (role !== "ADMIN") return;
+        if (!checkTokenExpiration || role !== "ADMIN") return;
 
         const fetchVerifications = async () => {
             try {
                 const verificationsData = await getPendingVerifications(authToken);
-                setVerifications(verificationsData);
+                const userProductsData = await getPendingUserProducts(authToken);
+                setVerifications(verificationsData.data);
+                setUserProducts(userProductsData.data)
             } catch (err) {
                 setError(err.message);
             } finally {
@@ -68,6 +148,8 @@ const AdminClient = () => {
 
         fetchVerifications();
     }, [authToken, role]);
+
+    console.log(userProducts);
 
     // Video blob fetch
     const fetchVideoBlob = useCallback(async (videoUrl) => {
@@ -100,6 +182,7 @@ const AdminClient = () => {
         const [videoSrc, setVideoSrc] = useState(null);
 
         useEffect(() => {
+            if (!checkTokenExpiration || role !== "ADMIN") return;
             let isMounted = true;
 
             fetchVideoBlob(videoUrl).then(blobUrl => {
@@ -115,10 +198,10 @@ const AdminClient = () => {
             <div>
                 {videoSrc ? (
                     <a href={videoSrc} target="_blank" rel="noopener noreferrer">
-                        Open Video
+                        {t('adminclient.openVideo')}
                     </a>
                 ) : (
-                    <p>Loading video...</p>
+                    <p>{t('adminclient.loadVideo')}</p>
                 )}
             </div>
         );
@@ -131,6 +214,7 @@ const AdminClient = () => {
             setUsers(users => users.map(user =>
                 user.id === id ? { ...user, role: "ARTIST" } : user
             ));
+            window.location.reload();
         } catch (error) {
             console.error('Error:', error);
         }
@@ -140,6 +224,7 @@ const AdminClient = () => {
     const refuseArtist = async (verificationId) => {
         try {
             await doRefuseArtist(authToken, verificationId);
+            window.location.reload();
         } catch (error) {
             console.error('Error:', error);
         }
@@ -157,6 +242,30 @@ const AdminClient = () => {
         setSearchTerm(e.target.value);
     };
 
+    // Aprobar producto
+    const approveProduct = async (productId) => {
+        try {
+            await approveUserProduct(authToken, productId);
+            // Actualizar lista de productos localmente
+            setUserProducts(prev => prev.filter(p => p.id !== productId));
+        } catch (err) {
+            console.error("Error aprobando producto:", err);
+            alert("No se pudo aprobar el producto");
+        }
+    };
+
+    // Rechazar producto
+    const rejectProduct = async (productId) => {
+        try {
+            await rejectUserProduct(authToken, productId);
+            // Actualizar lista de productos localmente
+            setUserProducts(prev => prev.filter(p => p.id !== productId));
+        } catch (err) {
+            console.error("Error rechazando producto:", err);
+            alert("No se pudo rechazar el producto");
+        }
+    };
+
     const MetricCard = React.memo(({ icon, value, title, iconColor, bgColor }) => {
         return (
             <div className="flex-1 w-auto bg-white shadow-lg rounded-lg p-4 m-2 flex items-center">
@@ -171,7 +280,11 @@ const AdminClient = () => {
         );
     });
 
-    if (role !== 'ADMIN') return <NonAuthorise />;
+    if (!role || role !== 'ADMIN') {
+        return <NonAuthorise />;
+    } else if (!checkTokenExpiration()) {
+        return <SessionExpired />;
+    }
 
     return (
         <div className="min-h-screen bg-gradient-to-r from-gray-300 to-white flex flex-col">
@@ -179,7 +292,7 @@ const AdminClient = () => {
                 {/* First Column */}
                 <div className="w-full h-full rounded-lg shadow-lg bg-white backdrop-blur-md md:p-8 p-4">
                     <p className="custom-font-footer-black text-xl md:text-2xl font-bold text-center md:text-left mb-6">
-                        Gestión de Clientes
+                        {t('adminclient.userManagement')}
                     </p>
                     <input
                         type="text"
@@ -198,10 +311,10 @@ const AdminClient = () => {
                                         <p className="text-sm text-gray-500">@{user.username}</p>
                                     </div>
                                     <div className="text-sm text-gray-600 space-y-1">
-                                        <p><span className="font-medium text-gray-700">Email:</span> {user.email || 'N/A'}</p>
-                                        <p><span className="font-medium text-gray-700">Ciudad:</span> {user.city || 'N/A'}</p>
-                                        <p><span className="font-medium text-gray-700">Dirección:</span> {user.address || 'N/A'}</p>
-                                        <p><span className="font-medium text-gray-700">Rol:</span>
+                                        <p><span className="font-medium text-gray-700">{t('adminclient.email')}:</span> {user.email || 'N/A'}</p>
+                                        <p><span className="font-medium text-gray-700">{t('adminclient.city')}:</span> {user.city || 'N/A'}</p>
+                                        <p><span className="font-medium text-gray-700">{t('adminclient.address')}:</span> {user.address || 'N/A'}</p>
+                                        <p><span className="font-medium text-gray-700">{t('adminclient.rol')}:</span>
                                             <span className={`ml-1 font-semibold px-2 py-1 rounded text-xs 
                                                 ${user.role === 'ADMIN' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'}`}>
                                                 {user.role}
@@ -234,7 +347,7 @@ const AdminClient = () => {
                                 <MetricCard
                                     icon={faUser}
                                     value={data.numUsers - data.numArtists}
-                                    title="Usuarios Registrados"
+                                    title={t('adminclient.registerdUsers')}
                                     iconColor="text-orange-600"
                                     bgColor="bg-orange-300"
                                 />
@@ -243,7 +356,7 @@ const AdminClient = () => {
                                 <MetricCard
                                     icon={faMusic}
                                     value={data.numArtists}
-                                    title="Artistas Registrados"
+                                    title={t('adminclient.registerdArtists')}
                                     iconColor="text-yellow-600"
                                     bgColor="bg-yellow-300"
                                 />
@@ -253,18 +366,18 @@ const AdminClient = () => {
                     {/* Verifications */}
                     <div className="bg-white p-4 rounded-lg mb-4 w-full overflow-x-auto">
                         <p className="custom-font-footer-black text-xl md:text-2xl font-bold text-center md:text-left mb-6">
-                            Verificaciones Pendientes
+                            {t('adminclient.artistVerifications')}
                         </p>
                         {verifications.length > 0 ? (
                             <table className="min-w-full divide-y divide-gray-200 text-sm">
                                 <thead className="bg-gray-100 text-gray-600 uppercase text-xs">
                                     <tr>
                                         <th className="px-4 py-3 text-left">ID</th>
-                                        <th className="px-4 py-3 text-left">Artista</th>
-                                        <th className="px-4 py-3 text-left">Video</th>
-                                        <th className="px-4 py-3 text-left">Fecha</th>
-                                        <th className="px-4 py-3 text-left">Estado</th>
-                                        <th className="px-4 py-3 text-center">Acciones</th>
+                                        <th className="px-4 py-3 text-left">{t('adminclient.artist')}</th>
+                                        <th className="px-4 py-3 text-left">{t('adminclient.video')}</th>
+                                        <th className="px-4 py-3 text-left">{t('adminclient.date')}</th>
+                                        <th className="px-4 py-3 text-left">{t('adminclient.status')}</th>
+                                        <th className="px-4 py-3 text-center">{t('adminclient.actions')}</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-200">
@@ -298,13 +411,13 @@ const AdminClient = () => {
                                                             onClick={() => verifyArtist(verification.artist.id, verification.id)}
                                                             className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 transition mr-2"
                                                         >
-                                                            Verificar
+                                                            {t('adminclient.verifyAritst')}
                                                         </button>
                                                         <button
                                                             onClick={() => refuseArtist(verification.id)}
                                                             className="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600 transition"
                                                         >
-                                                            Rechazar
+                                                            {t('adminclient.refuseArtist')}
                                                         </button>
                                                     </>
                                                 )}
@@ -314,9 +427,69 @@ const AdminClient = () => {
                                 </tbody>
                             </table>
                         ) : (
-                            <p className="text-gray-500 text-sm text-center">No hay verificaciones pendientes.</p>
+                            <p className="text-gray-500 text-sm text-center">{t('adminclient.noPendingVerification')}</p>
                         )}
                     </div>
+
+                    {/* USER PRODUCT TABLE */}
+                    <div className="bg-white p-4 rounded-lg mb-4 w-full overflow-x-auto">
+                        <p className="custom-font-footer-black text-xl md:text-2xl font-bold text-center md:text-left mb-6">
+                            {t('adminclient.userProducts')}
+                        </p>
+                        {userProducts.length > 0 ? (
+                            <table className="min-w-full divide-y divide-gray-200 text-sm">
+                                <thead className="bg-gray-100 text-gray-600 uppercase text-xs">
+                                    <tr>
+                                        <th className="px-4 py-3 text-left">ID</th>
+                                        <th className="px-4 py-3 text-left">{t('adminclient.name')}</th>
+                                        <th className="px-4 py-3 text-left">{t('adminclient.username')}</th>
+                                        <th className="px-4 py-3 text-left">{t('adminclient.description')}</th>
+                                        <th className="px-4 py-3 text-left">{t('adminclient.image')}</th>
+                                        <th className="px-4 py-3 text-center">{t('adminclient.actions')}</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-200">
+                                    {userProducts.map((product) => (
+                                        <tr key={product.id} className="hover:bg-gray-50">
+                                            <td className="px-4 py-3">{product.id}</td>
+                                            <td className="px-4 py-3 font-medium text-gray-800">{product.name}</td>
+                                            <td className="px-4 py-3">{product.username}</td>
+                                            <td className="px-4 py-3">{product.description || "N/A"}</td>
+                                            <td className="px-4 py-3">
+                                                <UserProductImages images={product.images} productName={product.name} />
+                                            </td>
+                                            <td className="px-4 py-3 text-center">
+                                                {product.status === "PENDING" ? (
+                                                    <>
+                                                        <button
+                                                            onClick={() => approveProduct(product.id)}
+                                                            className="px-3 py-1 text-sm bg-green-500 text-white rounded hover:bg-green-600 transition mr-2"
+                                                        >
+                                                            APPROVE
+                                                        </button>
+                                                        <button
+                                                            onClick={() => rejectProduct(product.id)}
+                                                            className="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600 transition"
+                                                        >
+                                                            REJECT
+                                                        </button>
+                                                    </>
+                                                ) : (
+                                                    <span className={`px-2 py-1 rounded text-xs font-semibold 
+            ${product.status === 'APPROVED' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                                        {product.status}
+                                                    </span>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        ) : (
+                            <p className="text-gray-500 text-sm text-center">{t('adminclient.noProducts')}</p>
+                        )}
+                    </div>
+
                 </div>
             </div>
         </div>

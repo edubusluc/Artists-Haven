@@ -3,11 +3,15 @@ package com.artists_heaven.entities.artist;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
@@ -16,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.context.MessageSource;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
@@ -23,10 +28,20 @@ import com.artists_heaven.admin.MonthlySalesDTO;
 import com.artists_heaven.entities.user.User;
 import com.artists_heaven.entities.user.UserRepository;
 import com.artists_heaven.entities.user.UserRole;
+import com.artists_heaven.event.Event;
+import com.artists_heaven.event.EventService;
+import com.artists_heaven.exception.AppExceptions;
+import com.artists_heaven.exception.AppExceptions.DuplicateActionException;
+import com.artists_heaven.exception.AppExceptions.ResourceNotFoundException;
 import com.artists_heaven.images.ImageServingUtil;
 import com.artists_heaven.order.Order;
 import com.artists_heaven.order.OrderItem;
 import com.artists_heaven.order.OrderStatus;
+import com.artists_heaven.product.CategoryRepository;
+import com.artists_heaven.product.Product;
+import com.artists_heaven.product.ProductService;
+import com.artists_heaven.verification.Verification;
+import com.artists_heaven.verification.VerificationRepository;
 import com.artists_heaven.verification.VerificationStatus;
 
 import jakarta.persistence.EntityNotFoundException;
@@ -38,6 +53,21 @@ class ArtistServiceTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private VerificationRepository verificationRepository;
+
+    @Mock
+    private CategoryRepository categoryRepository;
+
+    @Mock
+    private MessageSource messageSource;
+
+    @Mock
+    private EventService eventService;
+
+    @Mock
+    private ProductService productService;
 
     @InjectMocks
     private ArtistService artistService;
@@ -63,10 +93,15 @@ class ArtistServiceTest {
         User userEmail = new User();
         userEmail.setEmail("test@example.com");
 
-        when(userRepository.findByEmail("test@example.com")).thenReturn(userEmail);
+        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(userEmail));
 
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            artistService.registerArtist(artistRegisterDTO, artist);
+        when(messageSource.getMessage(
+                eq("email.duplicate"),
+                any(),
+                any(Locale.class))).thenReturn("El correo electrónico ya está registrado.");
+
+        DuplicateActionException exception = assertThrows(DuplicateActionException.class, () -> {
+            artistService.registerArtist(artistRegisterDTO, "es");
         });
 
         assertEquals("El correo electrónico ya está registrado.", exception.getMessage());
@@ -74,18 +109,20 @@ class ArtistServiceTest {
 
     @Test
     void testRegisterArtist_ArtistNameAlreadyExists() {
-        Artist artist = new Artist();
-        artist.setArtistName("existingArtist");
-
         ArtistRegisterDTO artistRegisterDTO = new ArtistRegisterDTO();
         artistRegisterDTO.setEmail("test@example.com");
         artistRegisterDTO.setArtistName("existingArtist");
 
-        when(userRepository.findByEmail(anyString())).thenReturn(null);
+        when(userRepository.findByEmail(anyString())).thenReturn(Optional.empty());
         when(artistRepository.existsByArtistName("existingArtist")).thenReturn(true);
+        when(messageSource.getMessage(
+                eq("artistName.alreadyExists"),
+                any(),
+                any(Locale.class)))
+                .thenReturn("Ya existe un usuario con ese nombre registrado");
 
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            artistService.registerArtist(artistRegisterDTO, artist);
+        DuplicateActionException exception = assertThrows(DuplicateActionException.class, () -> {
+            artistService.registerArtist(artistRegisterDTO, "es");
         });
 
         assertEquals("Ya existe un usuario con ese nombre registrado", exception.getMessage());
@@ -93,24 +130,29 @@ class ArtistServiceTest {
 
     @Test
     void testRegisterArtist_Success() {
-        Artist artist = new Artist();
+        Artist savedArtistMock = new Artist();
+        savedArtistMock.setArtistName("newArtist");
+        savedArtistMock.setUsername("newArtist");
+        savedArtistMock.setRole(UserRole.ARTIST);
+        savedArtistMock.setPassword(passwordEncoder.encode("password"));
 
         ArtistRegisterDTO artistRegisterDTO = new ArtistRegisterDTO();
         artistRegisterDTO.setEmail("newArtist@example.com");
         artistRegisterDTO.setArtistName("newArtist");
         artistRegisterDTO.setPassword("password");
 
-        when(userRepository.findByEmail(anyString())).thenReturn(null);
+        when(userRepository.findByEmail(anyString())).thenReturn(Optional.empty());
         when(artistRepository.existsByArtistName(anyString())).thenReturn(false);
-        when(artistRepository.save(any(Artist.class))).thenReturn(artist);
+        when(artistRepository.save(any(Artist.class))).thenReturn(savedArtistMock);
 
-        Artist savedArtist = artistService.registerArtist(artistRegisterDTO, artist);
+        Artist result = artistService.registerArtist(artistRegisterDTO, "es");
 
-        assertNotNull(savedArtist);
-        assertEquals("newArtist", savedArtist.getArtistName());
-        assertEquals("newArtist", savedArtist.getUsername());
-        assertEquals(UserRole.ARTIST, savedArtist.getRole());
-        assertTrue(passwordEncoder.matches("password", savedArtist.getPassword()));
+        assertNotNull(savedArtistMock);
+        assertNotNull(result);
+        assertEquals("newArtist", result.getArtistName());
+        assertEquals("newArtist", result.getUsername());
+        assertEquals(UserRole.ARTIST, result.getRole());
+        assertTrue(passwordEncoder.matches("password", savedArtistMock.getPassword()));
     }
 
     @Test
@@ -135,7 +177,7 @@ class ArtistServiceTest {
 
         when(artistRepository.findById(1L)).thenReturn(Optional.empty());
 
-        EntityNotFoundException exception = assertThrows(EntityNotFoundException.class, () -> {
+        ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class, () -> {
             artistService.findById(1L);
         });
 
@@ -450,11 +492,166 @@ class ArtistServiceTest {
 
         List<Artist> artists = Arrays.asList(artist);
 
-        when(artistRepository.findValidaAritst()).thenReturn(artists);
+        when(artistRepository.findValidAritst()).thenReturn(artists);
         List<Artist> result = artistService.getValidArtists();
 
         assertNotNull(result);
         assertEquals(result.size(), 1);
+    }
+
+    @Test
+    void validateArtist_SuccessfulFlow() {
+        // Arrange
+        Long artistId = 1L;
+        Long verificationId = 2L;
+
+        Artist artist = new Artist();
+        artist.setId(artistId);
+        artist.setArtistName("Juan Perez");
+        artist.setIsVerificated(false);
+
+        Verification verification = new Verification();
+        verification.setId(verificationId);
+        verification.setStatus(VerificationStatus.PENDING);
+
+        when(artistRepository.findById(artistId)).thenReturn(Optional.of(artist));
+        when(verificationRepository.findById(verificationId)).thenReturn(Optional.of(verification));
+
+        // Act
+        artistService.validateArtist(artistId, verificationId);
+
+        // Assert
+        assertTrue(artist.getIsVerificated());
+        assertEquals(VerificationStatus.ACCEPTED, verification.getStatus());
+        verify(artistRepository).save(artist);
+        verify(categoryRepository).save(argThat(cat -> cat.getName().equals("JUANPEREZ")));
+        verify(verificationRepository).save(verification);
+    }
+
+    @Test
+    void validateArtist_ArtistNotFound_ThrowsException() {
+        // Arrange
+        when(artistRepository.findById(1L)).thenReturn(Optional.empty());
+
+        // Act & Assert
+        AppExceptions.ResourceNotFoundException ex = assertThrows(
+                AppExceptions.ResourceNotFoundException.class,
+                () -> artistService.validateArtist(1L, 2L));
+        assertEquals("Artist not found", ex.getMessage());
+        verify(artistRepository, never()).save(any());
+        verify(categoryRepository, never()).save(any());
+        verify(verificationRepository, never()).save(any());
+    }
+
+    @Test
+    void validateArtist_VerificationNotFound_ThrowsException() {
+        // Arrange
+        Long artistId = 1L;
+        Long verificationId = 2L;
+
+        Artist artist = new Artist();
+        artist.setId(artistId);
+        artist.setArtistName("Juan Perez");
+        artist.setIsVerificated(false);
+
+        when(artistRepository.findById(artistId)).thenReturn(Optional.of(artist));
+        when(verificationRepository.findById(verificationId)).thenReturn(Optional.empty());
+
+        // Act & Assert
+        AppExceptions.ResourceNotFoundException ex = assertThrows(
+                AppExceptions.ResourceNotFoundException.class,
+                () -> artistService.validateArtist(artistId, verificationId));
+        assertEquals("Verification not found", ex.getMessage());
+
+        verify(artistRepository).save(artist);
+        verify(categoryRepository).save(any());
+        verify(verificationRepository, never()).save(any());
+    }
+
+    @Test
+    void getArtistWithDetails_SuccessfulFlow() {
+        // Arrange
+        Long artistId = 1L;
+
+        Artist artist = new Artist();
+        artist.setId(artistId);
+        artist.setArtistName("Juan Perez");
+        artist.setMainColor("blue");
+        artist.setBannerPhoto("banner.jpg");
+
+        List<Product> products = List.of(new Product(), new Product());
+        List<Event> events = List.of(new Event(), new Event());
+
+        when(artistRepository.findById(artistId)).thenReturn(Optional.of(artist));
+        when(productService.findProductsByArtist("juanperez")).thenReturn(products);
+        when(eventService.findEventThisYearByArtist(artistId)).thenReturn(events);
+
+        // Act
+        ArtistDTO result = artistService.getArtistWithDetails(artistId);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals("Juan Perez", result.getArtistName());
+        assertEquals("blue", result.getPrimaryColor());
+        assertEquals("banner.jpg", result.getBannerPhoto());
+        assertEquals(events, result.getArtistEvents());
+
+        verify(artistRepository).findById(artistId);
+        verify(productService).findProductsByArtist("JUANPEREZ");
+        verify(eventService).findEventThisYearByArtist(artistId);
+    }
+
+    @Test
+    void getArtistWithDetails_ArtistNotFound_ThrowsException() {
+        // Arrange
+        when(artistRepository.findById(1L)).thenReturn(Optional.empty());
+
+        // Act & Assert
+        AppExceptions.ResourceNotFoundException ex = assertThrows(
+                AppExceptions.ResourceNotFoundException.class,
+                () -> artistService.getArtistWithDetails(1L));
+        assertEquals("Artist not found with id: 1", ex.getMessage());
+        verify(productService, never()).findProductsByArtist(any());
+        verify(eventService, never()).findEventThisYearByArtist(any());
+    }
+
+    @Test
+    void getArtistDashboard_SuccessfulFlow() {
+        // Arrange
+        Long artistId = 1L;
+        int year = 2025;
+
+        Artist artist = new Artist();
+        artist.setId(artistId);
+        artist.setArtistName("Artst Name");
+
+        Order order = new Order();
+        order.setCreatedDate(LocalDateTime.now());
+        order.setCountry("ESP");
+
+        OrderItem orderItem = new OrderItem();
+        orderItem.setName("OrderItem");
+        orderItem.setOrder(order);
+
+        when(artistRepository.findById(artistId)).thenReturn(Optional.of(artist));
+        when(artistRepository.findFutureEventsForArtist(artistId, year)).thenReturn(10);
+        when(artistRepository.findPastEventsForArtist(artistId, year)).thenReturn(5);
+        when(artistRepository.isArtistVerificated(artistId)).thenReturn(true);
+        when(artistRepository.findLatestVerificationStatus(artistId))
+                .thenReturn(List.of(VerificationStatus.ACCEPTED));
+        when(artistRepository.findById(artistId)).thenReturn(Optional.of(artist));
+        when(artistRepository.getOrdersPerYear(eq(artist.getArtistName().toUpperCase()), eq(year)))
+                .thenReturn(List.of(orderItem));
+
+        // Act
+        ArtistDashboardDTO result = artistService.getArtistDashboard(artistId, year);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(10, result.getFutureEvents());
+        assertEquals(5, result.getPastEvents());
+        assertEquals(1, result.getOrderItemCount().get("OrderItem"));
+        assertEquals(1, result.getMostCountrySold().get("ESP"));
     }
 
 }

@@ -4,7 +4,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.artists_heaven.entities.user.User;
 import com.artists_heaven.shopping_cart.CartItemDTO;
+import com.stripe.Stripe;
+import com.stripe.model.checkout.Session;
 
+import io.github.cdimascio.dotenv.Dotenv;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -17,19 +20,25 @@ import io.swagger.v3.oas.annotations.parameters.RequestBody;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 @RestController
 @RequestMapping("/api/payment_process")
 public class PaymentGatewayController {
 
     private final PaymentGatewayService paymentGatewayService;
+
+     Dotenv dotenv = Dotenv.load();
 
     public PaymentGatewayController(PaymentGatewayService paymentGatewayService) {
         this.paymentGatewayService = paymentGatewayService;
@@ -75,6 +84,25 @@ public class PaymentGatewayController {
             return ResponseEntity.ok("Evento recibido");
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error interno del servidor");
+        }
+    }
+
+    @GetMapping("/confirm")
+    public ResponseEntity<?> confirmPayment(@RequestParam String session_id) {
+        try {
+            Stripe.apiKey = dotenv.get("STRIPE_KEY");
+            Session session = Session.retrieve(session_id);
+            if ("paid".equals(session.getPaymentStatus())) {
+                return ResponseEntity.ok(Map.of(
+                        "status", "success",
+                        "amount_total", session.getAmountTotal() / 100,
+                        "currency", session.getCurrency(),
+                        "email", session.getCustomerDetails().getEmail()));
+            } else {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("status", "pending"));
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", e.getMessage()));
         }
     }
 

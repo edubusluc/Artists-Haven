@@ -4,16 +4,23 @@ import Select from 'react-select';
 import { useTranslation } from 'react-i18next';
 
 const inputFields = [
-  { label: 'Nombre', name: 'firstName', type: 'text', required: true },
-  { label: 'Apellido', name: 'lastName', type: 'text', required: true },
-  { label: 'Correo Electrónico', name: 'email', type: 'email', required: true },
-  { label: 'Usuario', name: 'username', type: 'text', required: true },
-  { label: 'Contraseña', name: 'password', type: 'password', required: true },
-  { label: 'Teléfono', name: 'phone', type: 'tel', required: true },
-  { label: 'País', name: 'country', required: true },
-  { label: 'Código Postal', name: 'postalCode', type: 'text', required: true },
-  { label: 'Ciudad', name: 'city', type: 'text', required: true },
-  { label: 'Dirección', name: 'address', type: 'text', required: true },
+  { labelKey: 'userForm.label.firstName', name: 'firstName', type: 'text' },
+  { labelKey: 'userForm.label.lastName', name: 'lastName', type: 'text' },
+  { labelKey: 'userForm.label.email', name: 'email', type: 'email' },
+  { labelKey: 'userForm.label.username', name: 'username', type: 'text' },
+  { labelKey: 'userForm.label.password', name: 'password', type: 'password' },
+  { labelKey: 'userForm.label.phone', name: 'phone', type: 'tel' },
+  { labelKey: 'userForm.label.country', name: 'country' },
+  { labelKey: 'userForm.label.postalCode', name: 'postalCode', type: 'text' },
+  { labelKey: 'userForm.label.city', name: 'city', type: 'text' },
+  { labelKey: 'userForm.label.address', name: 'address', type: 'text' },
+];
+
+const sections = [
+  { titleKey: "userForm.title.personalData", fields: ['firstName', 'lastName'] },
+  { titleKey: "userForm.title.contactData", fields: ['email', 'phone'] },
+  { titleKey: "userForm.title.location", fields: ['city', 'postalCode', 'address'] },
+  { titleKey: "userForm.title.credentials", fields: ['username', 'password'] }
 ];
 
 const UserRegister = () => {
@@ -25,6 +32,12 @@ const UserRegister = () => {
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
   const currentLang = i18n.language;
+  const [validationErrors, setValidationErrors] = useState({});
+
+  useEffect(() => {
+        setValidationErrors({})
+    }, [currentLang]);
+
 
   useEffect(() => {
     fetch('https://restcountries.com/v3.1/independent?status=true')
@@ -61,23 +74,62 @@ const UserRegister = () => {
     e.preventDefault();
     setErrorMessage('');
 
-    for (const field of inputFields) {
-      if (field.required && !user[field.name].trim()) {
-        setErrorMessage(`Por favor, completa el campo "${field.label}".`);
-        return;
-      }
+    let errors = {};
+
+    if (!user.firstName.trim()) {
+      errors.firstName = t('form.error.requiredFirstName');
+    }
+    if (!user.lastName.trim()) {
+      errors.lastName = t('form.error.requiredLastName');
+    }
+    if (!user.email.trim()) {
+      errors.email = t('form.error.requiredEmail');
+    }
+    if (!user.username.trim()) {
+      errors.username = t('userForm.error.requiredUsername');
+    }
+    if (!user.password.trim()) {
+      errors.password = t('form.error.requiredPassword');
+    }
+    if (!user.postalCode.trim()) {
+      errors.postalCode = t('userForm.error.requiredPostalCode');
     }
 
+    if (!user.address.trim()) {
+      errors.address = t('userForm.error.requiredAddress');
+    }
+
+    if (!user.city.trim()) {
+      errors.city = t('userForm.error.requiredCity');
+    }
+
+    if (!user.phone.trim()) {
+      errors.phone = t('userForm.error.requiredPhone');
+    }
+
+    if (!user.country.trim()) {
+      errors.country = t('userForm.error.requiredCountry');
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+
+
     try {
-      const response = await fetch('/api/users/register', {
+      setValidationErrors({});
+      const response = await fetch(`/api/users/register?lang=${currentLang}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(user),
       });
 
+      const result = await response.json();
+      const errorMessage = result.message;
+
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Error al registrar el usuario');
+        throw new Error(errorMessage);
       }
 
       setUser(inputFields.reduce((acc, field) => ({ ...acc, [field.name]: '' }), {}));
@@ -109,26 +161,21 @@ const UserRegister = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 py-12 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 py-12 px-4 mt-10">
       <div className="max-w-5xl mx-auto bg-white rounded-3xl shadow-xl p-10">
-        <h2 className="text-4xl font-bold text-center text-blue-700 mb-10">Registro de Usuario</h2>
+        <h2 className="text-4xl font-bold text-center text-blue-700 mb-10">{t('userForm.title.register')}</h2>
 
         <form onSubmit={handleSubmit} className="grid md:grid-cols-2 gap-8">
-          {[
-            { title: "Datos personales", fields: ['firstName', 'lastName'] },
-            { title: "Datos de contacto", fields: ['email', 'phone'] },
-            { title: "Ubicación", fields: ['city', 'postalCode', 'address'] },
-            { title: "Credenciales", fields: ['username', 'password'] }
-          ].map((section, index) => (
+          {sections.map((section, index) => (
             <div key={index}>
-              <h3 className="text-lg font-semibold text-blue-600 mb-4 border-b pb-2">{section.title}</h3>
+              <h3 className="text-lg font-semibold text-blue-600 mb-4 border-b pb-2">{t(section.titleKey)}</h3>
               <div className="grid grid-cols-1 gap-5">
                 {section.fields.map((name) => {
-                  const { label, type, required } = inputFields.find((f) => f.name === name);
+                  const { labelKey, type, required } = inputFields.find((f) => f.name === name);
                   return (
                     <div key={name}>
                       <label htmlFor={name} className="block text-sm font-medium text-gray-700 mb-1">
-                        {label} {required && <span className="text-red-500">*</span>}
+                        {t(labelKey)} {required && <span className="text-red-500">*</span>}
                       </label>
                       <input
                         id={name}
@@ -136,9 +183,11 @@ const UserRegister = () => {
                         type={type}
                         value={user[name]}
                         onChange={handleChange}
-                        required={required}
                         className="w-full px-4 py-2 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 transition duration-200"
                       />
+                      {validationErrors[name] && (
+                        <p className="text-red-600 text-sm">{validationErrors[name]}</p>
+                      )}
                     </div>
                   );
                 })}
@@ -148,10 +197,10 @@ const UserRegister = () => {
 
           {/* Selector de país */}
           <div className="md:col-span-2">
-            <h3 className="text-lg font-semibold text-blue-600 mb-4 border-b pb-2">País</h3>
+            <h3 className="text-lg font-semibold text-blue-600 mb-4 border-b pb-2">{t('userForm.label.country')}</h3>
             <div>
               <label htmlFor="country" className="block text-sm font-medium text-gray-700 mb-1">
-                País <span className="text-red-500">*</span>
+                {t('userForm.label.country')} <span className="text-red-500">*</span>
               </label>
               <Select
                 id="country"
@@ -159,7 +208,7 @@ const UserRegister = () => {
                 options={countries}
                 value={countries.find((c) => c.value === user.country) || null}
                 onChange={handleCountryChange}
-                placeholder="Selecciona un país"
+                placeholder={t('userForm.placeholder.selectCountry')}
                 isClearable
                 components={{ Option: customOption, SingleValue: customSingleValue }}
                 className="react-select-container"
@@ -180,6 +229,9 @@ const UserRegister = () => {
                   }),
                 }}
               />
+              {validationErrors.country && (
+                <p className="text-red-600 text-sm">{validationErrors.country}</p>
+              )}
             </div>
           </div>
 
@@ -196,7 +248,7 @@ const UserRegister = () => {
               type="submit"
               className="bg-blue-600 hover:bg-blue-700 text-white font-semibold w-full max-w-sm py-3 rounded-xl shadow-md transition transform hover:scale-105"
             >
-              Registrar Usuario
+              {t('userForm.button.register')}
             </button>
           </div>
         </form>
@@ -206,11 +258,10 @@ const UserRegister = () => {
           onClick={() => navigate('/auth/login')}
           className="mt-8 text-sm text-blue-600 hover:underline block text-center"
         >
-          Volver al inicio
+          {t('userForm.button.back')}
         </button>
       </div>
     </div>
-
   );
 };
 

@@ -3,13 +3,17 @@ package com.artists_heaven.event;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 import java.io.IOException;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDate;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -26,6 +30,8 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.util.StringUtils;
 import com.artists_heaven.entities.artist.Artist;
 import com.artists_heaven.entities.artist.ArtistRepository;
+import com.artists_heaven.exception.AppExceptions.BadRequestException;
+import com.artists_heaven.exception.AppExceptions.ResourceNotFoundException;
 import com.artists_heaven.images.ImageServingUtil;
 
 class EventServiceTest {
@@ -54,6 +60,20 @@ class EventServiceTest {
         SecurityContextHolder.clearContext();
     }
 
+        @AfterEach
+    void cleanUp() throws Exception {
+        Path uploadDir = Paths.get("artists-heaven-backend/src/main/resources/event_media/");
+
+        if (Files.exists(uploadDir)) {
+            // Borrar todos los archivos dentro de la carpeta
+            try (DirectoryStream<Path> stream = Files.newDirectoryStream(uploadDir)) {
+                for (Path filePath : stream) {
+                    Files.deleteIfExists(filePath);
+                }
+            }
+        }
+    }
+
     @Test
     void testGetAllEvents() {
         eventService.getAllEvents();
@@ -75,7 +95,7 @@ class EventServiceTest {
         eventDto.setImage("Image");
         eventDto.setArtistId(1L);
 
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+        BadRequestException exception = assertThrows(BadRequestException.class, () -> {
             eventService.newEvent(eventDto);
         });
 
@@ -97,7 +117,7 @@ class EventServiceTest {
         eventDto.setImage("Image");
         eventDto.setArtistId(1L);
 
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+        BadRequestException exception = assertThrows(BadRequestException.class, () -> {
             eventService.newEvent(eventDto);
         });
 
@@ -118,7 +138,7 @@ class EventServiceTest {
         eventDto.setImage("Image");
         eventDto.setArtistId(null);
 
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+        ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class, () -> {
             eventService.newEvent(eventDto);
         });
         assertEquals("Artist not found", exception.getMessage());
@@ -138,9 +158,9 @@ class EventServiceTest {
         Artist artist = new Artist();
         artist.setIsVerificated(true);
         when(artistRepository.findById(anyLong())).thenReturn(Optional.of(artist));
-        when(eventRepository.save(any(Event.class))).thenThrow(new RuntimeException("Invalid data"));
+        when(eventRepository.save(any(Event.class))).thenThrow(new BadRequestException("Invalid data"));
 
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+        BadRequestException exception = assertThrows(BadRequestException.class, () -> {
             eventService.newEvent(eventDto);
         });
         assertEquals("Invalid data", exception.getMessage());
@@ -183,7 +203,7 @@ class EventServiceTest {
     void testDeleteEventThrowsExceptionForNotFound() {
         when(eventRepository.findById(1L)).thenReturn(Optional.empty());
 
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+        ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class, () -> {
             eventService.deleteEvent(1L);
         });
 
@@ -261,7 +281,7 @@ class EventServiceTest {
     void testGetEventByIdThrowsExceptionForNotFound() {
         when(eventRepository.findById(1L)).thenReturn(Optional.empty());
 
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+        ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class, () -> {
             eventService.getEventById(1L);
         });
 
@@ -360,12 +380,58 @@ class EventServiceTest {
         List<Event> events = List.of(event);
 
         when(eventRepository.findArtistEventThisYear(artistId, LocalDate.now().getYear())).thenReturn(events);
-        
+
         List<Event> result = eventService.findEventThisYearByArtist(artistId);
         assertNotNull(result);
         assertTrue(event.getDate().equals(LocalDate.now().plusDays(10)));
     }
 
+    @Test
+    void findEventThisYearByArtistInvalidId() {
+        List<Event> result = eventService.findEventThisYearByArtist(null);
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void findFutureEventsByArtist_ArtistExistsWithEvents_ReturnsEvents() {
+        Long artistId = 1L;
+        Artist artist = new Artist();
+        Event event1 = new Event();
+        Event event2 = new Event();
+        List<Event> expectedEvents = Arrays.asList(event1, event2);
+
+        when(artistRepository.findById(artistId)).thenReturn(Optional.of(artist));
+        when(eventRepository.findFutureEventsByArtist(eq(artistId), any(LocalDate.class)))
+                .thenReturn(expectedEvents);
+
+        List<Event> result = eventService.findFutureEventsByArtist(artistId);
+
+        assertEquals(2, result.size());
+        assertTrue(result.contains(event1));
+        assertTrue(result.contains(event2));
+    }
+
+    @Test
+    void findFutureEventsByArtist_ArtistExistsNoEvents_ReturnsEmptyList() {
+        Long artistId = 1L;
+        Artist artist = new Artist();
+
+        when(artistRepository.findById(artistId)).thenReturn(Optional.of(artist));
+        when(eventRepository.findFutureEventsByArtist(eq(artistId), any(LocalDate.class)))
+                .thenReturn(Collections.emptyList());
+
+        List<Event> result = eventService.findFutureEventsByArtist(artistId);
+
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void testFutureEvents() {
+        Event event = new Event();
+        when(eventRepository.findFutureEvents(LocalDate.now())).thenReturn(List.of(event));
+        List<Event> result = eventService.findFutureEvents();
+        assertNotNull(result);
+    }
 
     @AfterEach
     void tearDown() {

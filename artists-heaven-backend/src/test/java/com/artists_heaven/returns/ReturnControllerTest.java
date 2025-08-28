@@ -3,10 +3,19 @@ package com.artists_heaven.returns;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import org.springframework.http.MediaType;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -14,21 +23,35 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import com.artists_heaven.entities.user.User;
+import com.artists_heaven.exception.GlobalExceptionHandler;
 import com.artists_heaven.order.Order;
 import com.artists_heaven.order.OrderService;
+import com.artists_heaven.standardResponse.StandardResponse;
+
+import org.springframework.security.core.context.SecurityContext;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 
 class ReturnControllerTest {
+
+    private MockMvc mockMvc;
+
     @Mock
     private ReturnService returnService;
 
     @Mock
     private OrderService orderService;
+
+    @Mock
+    private MessageSource messageSource;
 
     @InjectMocks
     private ReturnController returnController;
@@ -36,6 +59,9 @@ class ReturnControllerTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+        mockMvc = MockMvcBuilders.standaloneSetup(returnController)
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .build();
     }
 
     @Test
@@ -50,31 +76,14 @@ class ReturnControllerTest {
 
         when(orderService.findOrderById(1L)).thenReturn(mockOrder);
         doNothing().when(returnService).createReturnForOrder(mockOrder, dto.getReason(), dto.getEmail());
+        when(messageSource.getMessage(eq("return.message.successful"), any(), any()))
+                .thenReturn("Solicitud de devolución creada correctamente. Devolución creada para el pedido con ID: ");
 
-        ResponseEntity<String> response = returnController.createReturnForOrder(dto);
+        ResponseEntity<StandardResponse<String>> response = returnController.createReturnForOrder(dto, "es");
 
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertTrue(response.getBody().contains("Return request created successfully"));
-    }
-
-    @Test
-    void testCreateReturnForOrder_Invalid() {
-        ReturnRequestDTO dto = new ReturnRequestDTO();
-        dto.setOrderId(1L);
-        dto.setReason("Motivo");
-        dto.setEmail("mal@example.com");
-
-        Order order = new Order();
-        order.setId(1L);
-
-        when(orderService.findOrderById(1L)).thenReturn(order);
-        doThrow(new IllegalStateException("Email inválido"))
-                .when(returnService).createReturnForOrder(order, dto.getReason(), dto.getEmail());
-
-        ResponseEntity<String> response = returnController.createReturnForOrder(dto);
-
-        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
-        assertTrue(response.getBody().contains("Email inválido"));
+        assertEquals(HttpStatus.CREATED, response.getStatusCode());
+        assertTrue(response.getBody().getMessage()
+                .contains("Solicitud de devolución creada correctamente. Devolución creada para el pedido con ID: "));
     }
 
     @Test
@@ -132,9 +141,10 @@ class ReturnControllerTest {
     }
 
     @Test
-    void testGetReturnLabel_UnauthenticatedUserWithWrongEmail() {
+    void testGetReturnLabel_UnauthenticatedUserWithWrongEmail() throws Exception {
         Long orderId = 1L;
 
+        // Crear el usuario y la orden
         User user = new User();
         user.setEmail("real@example.com");
         user.setId(99L);
@@ -142,38 +152,60 @@ class ReturnControllerTest {
         Order order = new Order();
         order.setUser(user);
 
-        SecurityContextHolder.clearContext();
+        // Simulamos la respuesta del servicio
+        when(orderService.findOrderById(orderId)).thenReturn(order);
+
+        // Limpiamos el contexto de seguridad (usuario no autenticado)
+        SecurityContext securityContext = mock(SecurityContext.class);
+        when(securityContext.getAuthentication()).thenReturn(null);
+        SecurityContextHolder.setContext(securityContext);
+
+        // Llamada al controlador
+        mockMvc.perform(get("/api/returns/{orderId}/label", orderId)
+                .param("email", "fake@example.com")
+                .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isForbidden())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.message").value("You are not allowed to access this return label"))
+                .andExpect(jsonPath("$.status").value(403));
+
+        verify(orderService).findOrderById(orderId);
+        verify(returnService, never()).generateReturnLabelPdf(anyLong());
+    }
+
+    // Escenario 3: Usuario autenticado pero NO dueño -> 403
+    @Test
+    void testGetReturnLabel_AuthenticatedUserNotOwner() throws Exception {
+        Long orderId = 3L;
+
+        User orderUser = new User();
+        orderUser.setEmail("owner@example.com");
+        orderUser.setId(101L);
+
+        Order order = new Order();
+        order.setUser(orderUser);
 
         when(orderService.findOrderById(orderId)).thenReturn(order);
 
-        ResponseEntity<byte[]> response = returnController.getReturnLabel(orderId, "fake@example.com");
-
-        assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
-    }
-
-    @Test
-    void testGetReturnLabel_AuthenticatedWrongUser() {
-        Long orderId = 1L;
-
-        User userInOrder = new User();
-        userInOrder.setId(1L);
-        userInOrder.setEmail("cliente@example.com");
-
-        User loggedInUser = new User();
-        loggedInUser.setId(2L);
-
-        Order order = new Order();
-        order.setUser(userInOrder);
+        // Usuario autenticado distinto
+        User loggedUser = new User();
+        loggedUser.setId(202L);
 
         Authentication auth = mock(Authentication.class);
         when(auth.isAuthenticated()).thenReturn(true);
-        when(auth.getPrincipal()).thenReturn(loggedInUser);
-        SecurityContextHolder.getContext().setAuthentication(auth);
+        when(auth.getPrincipal()).thenReturn(loggedUser);
 
-        when(orderService.findOrderById(orderId)).thenReturn(order);
+        SecurityContext securityContext = mock(SecurityContext.class);
+        when(securityContext.getAuthentication()).thenReturn(auth);
+        SecurityContextHolder.setContext(securityContext);
 
-        ResponseEntity<byte[]> response = returnController.getReturnLabel(orderId, null);
-        assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
+        mockMvc.perform(get("/api/returns/{orderId}/label", orderId)
+                .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("You are not allowed to access this return label"))
+                .andExpect(jsonPath("$.status").value(403));
+
+        verify(returnService, never()).generateReturnLabelPdf(anyLong());
     }
 
     @AfterEach

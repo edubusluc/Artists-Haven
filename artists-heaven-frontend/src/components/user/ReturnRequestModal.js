@@ -1,9 +1,11 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 const ReturnRequestModal = ({ isOpen, onClose, onSubmit }) => {
   const [reason, setReason] = useState("");
   const [email, setEmail] = useState("");
   const authToken = localStorage.getItem("authToken");
+  const {t} = useTranslation();
 
   if (!isOpen) return null;
 
@@ -11,19 +13,19 @@ const ReturnRequestModal = ({ isOpen, onClose, onSubmit }) => {
     e.preventDefault();
 
     if (reason.trim() === "") {
-      alert("Por favor, ingresa una razón para la devolución.");
+      alert(t('returnRequestModal.reasonError'));
       return;
     }
 
     if (authToken == null) {
       if (email.trim() === "") {
-        alert("Por favor, ingresa el correo con el que realizaste tu orden.");
+        alert(t('returnRequestModal.emailError'));
         return;
       }
       // Validación básica de formato de correo
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
-        alert("Por favor, ingresa un correo electrónico válido.");
+        alert(t('returnRequestModal.emailRegexError'));
         return;
       }
     }
@@ -43,13 +45,13 @@ const ReturnRequestModal = ({ isOpen, onClose, onSubmit }) => {
         className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-xl font-semibold mb-4">Reason for Return</h2>
+        <h2 className="text-xl font-semibold mb-4">{t('returnRequestModal.reasonForReturn')}</h2>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {authToken == null && (
             <input
               type="email"
               className="border rounded-md p-2"
-              placeholder="Ingresa el correo con el que realizaste tu orden"
+              placeholder={t('returnRequestModal.emailPlaceholder')}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -58,7 +60,7 @@ const ReturnRequestModal = ({ isOpen, onClose, onSubmit }) => {
           <textarea
             className="border rounded-md p-2 resize-none"
             rows={4}
-            placeholder="Write your reason here..."
+            placeholder={t('returnRequestModal.reasonPlaceholder')}
             value={reason}
             onChange={(e) => setReason(e.target.value)}
           />
@@ -67,18 +69,18 @@ const ReturnRequestModal = ({ isOpen, onClose, onSubmit }) => {
               type="button"
               onClick={() => {
                 setReason("");
-                if (setEmail) setEmail(""); // Optional: clear email too
+                if (setEmail) setEmail(""); 
                 onClose();
               }}
               className="px-4 py-2 rounded bg-gray-300 hover:bg-gray-400"
             >
-              Cancel
+              {t('returnRequestModal.cancel')}
             </button>
             <button
               type="submit"
               className="px-4 py-2 rounded bg-yellow-400 hover:bg-yellow-500 text-black font-semibold"
             >
-              Submit
+              {t('returnRequestModal.submit')}
             </button>
           </div>
         </form>

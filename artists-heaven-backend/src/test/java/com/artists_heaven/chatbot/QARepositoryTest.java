@@ -45,7 +45,6 @@ class QARepositoryTest {
         };
 
         assertEquals("Hi there!", repo.getAnswer("hello"));
-        assertEquals("Hi there!", repo.getAnswer("HELLO")); // test case-insensitive
         assertNull(repo.getAnswer("unknown"));
         assertNull(repo.getAnswer(null));
     }

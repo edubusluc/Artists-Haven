@@ -1,23 +1,18 @@
-import React from "react";
-import { useNavigate } from "react-router-dom";
+import { useAuth } from "./useAuth";
 
 const Logout = () => {
-  const navigate = useNavigate();
+  const { logout } = useAuth();
 
   const handleLogout = () => {
-    // Eliminar el token y el correo del localStorage
-    localStorage.removeItem("authToken");
-    localStorage.removeItem("userEmail");
-    localStorage.removeItem("role");
-
-    // Redirigir al usuario a la página de inicio (o login)
-    navigate("/");  // Puedes redirigir a la página que desees
+    logout();
     window.location.reload();
   };
 
   return (
     <div>
-      <button onClick={handleLogout}>Cerrar Sesión</button>
+      <button onClick={handleLogout} className="w-full rounded-lgtransition text-left">
+        Cerrar Sesión
+      </button>
     </div>
   );
 };

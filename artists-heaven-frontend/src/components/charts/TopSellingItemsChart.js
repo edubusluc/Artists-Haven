@@ -9,12 +9,15 @@ import {
     Legend,
     Title,
 } from 'chart.js';
+import { useTranslation } from 'react-i18next';
+
 
 ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend, Title);
 
 const TopSellingItemsChart = ({ orderItemCount }) => {
+    const {t} = useTranslation();
     if (!orderItemCount || Object.keys(orderItemCount).length === 0) {
-        return <p className="text-gray-500">No hay datos de productos vendidos.</p>;
+        return <p className="text-gray-500">{t('topSellingItemsChart.noDataAvailable')}</p>;
     }
 
     const labels = Object.keys(orderItemCount);

@@ -1,5 +1,6 @@
 package com.artists_heaven.shoppingCart;
 
+import static org.junit.Assert.assertNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -8,6 +9,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.never;
 
 import java.util.ArrayList;
@@ -23,6 +25,7 @@ import org.mockito.MockitoAnnotations;
 import com.artists_heaven.entities.user.User;
 import com.artists_heaven.entities.user.UserService;
 import com.artists_heaven.product.Product;
+import com.artists_heaven.product.Section;
 import com.artists_heaven.shopping_cart.CartItem;
 import com.artists_heaven.shopping_cart.CartItemRepository;
 import com.artists_heaven.shopping_cart.ShoppingCart;
@@ -196,6 +199,92 @@ class ShoppingCartServiceTest {
     }
 
     @Test
+    void addProductsAccessory_newItemAddedWithNullSize() {
+        Long userId = 1L;
+        User mockUser = new User();
+        mockUser.setId(userId);
+
+        Product accessory = new Product();
+        accessory.setId(10L);
+        accessory.setSection(Section.ACCESSORIES);
+
+        ShoppingCart cart = new ShoppingCart();
+        cart.setUser(mockUser);
+        cart.setItems(new ArrayList<>());
+
+        when(userService.getUserById(userId)).thenReturn(mockUser);
+        when(shoppingCartRepository.findShoppingCartByUserId(userId)).thenReturn(Optional.of(cart));
+
+        List<CartItem> result = shoppingCartService.addProducts(userId, accessory, null, 2);
+
+        assertEquals(1, result.size());
+        CartItem item = result.get(0);
+        assertEquals(accessory.getId(), item.getProduct().getId());
+        assertNull(item.getSize()); // Tamaño debe ser null para accesorios
+        assertEquals(2, item.getQuantity());
+        verify(cartItemRepository, times(1)).save(any(CartItem.class));
+    }
+
+    @Test
+    void addProductsAccessory_existingItemIncreasesQuantity() {
+        Long userId = 1L;
+        User mockUser = new User();
+        mockUser.setId(userId);
+
+        Product accessory = new Product();
+        accessory.setId(10L);
+        accessory.setSection(Section.ACCESSORIES);
+
+        CartItem existing = new CartItem();
+        existing.setProduct(accessory);
+        existing.setQuantity(3);
+
+        ShoppingCart cart = new ShoppingCart();
+        cart.setUser(mockUser);
+        cart.setItems(new ArrayList<>(List.of(existing)));
+
+        when(userService.getUserById(userId)).thenReturn(mockUser);
+        when(shoppingCartRepository.findShoppingCartByUserId(userId)).thenReturn(Optional.of(cart));
+
+        List<CartItem> result = shoppingCartService.addProducts(userId, accessory, null, 2);
+
+        assertEquals(1, result.size());
+        assertEquals(5, result.get(0).getQuantity()); // Se suma la cantidad
+        verify(cartItemRepository, times(1)).save(existing);
+    }
+
+    @Test
+    void addProductsClothing_existingItemDifferentSize_addsNewItem() {
+        Long userId = 1L;
+        User mockUser = new User();
+        mockUser.setId(userId);
+
+        Product shirt = new Product();
+        shirt.setId(20L);
+        shirt.setSection(Section.TSHIRT);
+
+        CartItem existing = new CartItem();
+        existing.setProduct(shirt);
+        existing.setSize("M");
+        existing.setQuantity(2);
+
+        ShoppingCart cart = new ShoppingCart();
+        cart.setUser(mockUser);
+        cart.setItems(new ArrayList<>(List.of(existing)));
+
+        when(userService.getUserById(userId)).thenReturn(mockUser);
+        when(shoppingCartRepository.findShoppingCartByUserId(userId)).thenReturn(Optional.of(cart));
+
+        // Agregar misma ropa pero talla diferente
+        List<CartItem> result = shoppingCartService.addProducts(userId, shirt, "L", 1);
+
+        assertEquals(2, result.size());
+        CartItem newItem = result.stream().filter(i -> "L".equals(i.getSize())).findFirst().orElseThrow();
+        assertEquals(1, newItem.getQuantity());
+        verify(cartItemRepository, times(1)).save(newItem);
+    }
+
+    @Test
     void addProductsNonAuthenticatedAddsNewItemToEmptyCart() {
         // Datos de prueba
         ShoppingCart shoppingCart = new ShoppingCart();
@@ -347,6 +436,96 @@ class ShoppingCartServiceTest {
         assertEquals("L", preservedItem.getSize());
         assertEquals(1, preservedItem.getQuantity());
         verify(cartItemRepository, never()).save(any(CartItem.class));
+    }
+
+    @Test
+    void addProductsNonAuthenticated_cartItemsNull_initializesList() {
+        ShoppingCart cart = new ShoppingCart();
+        cart.setItems(null);
+
+        Product product = new Product();
+        product.setId(1L);
+        product.setSection(Section.TSHIRT);
+
+        List<CartItem> items = shoppingCartService.addProductsNonAuthenticated(cart, product, "M", 2);
+
+        assertNotNull(items);
+        assertEquals(1, items.size());
+        assertEquals("M", items.get(0).getSize());
+        assertEquals(2, items.get(0).getQuantity());
+    }
+
+    @Test
+    void addProductsNonAuthenticated_existingAccessory_increasesQuantity() {
+        Product product = new Product();
+        product.setId(1L);
+        product.setSection(Section.ACCESSORIES);
+
+        CartItem existing = new CartItem();
+        existing.setProduct(product);
+        existing.setQuantity(3);
+
+        ShoppingCart cart = new ShoppingCart();
+        cart.setItems(new ArrayList<>(List.of(existing)));
+
+        List<CartItem> items = shoppingCartService.addProductsNonAuthenticated(cart, product, null, 2);
+
+        assertEquals(1, items.size());
+        assertEquals(5, items.get(0).getQuantity());
+        verify(cartItemRepository, times(1)).save(existing);
+    }
+
+    @Test
+    void addProductsNonAuthenticated_existingClothing_sameSize_increasesQuantity() {
+        Product product = new Product();
+        product.setId(1L);
+        product.setSection(Section.TSHIRT);
+
+        CartItem existing = new CartItem();
+        existing.setProduct(product);
+        existing.setSize("M");
+        existing.setQuantity(1);
+
+        ShoppingCart cart = new ShoppingCart();
+        cart.setItems(new ArrayList<>(List.of(existing)));
+
+        List<CartItem> items = shoppingCartService.addProductsNonAuthenticated(cart, product, "M", 2);
+
+        assertEquals(1, items.size());
+        assertEquals(3, items.get(0).getQuantity());
+        verify(cartItemRepository, times(1)).save(existing);
+    }
+
+    @Test
+    void addProductsNonAuthenticated_newAccessory_addedToCart() {
+        Product product = new Product();
+        product.setId(1L);
+        product.setSection(Section.ACCESSORIES);
+
+        ShoppingCart cart = new ShoppingCart();
+        cart.setItems(new ArrayList<>());
+
+        List<CartItem> items = shoppingCartService.addProductsNonAuthenticated(cart, product, null, 2);
+
+        assertEquals(1, items.size());
+        assertNull(items.get(0).getSize());
+        assertEquals(2, items.get(0).getQuantity());
+    }
+
+    @Test
+    void addProductsNonAuthenticated_newClothing_addedToCart() {
+        Product product = new Product();
+        product.setId(1L);
+        product.setSection(Section.TSHIRT);
+
+        ShoppingCart cart = new ShoppingCart();
+        cart.setItems(new ArrayList<>());
+
+        List<CartItem> items = shoppingCartService.addProductsNonAuthenticated(cart, product, "L", 3);
+
+        assertEquals(1, items.size());
+        assertEquals("L", items.get(0).getSize());
+        assertEquals(3, items.get(0).getQuantity());
     }
 
     @Test
@@ -502,6 +681,37 @@ class ShoppingCartServiceTest {
         // Verificaciones
         assertNotNull(result);
         assertEquals(0, result.size()); // El item se elimina completamente
+    }
+
+    @Test
+    void testDeleteShoppingCartUserItems() {
+        User user = new User();
+        user.setId(1L);
+
+        // Crear un carrito con algunos items
+        ShoppingCart cart = new ShoppingCart();
+        cart.setUser(user);
+        CartItem item1 = new CartItem();
+        CartItem item2 = new CartItem();
+        List<CartItem> items = new ArrayList<>(List.of(item1, item2));
+        cart.setItems(items);
+
+        // Mockear getShoppingCart para que devuelva nuestro carrito
+        when(userService.getUserById(1l)).thenReturn(user);
+        when(shoppingCartRepository.findShoppingCartByUserId(anyLong())).thenReturn(Optional.of(cart));
+
+        // Llamar al método a testear
+        shoppingCartService.deleteShoppingCartUserItems(user.getId());
+
+        // Verificar que cada item se eliminó
+        verify(cartItemRepository, times(1)).delete(item1);
+        verify(cartItemRepository, times(1)).delete(item2);
+
+        // Verificar que el carrito se actualizó con lista vacía
+        assertTrue(cart.getItems().isEmpty());
+
+        // Verificar que se guardó el carrito
+        verify(shoppingCartRepository, times(1)).save(cart);
     }
 
 }

@@ -1,24 +1,37 @@
 package com.artists_heaven.verification;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.*;
 
-import java.io.IOException;
-import java.util.Map;
+import java.util.Locale;
 
-import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.multipart.MultipartFile;
+import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import com.artists_heaven.email.EmailSenderService;
 import com.artists_heaven.entities.artist.Artist;
+import com.artists_heaven.exception.AppExceptions;
+import com.artists_heaven.exception.GlobalExceptionHandler;
 import com.artists_heaven.images.ImageServingUtil;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
 class VerificationControllerTest {
+
+    private MockMvc mockMvc;
 
     @Mock
     private EmailSenderService emailSenderService;
@@ -29,91 +42,107 @@ class VerificationControllerTest {
     @Mock
     private ImageServingUtil imageServingUtil;
 
+    @Mock
+    private MessageSource messageSource;
+
     @InjectMocks
     private VerificationController verificationController;
-
-    private final String UPLOAD_DIR = "artists-heaven-backend/src/main/resources/verification_media";
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+        mockMvc = MockMvcBuilders.standaloneSetup(verificationController)
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .build();
     }
 
     @Test
-    void testSendValidation_ArtistNotFound() {
-        String email = "test@example.com";
-        MultipartFile video = mock(MultipartFile.class);
+    void testSendValidation_Success() throws Exception {
+        MockMultipartFile video = new MockMultipartFile("video", "video.mp4", "video/mp4", "dummy".getBytes());
+        String email = "artist@example.com";
+        String lang = "en";
 
-        when(verificationService.validateArtist(email)).thenReturn(null);
-
-        ResponseEntity<Map<String, Object>> response = verificationController.sendValidation(email, video);
-
-        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
-        assertEquals("User is not an artist", response.getBody().get("error"));
-    }
-
-    @Test
-    void testSendValidation_ArtistNotEligible() {
-        String email = "test@example.com";
-        MultipartFile video = mock(MultipartFile.class);
         Artist artist = new Artist();
+        artist.setEmail(email);
 
-        when(verificationService.validateArtist(email)).thenReturn(artist);
-        when(verificationService.isArtistEligibleForVerification(artist)).thenReturn(false);
+        when(verificationService.validateArtistForVerification(email)).thenReturn(artist);
+        when(imageServingUtil.saveImages(any(), anyString(), anyString(), anyBoolean()))
+                .thenReturn("http://example.com/video.mp4");
+        when(messageSource.getMessage(eq("verification.message.successful"), isNull(), any(Locale.class)))
+                .thenReturn("Verification successful");
 
-        ResponseEntity<Map<String, Object>> response = verificationController.sendValidation(email, video);
-
-        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
-        assertEquals("User is not eligible or already verified", response.getBody().get("error"));
+        mockMvc.perform(multipart("/api/verification/send")
+                .file(video)
+                .param("email", email)
+                .param("lang", lang)
+                .contentType(MediaType.MULTIPART_FORM_DATA))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Verification successful"))
+                .andExpect(jsonPath("$.status").value(HttpStatus.OK.value()));
     }
 
     @Test
-    void testSendValidation_HasPendingVerification() {
-        String email = "test@example.com";
-        MultipartFile video = mock(MultipartFile.class);
+    void testSendValidation_ArtistNotEligible() throws Exception {
+        MockMultipartFile video = new MockMultipartFile("video", "video.mp4", "video/mp4", "dummy".getBytes());
+        String email = "artist@example.com";
+
+        when(verificationService.validateArtistForVerification(email))
+                .thenThrow(new AppExceptions.ForbiddenActionException("You are not allowed to verify"));
+
+        mockMvc.perform(multipart("/api/verification/send")
+                .file(video)
+                .param("email", email)
+                .param("lang", "en")
+                .contentType(MediaType.MULTIPART_FORM_DATA))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("You are not allowed to verify"))
+                .andExpect(jsonPath("$.status").value(HttpStatus.FORBIDDEN.value()));
+    }
+
+    @Test
+    void testSendValidation_DuplicateRequest() throws Exception {
+        MockMultipartFile video = new MockMultipartFile("video", "video.mp4", "video/mp4", "dummy".getBytes());
+        String email = "artist@example.com";
+
         Artist artist = new Artist();
+        artist.setEmail(email);
 
-        when(verificationService.validateArtist(email)).thenReturn(artist);
-        when(verificationService.isArtistEligibleForVerification(artist)).thenReturn(true);
-        when(verificationService.hasPendingVerification(artist)).thenReturn(true);
+        when(verificationService.validateArtistForVerification(email)).thenReturn(artist);
+        when(imageServingUtil.saveImages(any(), anyString(), anyString(), anyBoolean()))
+                .thenReturn("http://example.com/video.mp4");
+        doThrow(new AppExceptions.DuplicateActionException("Duplicate verification request"))
+                .when(verificationService).createVerification(eq(artist), anyString());
 
-        ResponseEntity<Map<String, Object>> response = verificationController.sendValidation(email, video);
-
-        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
-        assertEquals("There is already a pending request for this user", response.getBody().get("error"));
+        mockMvc.perform(multipart("/api/verification/send")
+                .file(video)
+                .param("email", email)
+                .param("lang", "en")
+                .contentType(MediaType.MULTIPART_FORM_DATA))
+                .andExpect(jsonPath("$.status").value(HttpStatus.BAD_REQUEST.value()))
+                .andExpect(jsonPath("$.message").value("Duplicate verification request"));
     }
 
     @Test
-    void testSendValidation_Success() throws IOException {
-        String email = "test@example.com";
-        MultipartFile video = mock(MultipartFile.class);
+    void testSendValidation_InternalServerError() throws Exception {
+        MockMultipartFile video = new MockMultipartFile("video", "video.mp4", "video/mp4", "dummy".getBytes());
+        String email = "artist@example.com";
+
         Artist artist = new Artist();
-        String videoUrl = "http://example.com/video.mp4";
+        artist.setEmail(email);
 
-        when(verificationService.validateArtist(email)).thenReturn(artist);
-        when(verificationService.isArtistEligibleForVerification(artist)).thenReturn(true);
-        when(verificationService.hasPendingVerification(artist)).thenReturn(false);
-        when(imageServingUtil.saveImages(video, UPLOAD_DIR, "/verification_media/", true)).thenReturn(videoUrl);
+        when(verificationService.validateArtistForVerification(email)).thenReturn(artist);
+        when(imageServingUtil.saveImages(any(), anyString(), anyString(), anyBoolean()))
+                .thenReturn("http://example.com/video.mp4");
+        doThrow(new AppExceptions.EmailSendException("Failed to send email"))
+                .when(emailSenderService).sendVerificationEmail(artist);
 
-        ResponseEntity<Map<String, Object>> response = verificationController.sendValidation(email, video);
-
-        verify(verificationService).createVerification(artist, videoUrl);
-        verify(emailSenderService).sendVerificationEmail(artist);
-
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals("Request submitted successfully", response.getBody().get("message"));
-    }
-
-    @Test
-    void testSendValidation_Exception() {
-        String email = "test@example.com";
-        MultipartFile video = mock(MultipartFile.class);
-
-        when(verificationService.validateArtist(email)).thenThrow(new RuntimeException("Error"));
-
-        ResponseEntity<Map<String, Object>> response = verificationController.sendValidation(email, video);
-
-        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
-        assertEquals("Error processing the request", response.getBody().get("error"));
+        mockMvc.perform(multipart("/api/verification/send")
+                .file(video)
+                .param("email", email)
+                .param("lang", "en")
+                .contentType(MediaType.MULTIPART_FORM_DATA))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.message").value("Failed to send email"))
+                .andExpect(jsonPath("$.status").value(HttpStatus.INTERNAL_SERVER_ERROR.value()));
     }
 }

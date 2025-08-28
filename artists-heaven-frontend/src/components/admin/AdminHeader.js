@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faTachometerAlt, faBoxOpen, faUsers, faBars, faShoppingCart, faUser, faRightFromBracket } from '@fortawesome/free-solid-svg-icons';
+import { faTachometerAlt, faBoxOpen, faUsers, faBars, faShoppingCart, faUser, faRightFromBracket, faShop } from '@fortawesome/free-solid-svg-icons';
 import { Link } from "react-router-dom";
 import Logout from "../Logout";
+import { useTranslation } from 'react-i18next';
 
 const AdminHeader = () => {
     const [isDropdownVisible, setDropdownVisible] = useState(false);
@@ -10,15 +11,20 @@ const AdminHeader = () => {
     const [isSidebarVisible, setSidebarVisible] = useState(false);
     const [isSidebarVisibleLeft, setSidebarVisibleLeft] = useState(false);
 
+    const { t, i18n } = useTranslation();
+    const language = i18n.language;
+    const changeLanguage = useCallback((lng) => i18n.changeLanguage(lng), [i18n]);
+
     const handleMouseLeave = () => {
         setDropdownVisible(false);
     };
 
     const links = [
-        { to: "admin/dashboard", icon: faTachometerAlt, label: "Dashboard" },
-        { to: "admin/products/store", icon: faBoxOpen, label: "Gestión de Productos" },
-        { to: "admin/orders", icon: faShoppingCart, label: "Órdenes" },
-        { to: "admin/clients", icon: faUsers, label: "Clientes" },
+        { to: "admin/dashboard", icon: faTachometerAlt, label: t('adminHeader.dashboard') },
+        { to: "admin/products/store", icon: faBoxOpen, label: t('adminHeader.productManagement') },
+        { to: "admin/orders", icon: faShoppingCart, label: t('adminHeader.orders') },
+        { to: "admin/clients", icon: faUsers, label: t('adminHeader.clients')},
+        { to: "shop", icon: faShop, label: t('adminHeader.shop') },
     ];
 
     const toggleSidebar = () => {
@@ -39,58 +45,49 @@ const AdminHeader = () => {
 
 
     return (
-        <div className="p-4"
-            style={{
-                display: "flex",
-                justifyContent: "space-between",
-                background: "white"
-            }}
-        >
-            <div
-                onClick={toggleSidebarLeft}
-                style={{
-                    cursor: "pointer",
-                    position: "relative",
-                    display: "inline-block",
-                }}
-            >
-
-                <FontAwesomeIcon icon={faBars}/>
+        <header className="flex items-center justify-between px-6 py-3 bg-white shadow-md fixed top-0 left-0 right-0 z-50">
+            {/* IZQUIERDA - Botón Menú */}
+            <div className="flex items-center">
+                <button onClick={toggleSidebarLeft} className="text-gray-700 text-xl cursor-pointer">
+                    <FontAwesomeIcon icon={faBars} />
+                </button>
             </div>
-            <p className="custom-font-shop custom-font-shop-black">ARTISTS HEAVEN</p>
+
+            {/* CENTRO - Logo */}
+            <div className="absolute left-1/2 transform -translate-x-1/2">
+                <Link to="/" className="text-lg font-bold logo-font">
+                    Artists’ Heaven
+                </Link>
+            </div>
+
+            {/* DERECHA - Usuario + Idiomas */}
+            <div className="flex items-center gap-2">
+                <button onClick={toggleSidebar} className="text-gray-700">
+                    <FontAwesomeIcon icon={faUser} />
+                </button>
+
+                {/* Selector de idioma */}
+                <div className="flex gap-2">
+                    <button onClick={() => changeLanguage('es')}>
+                        <span className="fi fi-es"></span>
+                    </button>
+                    <button onClick={() => changeLanguage('en')}>
+                        <span className="fi fi-gb"></span>
+                    </button>
+                </div>
+            </div>
+
+            {/* Overlay y sidebar derecho (perfil) */}
             {isSidebarVisible && (
                 <div
                     onClick={closeSidebar}
-                    style={{
-                        position: "fixed",
-                        top: 0,
-                        left: 0,
-                        width: "100%",
-                        height: "100%",
-                        backgroundColor: "rgba(0, 0, 0, 0.5)", // Fondo oscuro
-                        zIndex: 998, // Asegura que esté debajo del sidebar
-                    }}
+                    className="fixed inset-0 bg-black bg-opacity-50 z-40"
                 />
             )}
-
-            {/* Barra lateral (sidebar) */}
             <div
-                style={{
-                    position: "fixed",
-                    top: 0,
-                    right: isSidebarVisible ? 0 : "-400px", // Controla la visibilidad
-                    width: "400px", // El ancho estándar
-                    height: "100vh",
-                    backgroundColor: "white",
-                    boxShadow: "-2px 0 5px rgba(0,0,0,0.1)",
-                    transition: "right 0.3s ease",
-                    zIndex: 999,
-                    padding: "20px",
-                    overflowY: "auto",
-                }}
+                className={`p-4 fixed top-0 right-0 w-[400px] h-full bg-white shadow-lg z-50 transition-transform duration-300 transform ${isSidebarVisible ? "translate-x-0" : "translate-x-full"}`}
             >
-                <div>
-                    <button
+                <button
                         onClick={closeSidebar}
                         style={{
                             position: "absolute",
@@ -102,65 +99,36 @@ const AdminHeader = () => {
                             cursor: "pointer",
                         }}
                     >
-                        X
+                        ✕
                     </button>
-                    <h3 className="p-4 custom-font-shop custom-font-shop-black">My Profile</h3>
-                    <div className="p-4 ustom-font-shop-regular custom-font-shop-black">
-                        <Link to="/users/profile">
-                            <p>
-                                <FontAwesomeIcon icon={faUser} /> My Profile
-                            </p>
-                        </Link>
-                        <div className="flex items-center">
-                            <FontAwesomeIcon icon={faRightFromBracket} className="mr-1" /> 
-                            <Logout />
-                        </div>
+                <h3
+                    className="p-4 custom-font-shop custom-font-shop-black"
+                    style={{ borderBottom: "1px solid #e5e7eb" }}
+                >
+                    {t('adminHeader.myProfile')}</h3>
+                <div className="p-4 space-y-2">
+                    <Link to="/users/profile" onClick={closeSidebar} className="block">
+                        <FontAwesomeIcon icon={faUser} className="mr-2" />
+                        {t('adminHeader.myProfile')}
+                    </Link>
+                    <div className="flex items-center">
+                        <FontAwesomeIcon icon={faRightFromBracket} className="mr-2" />
+                        <Logout />
                     </div>
                 </div>
             </div>
-            <div
-                onClick={toggleSidebar}
-                style={{
-                    cursor: "pointer",
-                    position: "relative",
-                    display: "inline-block",
-                }}
-            >
-                <FontAwesomeIcon icon={faUser} />
-            </div>
 
-
-            {/* Overlay oscuro detrás del panel */}
+            {/* Overlay y sidebar izquierdo (admin links) */}
             {isSidebarVisibleLeft && (
                 <div
                     onClick={closeSidebarLeft}
-                    style={{
-                        position: "fixed",
-                        top: 0,
-                        left: 0,
-                        width: "100%",
-                        height: "100%",
-                        backgroundColor: "rgba(0, 0, 0, 0.5)",
-                        zIndex: 998,
-                    }}
+                    className="fixed inset-0 bg-black bg-opacity-50 z-40"
                 />
             )}
-
-            {/* Barra lateral (sidebar) */}
             <div
-                style={{
-                    position: "fixed",
-                    top: 0,
-                    left: isSidebarVisibleLeft ? 0 : "-400px",
-                    width: "400px",
-                    height: "100vh",
-                    backgroundColor: "white",
-                    boxShadow: "-2px 0 5px rgba(0,0,0,0.1)",
-                    transition: "left 0.3s ease",
-                    zIndex: 999,
-                    padding: "20px",
-                    overflowY: "auto",
-                }}
+                className={`fixed top-0 left-0 w-[400px] h-full p-4
+                    bg-white shadow-lg z-50 transition-transform duration-300
+                    transform ${isSidebarVisibleLeft ? "translate-x-0" : "-translate-x-full"}`}
             >
                 <button
                     onClick={closeSidebarLeft}
@@ -174,15 +142,15 @@ const AdminHeader = () => {
                         cursor: "pointer",
                     }}
                 >
-                    X
+                    ✕
                 </button>
                 <h3
                     className="p-4 custom-font-shop custom-font-shop-black"
                     style={{ borderBottom: "1px solid #e5e7eb" }}
                 >
-                    Admin Panel
+                    {t('adminHeader.adminPanel')}
                 </h3>
-                <div className="p-4 custom-font-shop-regular custom-font-shop-black">
+                <div className="p-4 space-y-4 custom-font-shop-regular custom-font-shop-black">
                     {links.map((link, index) => (
                         <Link to={link.to} key={index} onClick={closeSidebarLeft}>
                             <p className="mt-4">
@@ -193,9 +161,9 @@ const AdminHeader = () => {
                     ))}
                 </div>
             </div>
-        </div>
+        </header>
     );
-
 };
+
 
 export default AdminHeader;

@@ -10,6 +10,8 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.ManyToMany;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -22,7 +24,9 @@ public class Category {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique = true)
+    @NotBlank(message = "El nombre de la categoría es obligatorio")
+    @Size(max = 50, message = "El nombre de la categoría no debe superar los 50 caracteres")
+    @Column(unique = true, nullable = false, length = 50)
     private String name;
 
     @ManyToMany(mappedBy = "categories")

@@ -4,18 +4,16 @@ import com.artists_heaven.order.Order;
 import com.artists_heaven.order.OrderItem;
 import com.artists_heaven.order.OrderItemRepository;
 import com.artists_heaven.product.Product;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.times;
@@ -80,7 +78,7 @@ class PdfGeneratorServiceTest {
         Float total = 69.97f;
 
         // Generar el PDF
-        byte[] pdfContent = pdfGeneratorService.generateInvoice(orderReference, order, total);
+        byte[] pdfContent = pdfGeneratorService.generateInvoice(orderReference, order, total, 0l);
 
         // Comprobar que se genera el PDF correctamente
         assertNotNull(pdfContent);
@@ -99,7 +97,7 @@ class PdfGeneratorServiceTest {
         Float total = 0.0f;
 
         // Generar el PDF
-        byte[] pdfContent = pdfGeneratorService.generateInvoice(orderReference, order, total);
+        byte[] pdfContent = pdfGeneratorService.generateInvoice(orderReference, order, total, 0l);
 
         // Comprobar que se genera el PDF correctamente incluso si no hay productos
         assertNotNull(pdfContent);
@@ -116,14 +114,15 @@ class PdfGeneratorServiceTest {
         when(orderItemRepository.findByOrderId(order.getId())).thenReturn(orderItems);
         pdfGeneratorService = new PdfGeneratorService(orderItemRepository) {
             @Override
-            public byte[] generateInvoice(Long orderReference, Order order, Float total) {
+            public byte[] generateInvoice(Long orderReference, Order order, Float total, Long discount) {
                 throw new RuntimeException("Error al generar el PDF");
             }
         };
 
         // Verificar que se lanza una excepción al intentar generar la factura
         assertThrows(RuntimeException.class, () -> {
-            pdfGeneratorService.generateInvoice(12345L, order, 69.97f);
+            pdfGeneratorService.generateInvoice(12345L, order, 69.97f, 0l);
         });
     }
+
 }

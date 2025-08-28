@@ -1,9 +1,152 @@
-import { useState, useEffect, useContext } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useState, useEffect, useContext, useMemo, useCallback } from "react";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { CartContext } from "../../context/CartContext";
-import Footer from '../Footer';
-import { useTranslation } from 'react-i18next';
+import Footer from "../Footer";
+import { useTranslation } from "react-i18next";
 import AddReviewModal from "./AddReviewModal";
+import ProductCard from "./ProductCard";
+import guiaCamiseta from "../../util-image/guiaCamiseta.png";
+import guiaPantalon from "../../util-image/guiaPantalon.png";
+import ReviewsModal from "./ReviewsModal";
+import MoreInfoSlide from "./MoreInfoSlide";
+import { checkTokenExpiration } from "../../utils/authUtils";
+import SessionExpired from "../SessionExpired";
+import ProductAR from "./ProductAR";
+
+
+// ✅ Componente para mostrar imágenes
+const ProductImages = ({ images, name }) => (
+    <>
+        {/* Mobile */}
+        <div className="lg:hidden flex overflow-x-auto space-x-4 px-6 py-4 scroll-snap-x snap-mandatory">
+            {images?.map((image, index) => (
+                <div key={index} style={{ flexShrink: 0 }}>
+                    <img
+                        src={`/api/product${image}`}
+                        alt={name}
+                        className="max-w-full max-h-[300px] object-contain"
+                        loading="lazy"
+                    />
+                </div>
+            ))}
+        </div>
+        {/* Desktop */}
+        <div className="hidden lg:grid grid-cols-2 mt-10 auto-rows-auto gap-4">
+            {images?.map((image, index) => (
+                <div key={index} className="w-full">
+                    <img
+                        src={`/api/product${image}`}
+                        alt={name}
+                        className="w-full h-full object-contain"
+                        loading="lazy"
+                    />
+                </div>
+            ))}
+        </div>
+    </>
+);
+
+// ✅ Componente para seleccionar tallas
+const SizeSelector = ({ sizes, selectedSize, onSelect, sizeOrder, t }) => {
+    const availableSizes = useMemo(
+        () =>
+            Object.entries(sizes || {})
+                .filter(([size, quantity]) => quantity > 0 && sizeOrder.includes(size))
+                .sort(([a], [b]) => sizeOrder.indexOf(a) - sizeOrder.indexOf(b)),
+        [sizes, sizeOrder]
+    );
+
+    if (availableSizes.length === 0) {
+        return (
+            <p className="inter-400 text-sm flex items-center gap-2 text-red-500">
+                🚫 {t("Product out of stock")}
+            </p>
+        );
+    }
+
+    return (
+        <div className="flex flex-wrap gap-2">
+            {availableSizes.map(([size]) => (
+                <label
+                    key={size}
+                    className={`border border-gray-200 cursor-pointer w-14 h-10 text-sm text-center font-medium flex items-center justify-center ${selectedSize === size
+                        ? "bg-yellow-400 text-white hover:bg-yellow-500 transition"
+                        : "bg-white bold-arial hover:bg-gray-200 transition"
+                        }`}
+                >
+                    <input
+                        type="radio"
+                        name="size"
+                        value={size}
+                        className="hidden"
+                        onChange={(e) => onSelect(e.target.value)}
+                    />
+                    {size}
+                </label>
+            ))}
+        </div>
+    );
+};
+
+// ✅ Función para renderizar estrellas
+const renderStars = (averageRating) => {
+    const rating = parseFloat(averageRating);
+    const fullStars = Math.floor(rating);
+    const hasHalfStar = rating - fullStars >= 0.25 && rating - fullStars < 0.75;
+
+    return Array.from({ length: 5 }, (_, index) => {
+        if (index < fullStars) {
+            return (
+                <svg
+                    key={index}
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="#facc15"
+                    viewBox="0 0 24 24"
+                    width="15"
+                    height="15"
+                >
+                    <path d="M12 .587l3.668 7.571L24 9.748l-6 5.849L19.335 24 12 19.897 4.665 24 6 15.597 0 9.748l8.332-1.59z" />
+                </svg>
+            );
+        } else if (index === fullStars && hasHalfStar) {
+            return (
+                <svg
+                    key={index}
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    width="15"
+                    height="15"
+                >
+                    <defs>
+                        <linearGradient id={`half-grad-${index}`}>
+                            <stop offset="50%" stopColor="#facc15" />
+                            <stop offset="50%" stopColor="#e5e7eb" />
+                        </linearGradient>
+                    </defs>
+                    <path
+                        fill={`url(#half-grad-${index})`}
+                        d="M12 .587l3.668 7.571L24 9.748l-6 5.849L19.335 24 12 19.897 4.665 24 6 15.597 0 9.748l8.332-1.59z"
+                    />
+                </svg>
+            );
+        } else {
+            return (
+                <svg
+                    key={index}
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="#e5e7eb"
+                    viewBox="0 0 24 24"
+                    width="15"
+                    height="15"
+                >
+                    <path d="M12 .587l3.668 7.571L24 9.748l-6 5.849L19.335 24 12 19.897 4.665 24 6 15.597 0 9.748l8.332-1.59z" />
+                </svg>
+            );
+        }
+    });
+};
+
+
 
 const ProductDetails = () => {
     const [product, setProduct] = useState({});
@@ -14,89 +157,117 @@ const ProductDetails = () => {
     const navigate = useNavigate();
     const [reviews, setReviews] = useState([]);
     const { t } = useTranslation();
-    const [mainImage, setMainImage] = useState('/default-image.jpg');
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [relatedProducts, setRelatedProducts] = useState([]);
+    const [showSizeGuide, setShowSizeGuide] = useState(false);
+    const [isReviewsModalOpen, setIsReviewsModalOpen] = useState(false);
+    const [isCompositionSlideOpen, setIsCompositionSlideOpen] = useState(false);
+    const [isShippingSlideOpen, setIsShippingSlideOpen] = useState(false);
+    const [added, setAdded] = useState(false);
+    const [isClicked, setIsClicked] = useState(false);
+    const [sessionExpired, setSessionExpired] = useState(false);
+    const sizeOrder = ["XS", "S", "M", "L", "XL", "XXL"];
+    const [isAROpen, setIsAROpen] = useState(false);
 
+    const averageRating = useMemo(() => {
+        if (reviews.length === 0) return null;
+        return (
+            reviews.reduce((sum, review) => sum + review.score, 0) / reviews.length
+        ).toFixed(1);
+    }, [reviews]);
 
-    const sizeOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
-
+    // ✅ Fetch datos del producto y relacionados
     useEffect(() => {
+        const fetchProductDetails = async () => {
+            try {
+                setLoading(true);
+                const [productRes, reviewsRes] = await Promise.all([
+                    fetch(`/api/product/details/${id}`),
+                    fetch(`/api/rating/productReview/${id}`)
+                ]);
+
+                if (!productRes.ok) throw new Error("Error al obtener el producto");
+                const productData = await productRes.json();
+                productData.data.categories = productData.data.categories.map((c) => c.id);
+                setProduct(productData.data);
+
+                const relatedRes = await fetch(
+                    `/api/product/related?section=${encodeURIComponent(
+                        productData.data.section
+                    )}&id=${encodeURIComponent(productData.data.id)}`
+                );
+                if (relatedRes.ok) {
+                    const relatedData = await relatedRes.json();
+                    setRelatedProducts(relatedData.data);
+                }
+
+                if (reviewsRes.ok) {
+                    const reviewsData = await reviewsRes.json();
+                    setReviews(reviewsData.data);
+                }
+            } catch (error) {
+                console.error(error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchProductDetails();
         window.scrollTo(0, 0);
-    }, [id, product, reviews]);
-
-    useEffect(() => {
-        // Fetch producto
-        fetch(`/api/product/details/${id}`, {
-            method: "GET",
-        })
-            .then((response) => {
-                if (!response.ok) {
-                    throw new Error("Error al obtener el producto: " + response.statusText);
-                }
-                return response.json();
-            })
-            .then((data) => {
-                data.sizes = data.size;
-                data.categories = data.categories.map(category => category.id);
-                setProduct(data);
-
-                if (data.images && data.images.length > 0) {
-                    setMainImage(data.images[0]);
-                } else {
-                    setMainImage('/default-image.jpg');
-                }
-            })
-            .catch((error) => {
-                console.error(error);
-            });
-
-        // Fetch reseñas
-        fetch(`/api/rating/productReview/${id}`, {
-            method: "GET",
-        })
-            .then((response) => {
-                if (!response.ok) {
-                    throw new Error("Error al obtener las reseñas: " + response.statusText);
-                }
-                return response.json();
-            })
-            .then((additionalData) => {
-                setReviews(additionalData);
-            })
-            .catch((error) => {
-                console.error(error);
-            });
     }, [id]);
 
-    const handleAddProduct = async () => {
-        if (!selectedSize) {
-            alert("Por favor, selecciona un tamaño antes de añadir al carrito.");
+    const handleAddProduct = useCallback(async () => {
+        // 🔹 Si NO es accesorio, seguir pidiendo talla
+        if (product.section !== "ACCESSORIES" && !selectedSize) {
+            alert(t('shoppinCart.selectSizeFirst'));
             return;
         }
+
+        let availableStock;
+        let alreadyInCart;
+
+        if (product.section === "ACCESSORIES") {
+            // Para accesorios, usamos availableUnits
+            availableStock = product.availableUnits;
+            alreadyInCart =
+                shoppingCart?.items
+                    ?.filter(item => item.product.id === product.id)
+                    .reduce((sum, item) => sum + item.quantity, 0) || 0;
+        } else {
+            // Para ropa, usamos tallas
+            availableStock = product.sizes[selectedSize];
+            alreadyInCart =
+                shoppingCart?.items
+                    ?.filter(item => item.product.id === product.id && item.size === selectedSize)
+                    .reduce((sum, item) => sum + item.quantity, 0) || 0;
+        }
+
+        if (alreadyInCart >= availableStock) {
+            alert("No puedes añadir más unidades. Stock insuficiente.");
+            return;
+        }
+
+        setAdded(true);
+        setTimeout(() => setAdded(false), 500);
 
         const endpoint = authToken
             ? `/api/myShoppingCart/addProducts`
             : `/api/myShoppingCart/addProductsNonAuthenticate`;
 
         const payload = authToken
-            ? {
-                productId: product.id,
-                size: selectedSize,
-            }
-            : {
-                shoppingCart: shoppingCart,
-                productId: product.id,
-                size: selectedSize,
-            };
+            ? { productId: product.id, ...(product.section !== "ACCESSORIES" && { size: selectedSize }) }
+            : { shoppingCart, productId: product.id, ...(product.section !== "ACCESSORIES" && { size: selectedSize }) };
+
 
         try {
             const response = await fetch(endpoint, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    ...(authToken && { Authorization: `Bearer ${authToken}` }),
+                    ...(authToken && { Authorization: `Bearer ${authToken}` })
                 },
-                body: JSON.stringify(payload),
+                body: JSON.stringify(payload)
             });
 
             if (!response.ok) {
@@ -108,223 +279,299 @@ const ProductDetails = () => {
         } catch (error) {
             console.error("Error al añadir el producto al carrito:", error);
         }
+    }, [selectedSize, product, shoppingCart, authToken, setShoppingCart]);
+
+    const handleAddProductThrottled = () => {
+        if (!checkTokenExpiration()) {
+            setSessionExpired(true);
+            return;
+        }
+        if (isClicked) return;
+
+        setIsClicked(true);
+        handleAddProduct();
+
+        setTimeout(() => setIsClicked(false), 500);
     };
 
-    const handleAddReview = () => {
-        navigate(`/product/newReview/${id}`);
-    };
-
-    const renderStars = (score) => {
-        const fullStars = Math.floor(score);
-        const halfStars = score % 1 !== 0 ? 1 : 0;
-        const emptyStars = 5 - fullStars - halfStars;
-
+    if (loading) {
         return (
-            <>
-                {"★".repeat(fullStars)}{"☆".repeat(halfStars)}{"☆".repeat(emptyStars)}
-            </>
+            <div className="min-h-screen flex items-center justify-center bg-white">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-500 border-solid mx-auto mb-4"></div>
+                    <p className="text-gray-600 font-medium">{t('productDetails.loadInfo')}</p>
+                </div>
+            </div>
         );
-    };
+    }
 
-    const handleOpenModal = () => {
-        setIsModalOpen(true);
-    };
+    if (sessionExpired) {
+        return <SessionExpired />;
+    }
 
-    const handleCloseModal = () => {
-        setIsModalOpen(false);
-        
-    };
+    console.log(product);
 
     return (
         <>
-            <div className="grid grid-cols-1 md:grid-cols-2 p-4 mt-10">
-                {/* Columna 1 */}
-                <div>
-                    {/*VERSION MÓVIL*/}
-                    <div className="md:hidden flex overflow-x-auto space-x-4 p-4 justify-around">
-                        {product.images?.map((image, index) => (
-                            <div
-                                key={index}
-                                style={{ flexShrink: 0 }}
-                                onClick={() => setMainImage(image)}
-                            >
-                                <img
-                                    src={`/api/product${product.images[index]}`}
-                                    alt={product.name}
-                                    className="max-w-full max-h-[300px] object-contain rounded-md"
-                                    loading="lazy"
-                                />
-                            </div>
-                        ))}
+            <div className="p-6 bg-white">
+                <div className="grid grid-cols-1 lg:grid-cols-2">
+                    {/* Columna 1 */}
+                    <div className="mt-10">
+                        <ProductImages images={product.images} name={product.name} />
                     </div>
-                    {/*VERSION MD/LG */}
-                    <div className="hidden md:grid grid-cols-2 gap-4 p-10">
-                        {product.images?.map((image, index) => (
-                            <div
-                                key={index}
-                                style={{ flexShrink: 0 }}
-                                onClick={() => setMainImage(image)}
-                            >
-                                <img
-                                    src={`/api/product${product.images[index]}`}
-                                    alt={product.name}
-                                    className="max-w-full max-h-[500px] object-contain rounded-md"
-                                    loading="lazy"
-                                />
-                            </div>
-                        ))}
-                    </div>
-                </div>
 
-                {/* Columna 2 */}
-                <div className="flex flex-col items-center justify-center p-4 sm:p-6">
-                    {/* Nombre + PRECIO + REF */}
-                    <div className="w-full">
-                        <div className="text-black mx-auto">
-                            <p className="custom-font-footer-black text-lg">{product.name}</p>
-                            {product.on_Promotion && product.discount > 0 ? (
-                                <>
-                                    <snap className="inline-block p-1 bg-red-500 inter-400 text-xs text-white">{`DESCUENTO ${product.discount}%`}</snap>
-                                    <div className="flex items-center gap-2">
-                                        <span className="inter-400 text-sm line-through" style={{ color: '#909497' }}>
-                                            {(product.price / ((100 - product.discount) / 100)).toFixed(2)}€
+                    {/* Columna 2 */}
+                    <div className="flex flex-col items-center justify-start sm:p-6 md:p-0 w-full mt-10">
+                        <div className="w-full lg:w-1/2 sticky top-20 mt-10">
+                            {/* Nombre + Precio */}
+                            <div className="text-black space-y-2">
+                                <p className="custom-font-footer-black text-lg mb-2">{product.name}</p>
+                                {product.on_Promotion && product.discount > 0 ? (
+                                    <>
+                                        <span className="inline-block p-1 bg-red-500 inter-400 text-xs text-white">
+                                            {`DESCUENTO ${product.discount}%`}
                                         </span>
-                                        <span className="inter-400 text-sm text-red-600">
-                                            {product.price ? product.price.toFixed(2) : "Precio no disponible"}€
-                                        </span>
-                                    </div>
-                                </>
-                            ) : (
-                                <span className="inter-400 text-sm" style={{color: '#909497'}}>
-                                    {product.price ? product.price.toFixed(2) : "Precio no disponible"}€
-                                </span>
-                            )}
-                            <p className="inter-400 text-sm" >DESARROLLAR REF </p>
-                            <hr className="border-t border-black my-4 w-full" />
-                        </div>
-
-                        {/* DESCRIPCIÓN */}
-                        <div className="text-black w-full mx-auto">
-                            <p className="inter-400 text-sm">{product.description}</p>
-                            <hr className="border-t border-black my-4 w-full" />
-                        </div>
-
-                        {/* TALLAS DISPONIBLES */}
-                        <div className="text-black w-full mx-auto">
-                            <div className="flex flex-wrap gap-2">
-                                {product.sizes &&
-                                    Object.entries(product.sizes)
-                                        .filter(([size, quantity]) => quantity > 0 && sizeOrder.includes(size))
-                                        .sort(([sizeA], [sizeB]) => sizeOrder.indexOf(sizeA) - sizeOrder.indexOf(sizeB))
-                                        .map(([size]) => (
-                                            <label
-                                                key={size}
-                                                className={`border border-gray-200 cursor-pointer w-14 h-10 text-sm text-center font-medium flex items-center justify-center ${selectedSize === size
-                                                    ? 'bg-yellow-400 text-white hover:bg-yellow-500 transition'
-                                                    : 'bg-white bold-arial hover:bg-gray-200 transition'
-                                                    }`}
+                                        <div className="flex items-center gap-2">
+                                            <span
+                                                className="inter-400 text-sm line-through"
+                                                style={{ color: "#909497" }}
                                             >
-                                                <input
-                                                    type="radio"
-                                                    name="size"
-                                                    value={size}
-                                                    className="hidden"
-                                                    onChange={(e) => setSelectedSize(e.target.value)}
-                                                />
-                                                {size}
-                                            </label>
-                                        ))}
+                                                {(
+                                                    product.price /
+                                                    ((100 - product.discount) / 100)
+                                                ).toFixed(2)}
+                                                €
+                                            </span>
+                                            <span className="inter-400 text-sm text-red-600">
+                                                {product.price ? product.price.toFixed(2) : "Precio no disponible"}€
+                                            </span>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <span className="inter-400 text-base">
+                                        {product.price ? product.price.toFixed(2) : "Precio no disponible"}€
+                                    </span>
+                                )}
+                                <p className="inter-400 text-sm">
+                                    {t("Reference")}: {product.reference}
+                                </p>
+                                <hr className="border-t border-black my-4 w-full" />
                             </div>
-                            <hr className="border-t border-black my-4 w-full" />
-                        </div>
 
-                        {/* Añadir a la cesta + guía de tallas */}
-                        <div className="text-black w-full mx-auto">
-                            {!product.available && (
-                                <p className="text-red-600 font-semibold mb-2">{t('NotAvailable')}</p>
+                            {/* Descripción */}
+                            <div className="text-black w-full mx-auto mt-2">
+                                <p className="inter-400 text-sm">{product.description}</p>
+                                <hr className="border-t border-black my-4 w-full" />
+                            </div>
+
+                            {/* Selector de tallas */}
+                            {product.section !== "ACCESSORIES" && (
+                                <div className="text-black w-full mx-auto">
+                                    {selectedSize && <p className="inter-400 text-sm mb-2">{t('productDetails.size')}: {selectedSize}</p>}
+                                    <SizeSelector
+                                        sizes={product.sizes}
+                                        selectedSize={selectedSize}
+                                        onSelect={setSelectedSize}
+                                        sizeOrder={sizeOrder}
+                                        t={t}
+                                    />
+                                    <hr className="border-t border-black my-4 w-full" />
+                                </div>
                             )}
 
-                            <button
-                                onClick={handleAddProduct}
-                                disabled={!product.available}
-                                className={`w-full py-2 px-4 ${product.available
-                                    ? 'button-custom cursor-pointer'
-                                    : 'bg-gray-300 text-gray-600 cursor-not-allowed'
-                                    }`}
-                            >
-                                <p className="inter-400 text-sm">{t('AddToShoppingCard')}</p>
-                            </button>
+                            {product.section === "ACCESSORIES" && (
+                                <div className="text-black w-full mx-auto mb-4">
+                                    <p className="inter-400 text-sm">
+                                        {t("AvailableUnits")}: {product.availableUnits}
+                                    </p>
+                                    <hr className="border-t border-black my-4 w-full" />
+                                </div>
+                            )}
 
-                            {/* MODAL PARA AÑADIR RESEÑA */}
-                            <div className="w-full mx-auto">
-                                {/* Botón para abrir el modal */}
+                            {/* Añadir a carrito */}
+                            <div className="text-black w-full mx-auto">
+                                {!product.available && (
+                                    <p className="text-red-600 font-semibold mb-2">{t("NotAvailable")}</p>
+                                )}
                                 <button
-                                    onClick={handleOpenModal}
-                                    className="w-full mt-2 bg-black py-2 px-4 border-none cursor-pointer"
+                                    onClick={handleAddProductThrottled}
+                                    disabled={
+                                        !product.available ||
+                                        (
+                                            product.section === "ACCESSORIES"
+                                                ? product.availableUnits <= 0
+                                                : !product.sizes || Object.entries(product.sizes).every(([_, qty]) => qty === 0)
+                                        )
+                                    }
+                                    className={`w-full py-4 px-4 ${added ? "added" : ""}
+        ${product.available &&
+                                            (
+                                                product.section === "ACCESSORIES"
+                                                    ? product.availableUnits > 0
+                                                    : product.sizes && Object.values(product.sizes).some(qty => qty > 0)
+                                            )
+                                            ? "button-custom cursor-pointer"
+                                            : "bg-gray-300 text-gray-600 cursor-not-allowed"
+                                        }`}
                                 >
-                                    <p className="text-white inter-400 text-sm">{t('AddReview')}</p>
+                                    <p className="inter-400 text-base">{t("AddToShoppingCard")}</p>
                                 </button>
 
-                                {/* Modal para añadir reseña */}
-                                <AddReviewModal
-                                    isOpen={isModalOpen}
-                                    onClose={handleCloseModal}
-                                    productId={id}
-                                    authToken={authToken}
-                                />
+                                {/* Botón reseña */}
+                                <div className="w-full mx-auto">
+                                    <button
+                                        onClick={() => setIsModalOpen(true)}
+                                        className="w-full mt-2 bg-black py-2 px-4 border-none cursor-pointer"
+                                    >
+                                        <p className="text-white inter-400 text-sm">{t("AddReview")}</p>
+                                    </button>
+                                </div>
+
+                                {/* Botón Ver en AR */}
+                                {product.section !== "ACCESSORIES" && product.section !== "PANTS" &&
+                                    <div className="w-full mx-auto">
+                                        <button
+                                            onClick={() => setIsAROpen(true)}
+                                            className="w-full mt-2 bg-yellow-400 py-2 px-4 border-none cursor-pointer"
+                                        >
+                                            <p className="text-black inter-400 text-sm">👓 Ver en AR</p>
+                                        </button>
+                                    </div>
+                                }
+
+                                <hr className="border-t border-black my-4 w-full" />
+
+                                {/* Guía de tallas */}
+                                {product.section !== "ACCESSORIES" && (
+                                    <>
+                                        <button
+                                            onClick={() => setShowSizeGuide((prev) => !prev)}
+                                            className="w-full border border-black text-black py-2 px-4 cursor-pointer bg-white flex items-center justify-between"
+                                        >
+                                            <p className="inter-400 text-sm">{t("sizeGuide")}</p>
+                                            <span className="text-sm">{showSizeGuide ? "▲" : "▼"}</span>
+                                        </button>
+                                        <div
+                                            className={`transition-all duration-300 ease-in-out overflow-hidden ${showSizeGuide ? "max-h-[500px] opacity-100 mt-4" : "max-h-0 opacity-0"
+                                                }`}
+                                        >
+                                            {product.section === "TSHIRT" && (
+                                                <img
+                                                    src={guiaCamiseta}
+                                                    alt="Guía de tallas - Camiseta"
+                                                    className="w-full max-w-md mx-auto"
+                                                />
+                                            )}
+                                            {product.section === "PANTS" && (
+                                                <img
+                                                    src={guiaPantalon}
+                                                    alt="Guía de tallas - Pantalón"
+                                                    className="w-full max-w-md mx-auto"
+                                                />
+                                            )}
+                                        </div>
+                                        <hr className="border-t border-black my-4 w-full" />
+                                    </>
+                                )}
                             </div>
 
-                            <hr className="border-t border-black my-4 w-full" />
+                            {/* Enlaces adicionales */}
+                            <div className="text-black w-full mx-auto">
+                                <p
+                                    onClick={() => setIsCompositionSlideOpen(true)}
+                                    className="inter-400 text-xs mt-2 underline text-gray-400 cursor-pointer"
+                                >
+                                    {t("Composition")}
+                                </p>
+                                <p
+                                    onClick={() => setIsShippingSlideOpen(true)}
+                                    className="inter-400 text-xs mt-2 underline text-gray-400 cursor-pointer"
+                                >
+                                    {t('shipping_details')}
+                                </p>
+                                <hr className="border-t border-black my-2 w-full" />
+                            </div>
 
-                            <button className="w-full border border-black text-black py-2 px-4 cursor-pointer bg-white">
-                                <p className="inter-400 text-sm">{t('sizeGuide')}</p>
-                            </button>
-                            <hr className="border-t border-black my-4 w-full" />
-                        </div>
-
-                        {/* DETALLES DEL PRODUCTO */}
-                        <div className="text-black w-full mx-auto">
-                            <p className="inter-400 text-sm">{t('Product details')}</p>
-                            <p className="inter-400 text-sm">{t('Composition')}</p>
-                            <hr className="border-t border-black my-2 w-full" />
-                            <p className="inter-400 text-sm">{t('Care')}</p>
-                            <hr className="border-t border-black my-2 w-full" />
-                            <p className="inter-400 text-sm">{t('Origin')}</p>
-                            <hr className="border-t border-black my-2 w-full" />
-                        </div>
-
-                        {/* VALORACIÓN */}
-                        <div className="text-black w-full mx-auto">
-                            <p className="inter-400 text-sm">Valoración General</p>
-                            {reviews.length > 0 ? (
-                                reviews.map((review, index) => (
-                                    <div key={index} className="review">
-                                        <div className="review-rating">
-                                            {renderStars(review.score)} {/* Muestra las estrellas */}
+                            {/* Valoración */}
+                            <div className="text-black w-full mx-auto">
+                                <p className="inter-400 text-sm mb-2">{t("GeneralRating")}</p>
+                                {reviews.length > 0 ? (
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex gap-1" aria-label={`Valoración media ${averageRating} de 5`}>
+                                            {renderStars(averageRating)}
                                         </div>
-                                        <div className="review-comment inter-400 text-sm">
-                                            <p>{review.comment}</p> {/* Muestra el comentario */}
-                                            <p>{review.email}</p>
+                                        <div className="flex text-sm text-gray-800 gap-2">
+                                            <span className="font-semibold">{averageRating} / 5</span>
+                                            <span className="text-gray-500">{reviews.length} {t("reviews")}</span>
                                         </div>
                                     </div>
-                                ))
-                            ) : (
-                                <p className="inter-400 text-sm">{t('No reviews')}</p>
-                            )}
+                                ) : (
+                                    <p className="inter-400 text-sm text-gray-500">{t("No reviews")}</p>
+                                )}
+                                {reviews.length > 0 && (
+                                    <p
+                                        onClick={() => setIsReviewsModalOpen(true)}
+                                        className="inter-400 text-xs mt-2 underline text-gray-400 cursor-pointer"
+                                    >
+                                        {t("ViewReview")}
+                                    </p>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <div className="flex flex-col items-center mt-4">
-                <hr className="border-2 border-yellow-500 mb-2 w-2/3 sm:w-1/3" />
-                <hr className="border-2 border-yellow-500 w-1/3" />
+                {/* Productos relacionados */}
+                <div className="flex items-center gap-2 mb-5 mt-5">
+                    <p className="">■</p>
+                    <p className="inter-400 text-sm">{t('related_products')}</p>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1 w-full">
+                    {relatedProducts.map((product, index) => (
+                        <Link to={`/product/details/${product.id}`} key={index}>
+                            <div className="flex justify-center">
+                                <ProductCard product={product} />
+                            </div>
+                        </Link>
+                    ))}
+                </div>
             </div>
 
             <Footer />
+
+            {/* Modales */}
+            <ReviewsModal
+                isOpen={isReviewsModalOpen}
+                onClose={() => setIsReviewsModalOpen(false)}
+                reviews={reviews}
+            />
+            <AddReviewModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                productId={id}
+                authToken={authToken}
+            />
+            <MoreInfoSlide
+                isOpen={isCompositionSlideOpen}
+                titleSlide={t("Composition")}
+                onClose={() => setIsCompositionSlideOpen(false)}
+                productDetails={product.composition}
+            />
+            <MoreInfoSlide
+                isOpen={isShippingSlideOpen}
+                titleSlide="Envio"
+                onClose={() => setIsShippingSlideOpen(false)}
+                productDetails={product.shippingDetails}
+            />
+            {isAROpen && (
+                <ProductAR
+                    onClose={() => setIsAROpen(false)}
+                    modelReference={product.modelReference}
+                    section = {product.section}
+                />
+            )}
         </>
     );
-
 };
 
 export default ProductDetails;

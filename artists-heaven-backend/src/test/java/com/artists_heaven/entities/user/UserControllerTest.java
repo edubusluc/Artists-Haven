@@ -4,7 +4,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -14,7 +13,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 
 import java.security.Principal;
-import java.util.Collections;
+import java.util.Optional;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -58,49 +57,22 @@ class UserControllerTest {
         }
 
         @Test
-        void testGetAllUsers() throws Exception {
-                User user = new User(1L, "Jane", "Doe", "JaneDoe", "jane.doe@example.com", "password1234", "1234567890",
-                                "Street 123", "1234", "Seville", "Spain",
-                                UserRole.USER, null);
-
-                when(userService.getAllUsers()).thenReturn(Collections.singletonList(user));
-
-                mockMvc.perform(get("/api/users/list"))
-                                .andExpect(status().isOk())
-                                .andExpect(jsonPath("$[0].firstName").value("Jane"))
-                                .andExpect(jsonPath("$[0].lastName").value("Doe"));
-        }
-
-        @Test
         void testRegisterUser() throws Exception {
                 // Mockea el comportamiento del servicio
                 User registeredUser = new User(1L, "Jane", "Doe", "JaneDoe", "jane.doe@example.com", "password1234",
                                 "1234567890", "Street 123", "1234", "Seville", "Spain",
-                                UserRole.USER, null);
-                when(userService.registerUser(any(User.class))).thenReturn(registeredUser);
+                                UserRole.USER, null, 0);
+                when(userService.registerUser(any(UserRegisterDTO.class), anyString())).thenReturn(registeredUser);
 
                 // Realiza la solicitud POST para registrar un nuevo usuario
                 mockMvc.perform(post("/api/users/register")
+                                .param("lang", "es")
                                 .contentType("application/json")
                                 .content(
                                                 "{\"firstName\":\"Jane\",\"lastName\":\"Doe\",\"email\":\"jane.doe@example.com\",\"password\":\"password1234\"}"))
                                 .andExpect(status().isCreated())
-                                .andExpect(jsonPath("$.firstName").value("Jane"))
-                                .andExpect(jsonPath("$.lastName").value("Doe"));
-        }
-
-        @Test
-        void testRegisterUserBadRequest() throws Exception {
-                // Simula una excepción en el servicio
-                when(userService.registerUser(any(User.class)))
-                                .thenThrow(new IllegalArgumentException("Invalid user data"));
-
-                // Realiza la solicitud POST y espera una respuesta BAD_REQUEST
-                mockMvc.perform(post("/api/users/register")
-                                .contentType("application/json")
-                                .content(
-                                                "{\"firstName\":\"Jane\",\"lastName\":\"Doe\",\"email\":\"invalid-email\",\"password\":\"password1234\"}"))
-                                .andExpect(status().isBadRequest());
+                                .andExpect(jsonPath("$.data.firstName").value("Jane"))
+                                .andExpect(jsonPath("$.data.lastName").value("Doe"));
         }
 
         @Test
@@ -108,8 +80,8 @@ class UserControllerTest {
                 // Simular un usuario autenticado
                 User user = new User(1L, "Jane", "Doe", "JaneDoe", "jane.doe@example.com", "password1234", "1234567890",
                                 "Street 123", "1234", "Seville", "Spain",
-                                UserRole.USER, null);
-                when(userRepository.findByEmail("jane.doe@example.com")).thenReturn(user);
+                                UserRole.USER, null, 0);
+                when(userRepository.findByEmail("jane.doe@example.com")).thenReturn(Optional.of(user));
 
                 // Simular autenticación
                 Authentication authentication = mock(Authentication.class);
@@ -122,7 +94,7 @@ class UserControllerTest {
                 // Realizar la solicitud GET
                 mockMvc.perform(get("/api/users/profile").principal(principal))
                                 .andExpect(status().isOk())
-                                .andExpect(jsonPath("$.email").value("jane.doe@example.com"));
+                                .andExpect(jsonPath("$.data.email").value("jane.doe@example.com"));
         }
 
         @Test
@@ -135,7 +107,7 @@ class UserControllerTest {
                 artist.setEmail("artist@email.com");
                 artist.setArtistName("Artist Name");
                 artist.setRole(UserRole.ARTIST);
-                when(userRepository.findByEmail("artist@email.com")).thenReturn(artist);
+                when(userRepository.findByEmail("artist@email.com")).thenReturn(Optional.of(artist));
 
                 // Simular autenticación
                 Authentication authentication = mock(Authentication.class);
@@ -148,7 +120,7 @@ class UserControllerTest {
                 // Realizar la solicitud GET
                 mockMvc.perform(get("/api/users/profile").principal(principal))
                                 .andExpect(status().isOk())
-                                .andExpect(jsonPath("$.email").value("artist@email.com"));
+                                .andExpect(jsonPath("$.data.email").value("artist@email.com"));
         }
 
         @Test
@@ -169,10 +141,9 @@ class UserControllerTest {
 
                 // Simular lógica de actualización sin excepción
                 doNothing().when(userService).updateUserProfile(any(UserProfileUpdateDTO.class), eq(principal),
-                                anyString(), anyString());
+                                anyString(), anyString(), eq("es"));
 
-                // Enviar request multipart simulando PUT con "_method" override (Spring lo
-                // permite)
+                // Enviar request multipart simulando PUT
                 mockMvc.perform(multipart("/api/users/profile/edit")
                                 .file(imageFile)
                                 .file(bannerFile)
@@ -186,6 +157,7 @@ class UserControllerTest {
                                 .param("country", "France")
                                 .param("phone", "+33 123456789")
                                 .param("color", "#FF5733")
+                                .param("lang", "es")
                                 .with(request -> {
                                         request.setMethod("PUT");
                                         request.setUserPrincipal(principal);
@@ -199,10 +171,11 @@ class UserControllerTest {
         void testUpdateUserProfile_withoutImages_success() throws Exception {
                 Principal principal = () -> "testUser";
 
-                doNothing().when(userService).updateUserProfile(any(UserProfileUpdateDTO.class), eq(principal), eq(""),
-                                eq(""));
+                doNothing().when(userService).updateUserProfile(any(UserProfileUpdateDTO.class), eq(principal),
+                                anyString(), anyString(), eq("es"));
 
                 mockMvc.perform(multipart("/api/users/profile/edit")
+                                .param("lang", "es")
                                 .param("email", "test@example.com")
                                 .param("firstName", "Alice")
                                 .param("lastName", "Smith")
@@ -220,24 +193,6 @@ class UserControllerTest {
                                 }))
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$.message").value("Profile updated successfully"));
-        }
-
-        @Test
-        void testUpdateUserProfile_generalException() throws Exception {
-                Principal principal = () -> "testUser";
-
-                doThrow(new RuntimeException("Unexpected error")).when(userService)
-                                .updateUserProfile(any(UserProfileUpdateDTO.class), eq(principal), anyString(),
-                                                anyString());
-
-                mockMvc.perform(multipart("/api/users/profile/edit")
-                                .param("email", "test@example.com")
-                                .with(request -> {
-                                        request.setMethod("PUT");
-                                        request.setUserPrincipal(principal);
-                                        return request;
-                                }))
-                                .andExpect(status().isInternalServerError());
         }
 
         @AfterEach

@@ -46,10 +46,11 @@ public class AdminService {
     public List<MonthlySalesDTO> getMonthlySalesData(int year) {
         List<Object[]> results = adminRepository.findMonthlySalesData(year, OrderStatus.RETURN_ACCEPTED);
         List<MonthlySalesDTO> monthlySalesDTOList = new ArrayList<>();
+
         for (Object[] result : results) {
-            Integer month = (int) result[0]; // El mes en formato "YYYY-MM"
-            Long totalOrders = (Long) result[1]; // El número total de productos vendidos
-            Double totalRevenue = (Double) result[2]; // El total de ingresos
+            Integer month = (result[0] != null) ? ((Number) result[0]).intValue() : null;
+            Long totalOrders = (result[1] != null) ? ((Number) result[1]).longValue() : 0L;
+            Double totalRevenue = (result[2] != null) ? ((Number) result[2]).doubleValue() : 0.0;
 
             MonthlySalesDTO dto = new MonthlySalesDTO(month, totalOrders, totalRevenue);
             monthlySalesDTOList.add(dto);
@@ -87,7 +88,7 @@ public class AdminService {
         for (Order order : ordersByYear) {
             for (OrderItem item : order.getItems()) {
                 String itemName = item.getName();
-                itemsCount.merge(itemName, 1, Integer::sum);
+                itemsCount.merge(itemName, item.getQuantity(), Integer::sum);
             }
         }
         return itemsCount;

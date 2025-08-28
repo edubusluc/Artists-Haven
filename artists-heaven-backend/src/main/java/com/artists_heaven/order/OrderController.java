@@ -5,9 +5,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.artists_heaven.entities.user.User;
-import com.artists_heaven.entities.user.UserRole;
 import com.artists_heaven.product.Product;
 import com.artists_heaven.product.ProductService;
+import com.artists_heaven.standardResponse.StandardResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -16,7 +16,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
-import jakarta.persistence.EntityNotFoundException;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 
 import java.util.HashMap;
 import java.util.List;
@@ -30,8 +31,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
@@ -49,111 +49,82 @@ public class OrderController {
     }
 
     @GetMapping("/myOrders")
-    @Operation(summary = "Get current user's orders with pagination", description = "Returns a paginated list of orders placed by the authenticated user. Requires authentication.", security = @SecurityRequirement(name = "bearerAuth"))
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved list of orders", content = @Content(mediaType = "application/json")),
-            @ApiResponse(responseCode = "400", description = "Bad request, unable to retrieve orders", content = @Content),
-            @ApiResponse(responseCode = "401", description = "Unauthorized, authentication required", content = @Content)
+    @Operation(summary = "Get current user's orders with pagination", description = "Returns a paginated list of orders placed by the authenticated user.", security = @SecurityRequirement(name = "bearerAuth"))
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Orders retrieved successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid request parameters"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
-    public ResponseEntity<Map<String, Object>> getMyOrders(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "3") int size) {
-        try {
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            User user = (User) authentication.getPrincipal();
+    public ResponseEntity<StandardResponse<Map<String, Object>>> getMyOrders(
+            @AuthenticationPrincipal User user,
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "3") @Min(1) @Max(50) int size) {
 
-            // Paginación: devuelve Page<Order>
-            Sort sort = Sort.by(Sort.Order.desc("lastUpdateDateTime").nullsLast());
-            Pageable pageable = PageRequest.of(page, size, sort);
+        Sort sort = Sort.by(Sort.Order.desc("lastUpdateDateTime").nullsLast());
+        Pageable pageable = PageRequest.of(page, size, sort);
 
-            Page<Order> orderPage = orderService.getMyOrdersPageable(user.getId(), pageable);
+        Page<Order> orderPage = orderService.getMyOrdersPageable(user.getId(), pageable);
+        List<Order> orders = orderPage.getContent();
 
-            // Extraer pedidos de la página
-            List<Order> orders = orderPage.getContent();
+        Map<Long, String> productImages = getProductsImages(orders);
+        List<OrderDetailsUserDTO> orderDetailsList = orders.stream()
+                .map(OrderDetailsUserDTO::new)
+                .toList();
 
-            Map<Long, String> productImages = getProductsImages(orders);
+        // Construir data para la respuesta
+        Map<String, Object> data = new HashMap<>();
+        data.put("orders", orderDetailsList);
+        data.put("productImages", productImages);
+        data.put("currentPage", orderPage.getNumber());
+        data.put("totalPages", orderPage.getTotalPages());
+        data.put("totalItems", orderPage.getTotalElements());
 
-            // Convertir a DTO
-            List<OrderDetailsUserDTO> orderDetailsList = orders.stream()
-                    .map(OrderDetailsUserDTO::new)
-                    .toList();
+        StandardResponse<Map<String, Object>> response = new StandardResponse<>("Orders retrieved successfully", data,
+                HttpStatus.OK.value());
 
-            // Armar respuesta
-            Map<String, Object> response = new HashMap<>();
-            response.put("orders", orderDetailsList);
-            response.put("productImages", productImages);
-            response.put("currentPage", orderPage.getNumber());
-            response.put("totalPages", orderPage.getTotalPages());
-            response.put("totalItems", orderPage.getTotalElements());
-
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
-        }
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Get order details by ID", description = "Retrieves detailed information of an order by its ID. Access is restricted to the order owner or administrators. "
+    @Operation(summary = "Get order details by ID", description = "Retrieves detailed information of an order by its ID. "
             +
+            "Access is restricted to the order owner or administrators. " +
             "Orders without an assigned user can only be accessed by administrators.", security = @SecurityRequirement(name = "bearerAuth"))
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully retrieved order details", content = @Content(mediaType = "application/json", schema = @Schema(implementation = OrderDetailsDTO.class))),
-            @ApiResponse(responseCode = "403", description = "Forbidden: Access denied to this order", content = @Content),
-            @ApiResponse(responseCode = "404", description = "Order not found", content = @Content),
-            @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
+            @ApiResponse(responseCode = "200", description = "Successfully retrieved order details", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Forbidden: Access denied to this order", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Order not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
+            @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
     })
-    public ResponseEntity<OrderDetailsDTO> getOrder(
+    public ResponseEntity<StandardResponse<OrderDetailsDTO>> getOrder(
             @Parameter(description = "ID of the order to retrieve", required = true) @PathVariable Long id) {
 
-        try {
-            Order order = orderService.findOrderById(id);
-
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            User user = (User) authentication.getPrincipal();
-
-            boolean isAdmin = user.getRole().equals(UserRole.ADMIN);
-
-            if (order.getUser() == null) {
-                if (!isAdmin) {
-                    return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-                }
-            } else {
-                boolean isOwner = order.getUser().getId().equals(user.getId());
-                if (!isOwner && !isAdmin) {
-                    return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-                }
-            }
-
-            OrderDetailsDTO orderDetailsDTO = new OrderDetailsDTO(order);
-            return ResponseEntity.ok(orderDetailsDTO);
-
-        } catch (EntityNotFoundException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+        OrderDetailsDTO orderDetailsDTO = orderService.getOrderDetailsById(id);
+        return ResponseEntity.ok(
+                new StandardResponse<>("Order retrieved successfully", orderDetailsDTO, HttpStatus.OK.value()));
     }
 
     @GetMapping("/by-identifier")
-    public ResponseEntity<Map<String, Object>> getOrderByIdentifier(@RequestParam Long identifier) {
-        try {
-            Order order = orderService.getOrderByIdentifier(identifier);
-            if (order == null) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-            }
-            Map<Long, String> productImages = getProductsImages(List.of(order));
+    @Operation(summary = "Get order details by identifier", description = "Retrieves order information and related product images using a unique identifier.", security = @SecurityRequirement(name = "bearerAuth"))
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Successfully retrieved order by identifier", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Order not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
+            @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+    })
+    public ResponseEntity<StandardResponse<Map<String, Object>>> getOrderByIdentifier(
+            @Parameter(description = "Unique identifier of the order", required = true) @RequestParam Long identifier, @RequestParam String lang) {
 
-            OrderDetailsUserDTO orderDetailsUserDTO = new OrderDetailsUserDTO(order);
+        Order order = orderService.getOrderByIdentifier(identifier, lang);
 
-            Map<String, Object> response = new HashMap<>();
-            response.put("orders", orderDetailsUserDTO);
-            response.put("productImages", productImages);
+        Map<Long, String> productImages = getProductsImages(List.of(order));
+        OrderDetailsUserDTO orderDetailsUserDTO = new OrderDetailsUserDTO(order);
 
-            return ResponseEntity.ok(response);
+        Map<String, Object> response = new HashMap<>();
+        response.put("orders", orderDetailsUserDTO);
+        response.put("productImages", productImages);
 
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+        return ResponseEntity.ok(
+                new StandardResponse<>("Order retrieved successfully", response, HttpStatus.OK.value()));
     }
 
     private Map<Long, String> getProductsImages(List<Order> orders) {

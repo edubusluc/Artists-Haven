@@ -1,6 +1,6 @@
 package com.artists_heaven.event;
 
-
+import java.time.LocalDate;
 import java.util.List;
 
 import org.springframework.data.domain.Page;
@@ -16,5 +16,11 @@ public interface EventRepository extends JpaRepository<Event, Long> {
 
     @Query("SELECT e FROM Event e WHERE e.artist.id = :artistId AND YEAR(e.date) = :year")
     List<Event> findArtistEventThisYear(@Param("artistId") Long artistId, @Param("year") int year);
+
+    @Query("SELECT e FROM Event e WHERE e.artist.id = :artistId AND e.date > :date")
+    List<Event> findFutureEventsByArtist(@Param("artistId") Long artistId, @Param("date") LocalDate date);
+
+    @Query("SELECT e FROM Event e WHERE e.date > :date")
+    List<Event> findFutureEvents(@Param("date") LocalDate date);
 
 }

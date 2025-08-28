@@ -29,6 +29,7 @@ import com.artists_heaven.order.OrderRepository;
 import com.artists_heaven.payment_gateway.PaymentGatewayService;
 import com.artists_heaven.product.Product;
 import com.artists_heaven.product.ProductService;
+import com.artists_heaven.product.Section;
 import com.artists_heaven.shopping_cart.CartItemDTO;
 import com.artists_heaven.shopping_cart.ProductItemDTO;
 import com.artists_heaven.shopping_cart.ShoppingCartService;
@@ -74,6 +75,7 @@ class PaymentGatewayServiceTest {
         productItem.setId(1L);
         productItem.setName("Product");
         productItem.setPrice(10.0f);
+        productItem.setSection(Section.TSHIRT);
 
         // Creamos el producto con talla M y cantidad 0
         product = new Product();
@@ -82,6 +84,7 @@ class PaymentGatewayServiceTest {
         sizeMap.put("M", 0); // Producto no disponible
         product.setSize(sizeMap);
         product.setAvailable(true); // Producto disponible pero sin stock
+        product.setSection(Section.TSHIRT);
 
         item.setProduct(productItem);
         item.setSize("M");

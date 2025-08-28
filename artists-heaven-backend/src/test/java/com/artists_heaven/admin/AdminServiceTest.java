@@ -1,6 +1,6 @@
 package com.artists_heaven.admin;
 
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.times;
@@ -27,6 +27,8 @@ import org.springframework.data.domain.Sort;
 import com.artists_heaven.entities.user.User;
 import com.artists_heaven.entities.user.UserProfileDTO;
 import com.artists_heaven.entities.user.UserRole;
+import com.artists_heaven.exception.AppExceptions;
+import com.artists_heaven.exception.AppExceptions.ResourceNotFoundException;
 import com.artists_heaven.order.Order;
 import com.artists_heaven.order.OrderItem;
 import com.artists_heaven.order.OrderService;
@@ -35,8 +37,6 @@ import com.artists_heaven.product.Category;
 import com.artists_heaven.product.Product;
 import com.artists_heaven.product.ProductService;
 import com.artists_heaven.verification.VerificationStatus;
-
-import jakarta.persistence.EntityNotFoundException;
 
 import org.junit.jupiter.api.Test;
 
@@ -130,6 +130,7 @@ class AdminServiceTest {
 
         OrderItem orderItem = new OrderItem();
         orderItem.setName("Item Test");
+        orderItem.setQuantity(10);
         List<OrderItem> orderItems = new ArrayList<>(Arrays.asList(orderItem));
 
         Order order = new Order();
@@ -140,7 +141,7 @@ class AdminServiceTest {
 
         Map<String, Integer> result = adminService.getMostSoldItems(year);
         assertEquals(1, result.size());
-        assertEquals(1, result.get("Item Test"));
+        assertEquals(10, result.get("Item Test"));
     }
 
     @Test
@@ -280,10 +281,11 @@ class AdminServiceTest {
 
         // Simulamos que el repositorio no encuentra la orden y lanza una excepción
         when(orderService.findOrderById(orderId))
-                .thenThrow(new EntityNotFoundException("Order not found with id: " + orderId));
+                .thenThrow(new AppExceptions.ResourceNotFoundException("Order not found with id: " + orderId));
+
 
         // Llamamos al método updateOrderStatus y verificamos que se lanza la excepción
-        EntityNotFoundException exception = assertThrows(EntityNotFoundException.class, () -> {
+        ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class, () -> {
             adminService.updateOrderStatus(orderId, newStatus);
         });
 
