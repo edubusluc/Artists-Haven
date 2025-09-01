@@ -1,5 +1,6 @@
 package com.artists_heaven.chat;
 
+import com.artists_heaven.exception.AppExceptions;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.InputStream;
@@ -25,7 +26,7 @@ public class QARepository {
         ObjectMapper mapper = new ObjectMapper();
         try (InputStream is = getResourceAsStream()) {
             if (is == null) {
-                throw new RuntimeException("No se encontró el archivo predefinedQA.json en resources");
+                throw new AppExceptions.InternalServerErrorException("No se encontró el archivo predefinedQA.json en resources");
             }
             predefinedQA = mapper.readValue(is, Map.class);
 
@@ -37,7 +38,7 @@ public class QARepository {
             }
 
         } catch (IOException e) {
-            throw new RuntimeException("Error cargando predefinedQA.json", e);
+            throw new AppExceptions.InternalServerErrorException("Error cargando predefinedQA.json");
         }
     }
 

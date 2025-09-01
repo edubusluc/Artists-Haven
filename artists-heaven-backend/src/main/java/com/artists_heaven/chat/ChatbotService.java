@@ -6,7 +6,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -17,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.core.io.Resource;
 
+import com.artists_heaven.exception.AppExceptions;
 import com.artists_heaven.product.ProductService;
 
 import io.github.cdimascio.dotenv.Dotenv;
@@ -30,8 +30,8 @@ public class ChatbotService {
     private final QARepository qaRepository;
     private final Dotenv dotenv = Dotenv.load();
 
-    private final String GEMINI_API_KEY = dotenv.get("GEMINI_KEY");
-    private final String GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+    private final String geminiApiKey  = dotenv.get("GEMINI_KEY");
+    private final static String geminiApiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
 
     private final double similarityThreshold;
 
@@ -77,7 +77,7 @@ public class ChatbotService {
                     return Map.entry(entry.getKey(), similarity);
                 })
                 .filter(e -> e.getValue() >= similarityThreshold)
-                .collect(Collectors.toList());
+                .toList();
 
         if (matches.isEmpty()) {
             return null;
@@ -93,7 +93,7 @@ public class ChatbotService {
         List<String> bestMatches = matches.stream()
                 .filter(e -> e.getValue() == maxSim)
                 .map(Map.Entry::getKey)
-                .collect(Collectors.toList());
+                .toList();
 
         // Desempate: seleccionamos la que tenga longitud más parecida a la pregunta
         // original
@@ -242,14 +242,14 @@ public class ChatbotService {
 
     // Método para sanitizar (ejemplo básico)
     private String sanitize(String input) {
-        return input == null ? "" : input.replaceAll("%", "%%"); // Escapa % para evitar interpretaciones
+        return input == null ? "" : input.replace("%", "%%");
     }
 
     public boolean isApiKeyConfigured() {
-        return GEMINI_API_KEY != null && !GEMINI_API_KEY.isBlank();
+        return geminiApiKey  != null && !geminiApiKey .isBlank();
     }
 
-    public String callGeminiAPI(String userMessage) throws Exception {
+    public String callGeminiAPI(String userMessage) {
         RestTemplate restTemplate = createRestTemplate();
 
         Map<String, Object> systemMessage = Map.of("text", systemPromptText);
@@ -261,24 +261,24 @@ public class ChatbotService {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set("X-goog-api-key", GEMINI_API_KEY);
+        headers.set("X-goog-api-key", geminiApiKey );
 
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 
-        ResponseEntity<Map> response = restTemplate.postForEntity(GEMINI_API_URL, entity, Map.class);
+        ResponseEntity<Map> response = restTemplate.postForEntity(geminiApiUrl, entity, Map.class);
 
         if (!response.getStatusCode().is2xxSuccessful()) {
-            throw new RuntimeException("Error del servidor de Gemini");
+            throw new AppExceptions.InternalServerErrorException("Error del servidor de Gemini");
         }
 
         Map<String, Object> responseBody = response.getBody();
         if (responseBody == null || !responseBody.containsKey("candidates")) {
-            throw new RuntimeException("Respuesta inesperada de Gemini");
+            throw new AppExceptions.InternalServerErrorException("Respuesta inesperada de Gemini");
         }
 
         var candidatesList = (List<Map<String, Object>>) responseBody.get("candidates");
         if (candidatesList.isEmpty()) {
-            throw new RuntimeException("No se generó respuesta de Gemini");
+            throw new AppExceptions.InternalServerErrorException("No se generó respuesta de Gemini");
         }
 
         Map<String, Object> firstCandidate = candidatesList.get(0);
@@ -286,7 +286,7 @@ public class ChatbotService {
         var parts = (List<Map<String, Object>>) contentResponse.get("parts");
 
         if (parts.isEmpty()) {
-            throw new RuntimeException("Respuesta sin partes de texto");
+            throw new AppExceptions.InternalServerErrorException("Respuesta sin partes de texto");
         }
 
         return (String) parts.get(0).get("text");
