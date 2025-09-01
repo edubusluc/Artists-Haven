@@ -127,6 +127,26 @@ class ReturnServiceTest {
     }
 
     @Test
+    void testGenerateReturnLabelPdf_Anonymous_UsesEmail() {
+        Order order = new Order();
+        order.setIdentifier(456L);
+        order.setPaymentIntent("PAY_002");
+        order.setAddressLine1("Calle B");
+        order.setPostalCode("67890");
+        order.setCity("Ciudad Y");
+        order.setCountry("País Z");
+        order.setEmail("anon@example.com");
+
+        // 👀 no seteamos el user aquí, porque no se usa en el else
+        when(orderService.findOrderById(2L)).thenReturn(order);
+
+        byte[] pdf = returnService.generateReturnLabelPdf(2L, true);
+
+        assertNotNull(pdf);
+        assertTrue(pdf.length > 0);
+    }
+
+    @Test
     void testCreateReturnForOrder_EmailMismatchAndUnauthenticated() {
         Order order = new Order();
         order.setEmail("order@example.com");
@@ -171,7 +191,7 @@ class ReturnServiceTest {
     }
 
     @Test
-    void testFindById(){
+    void testFindById() {
         Return result = new Return();
         when(returnRepository.findById(1L)).thenReturn(Optional.of(result));
         Return response = returnService.findById(1L);
