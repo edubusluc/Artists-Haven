@@ -12,7 +12,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 
 import java.util.Date;
 
@@ -30,10 +29,8 @@ public class EmailSenderController {
 
     @PostMapping("/send")
     @Operation(summary = "Send an email", description = "Sends an email report using the provided email details.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Email sent successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
-            @ApiResponse(responseCode = "500", description = "Failed to send email", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
-    })
+    @ApiResponse(responseCode = "200", description = "Email sent successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+    @ApiResponse(responseCode = "500", description = "Failed to send email", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
     public ResponseEntity<StandardResponse<String>> sendEmail(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Email object containing the recipient, subject, body, and other details", required = true, content = @Content(mediaType = "application/json", schema = @Schema(implementation = Email.class))) @RequestBody Email email) {
 

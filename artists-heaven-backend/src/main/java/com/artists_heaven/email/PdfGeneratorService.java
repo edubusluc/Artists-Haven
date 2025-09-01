@@ -3,7 +3,6 @@ package com.artists_heaven.email;
 import com.artists_heaven.order.Order;
 import com.artists_heaven.order.OrderItem;
 import com.artists_heaven.order.OrderItemRepository;
-import com.itextpdf.io.image.ImageDataFactory;
 import com.itextpdf.io.font.constants.StandardFonts;
 import com.itextpdf.kernel.colors.Color;
 import com.itextpdf.kernel.colors.ColorConstants;
@@ -22,19 +21,16 @@ import org.springframework.stereotype.Service;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.text.DecimalFormat;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @Service
 public class PdfGeneratorService {
 
         private final OrderItemRepository orderItemRepository;
-        private final PdfFont bold;
-        private final PdfFont normal;
 
         public PdfGeneratorService(OrderItemRepository orderItemRepository) throws Exception {
                 this.orderItemRepository = orderItemRepository;
-                this.bold = PdfFontFactory.createFont(StandardFonts.HELVETICA_BOLD);
-                this.normal = PdfFontFactory.createFont(StandardFonts.HELVETICA);
         }
 
         public byte[] generateInvoice(Long orderReference, Order order, Float total, Long discount) {
@@ -47,29 +43,32 @@ public class PdfGeneratorService {
                         // 1. Documento final
                         PdfWriter writer = new PdfWriter(out);
                         PdfDocument pdfDoc = new PdfDocument(writer);
-                        Document document = new Document(pdfDoc);
 
                         // 2. Abrir plantilla
                         PdfDocument templateDoc = new PdfDocument(new PdfReader(templateStream));
 
-                        // 3. Copiar primera página de la plantilla (background)
-                        PdfPage templatePage = templateDoc.getFirstPage().copyTo(pdfDoc);
-                        pdfDoc.addPage(templatePage);
-
-                        // 4. Agregar tu contenido ENCIMA de esa página
-                        document.setMargins(40, 40, 40, 40);
-
-                        addHeader(document);
-                        addTitle(document);
-                        addInvoiceInfo(document, orderReference, order);
-                        addProductTable(document, items);
-                        addTotal(document, total, discount);
-                        addFooter(document);
-
-                        // 5. Cerrar docs
-                        document.close();
+                        // 3. Copiar la primera página
+                        PdfPage templatePage = templateDoc.getFirstPage();
+                        pdfDoc.addPage(templatePage.copyTo(pdfDoc));
                         templateDoc.close();
 
+                        // 4. Asociar Document
+                        Document document = new Document(pdfDoc);
+                        document.setMargins(40, 40, 40, 40);
+
+                        // 🔑 Crear fuentes por factura
+                        PdfFont bold = PdfFontFactory.createFont(StandardFonts.HELVETICA_BOLD);
+                        PdfFont normal = PdfFontFactory.createFont(StandardFonts.HELVETICA);
+
+                        // Pasarlas a tus métodos
+                        addHeader(document, bold, normal);
+                        addTitle(document, bold);
+                        addInvoiceInfo(document, orderReference, order, bold, normal);
+                        addProductTable(document, items, bold, normal);
+                        addTotal(document, total, discount, bold, normal);
+                        addFooter(document, normal);
+
+                        document.close();
                         return out.toByteArray();
 
                 } catch (Exception e) {
@@ -77,60 +76,81 @@ public class PdfGeneratorService {
                 }
         }
 
-        private void addHeader(Document document) {
+        private void addHeader(Document document, PdfFont bold, PdfFont normal) {
                 try {
-                        Image logo = new Image(ImageDataFactory.create(
-                                        new ClassPathResource("static/images/logo.png").getURL()))
-                                        .scaleToFit(80, 80);
-
                         Table headerTable = new Table(UnitValue.createPercentArray(new float[] { 3, 7 }))
                                         .useAllAvailableWidth();
 
-                        Cell logoCell = new Cell().add(logo).setBorder(Border.NO_BORDER);
+                        // Celda vacía (columna izquierda)
+                        Cell emptyCell = new Cell().setBorder(Border.NO_BORDER);
+                        headerTable.addCell(emptyCell);
 
+                        // Celda con la info (columna derecha)
                         Cell companyInfoCell = new Cell()
                                         .add(new Paragraph("ARTISTS HEAVEN").setFont(bold).setFontSize(14))
                                         .add(new Paragraph("Email: mod.artistheaven@gmail.com").setFont(normal))
                                         .setTextAlignment(TextAlignment.RIGHT)
                                         .setBorder(Border.NO_BORDER);
 
-                        headerTable.addCell(logoCell);
                         headerTable.addCell(companyInfoCell);
 
                         document.add(headerTable);
                 } catch (Exception e) {
                         document.add(new Paragraph(
-                                        "ARTISTS HEAVEN\nDirección: Calle Principal 123, Ciudad\nEmail: mod.artistheaven@gmail.com")
+                                        "ARTISTS HEAVEN\nDirección: España, Sevilla\nEmail: mod.artistheaven@gmail.com")
                                         .setFontSize(10)
                                         .setTextAlignment(TextAlignment.RIGHT));
                 }
         }
 
-        private void addTitle(Document document) {
-                document.add(new Paragraph("FACTURA")
+        private void addTitle(Document document, PdfFont bold) {
+                document.add(new Paragraph("Detalles de la compra")
                                 .setFont(bold)
                                 .setFontSize(20)
                                 .setTextAlignment(TextAlignment.CENTER)
                                 .setMarginTop(20));
         }
 
-        private void addInvoiceInfo(Document document, Long orderReference, Order order) {
+        private void addInvoiceInfo(Document document, Long orderReference, Order order, PdfFont bold, PdfFont normal) {
                 Table infoTable = new Table(UnitValue.createPercentArray(new float[] { 1, 2 }))
                                 .useAllAvailableWidth()
                                 .setMarginTop(20)
                                 .setBorder(new SolidBorder(1));
 
-                infoTable.addCell(new Cell().add(new Paragraph("Número de Factura:").setFont(bold))
+                // Número de Factura
+                infoTable.addCell(new Cell().add(new Paragraph("Número de Seguimiento:").setFont(bold))
                                 .setBorder(Border.NO_BORDER));
-                infoTable.addCell(new Cell().add(new Paragraph(orderReference.toString())).setBorder(Border.NO_BORDER));
-                infoTable.addCell(new Cell().add(new Paragraph("Fecha:").setFont(bold)).setBorder(Border.NO_BORDER));
-                infoTable.addCell(new Cell().add(new Paragraph(order.getCreatedDate().toString()))
+                infoTable.addCell(new Cell().add(new Paragraph(orderReference.toString()))
+                                .setBorder(Border.NO_BORDER));
+
+                // Fecha (formateada)
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd 'de' MMMM 'de' yyyy, HH:mm");
+                String formattedDate = order.getCreatedDate().format(formatter);
+
+                infoTable.addCell(new Cell().add(new Paragraph("Fecha de emisión:").setFont(bold))
+                                .setBorder(Border.NO_BORDER));
+                infoTable.addCell(new Cell().add(new Paragraph(formattedDate))
+                                .setBorder(Border.NO_BORDER));
+
+                // Dirección de Envío
+                infoTable.addCell(new Cell().add(new Paragraph("Dirección de Envío:").setFont(bold))
+                                .setBorder(Border.NO_BORDER));
+
+                StringBuilder addressBuilder = new StringBuilder();
+                addressBuilder.append(order.getAddressLine1()).append("\n");
+                if (order.getAddressLine2() != null && !order.getAddressLine2().isBlank()) {
+                        addressBuilder.append(order.getAddressLine2()).append("\n");
+                }
+                addressBuilder.append(order.getPostalCode()).append(" ").append(order.getCity()).append("\n");
+                addressBuilder.append(order.getCountry());
+
+                infoTable.addCell(new Cell().add(new Paragraph(addressBuilder.toString()))
                                 .setBorder(Border.NO_BORDER));
 
                 document.add(infoTable);
         }
 
-        private void addProductTable(Document document, List<OrderItem> items) {
+        private void addProductTable(Document document, List<OrderItem> items, PdfFont bold, PdfFont normal) {
                 document.add(new Paragraph("\n"));
 
                 Table table = new Table(UnitValue.createPercentArray(new float[] { 4, 2, 2, 2 }))
@@ -166,7 +186,7 @@ public class PdfGeneratorService {
                 document.add(table);
         }
 
-        private void addTotal(Document document, Float total, Long discount) {
+        private void addTotal(Document document, Float total, Long discount, PdfFont bold, PdfFont normal) {
                 document.add(new Paragraph("\n"));
 
                 Table totalTable = new Table(UnitValue.createPercentArray(new float[] { 6, 2 }))
@@ -222,7 +242,7 @@ public class PdfGeneratorService {
                 return input == null ? "" : input.replaceAll("%", "%%");
         }
 
-        private void addFooter(Document document) {
+        private void addFooter(Document document, PdfFont normal) {
                 document.add(new Paragraph("\nGracias por su compra en Artists Heaven!")
                                 .setTextAlignment(TextAlignment.CENTER)
                                 .setFontSize(12)

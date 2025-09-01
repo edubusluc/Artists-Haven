@@ -1,6 +1,6 @@
 package com.artists_heaven.email;
 
-import java.util.HashMap;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 
@@ -123,10 +123,8 @@ public class EmailSenderService {
     }
 
     public Map<EmailType, Integer> getEmailCounts(int year) {
-
         List<Object[]> result = emailSenderRepository.countEmailsByType(year);
-        Map<EmailType, Integer> emailCountMap = new HashMap<>();
-
+        Map<EmailType, Integer> emailCountMap = new EnumMap<>(EmailType.class);
         for (Object[] row : result) {
             EmailType type = (EmailType) row[0];
             Long count = (Long) row[1];
