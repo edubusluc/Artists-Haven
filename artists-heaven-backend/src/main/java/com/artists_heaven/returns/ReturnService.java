@@ -70,7 +70,7 @@ public class ReturnService {
         orderService.save(order);
     }
 
-    public byte[] generateReturnLabelPdf(Long orderId) {
+    public byte[] generateReturnLabelPdf(Long orderId, boolean isAnonymous) {
         Order order = orderService.findOrderById(orderId);
 
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
@@ -97,9 +97,15 @@ public class ReturnService {
             infoTable.addCell(createLabelCell("ID del pedido:", bold));
             infoTable.addCell(createValueCell(order.getIdentifier().toString(), regular));
 
-            infoTable.addCell(createLabelCell("Cliente:", bold));
-            infoTable.addCell(
-                    createValueCell(order.getUser().getFirstName() + " " + order.getUser().getLastName(), regular));
+            if (!isAnonymous) {
+                infoTable.addCell(createLabelCell("Cliente:", bold));
+                infoTable.addCell(
+                        createValueCell(order.getUser().getFirstName() + " " + order.getUser().getLastName(), regular));
+            } else {
+                infoTable.addCell(createLabelCell("Cliente:", bold));
+                infoTable.addCell(
+                        createValueCell(order.getEmail(), regular));
+            }
 
             infoTable.addCell(createLabelCell("Dirección:", bold));
             infoTable.addCell(createValueCell(formatAddress(order), regular));
@@ -161,6 +167,11 @@ public class ReturnService {
         if (order.getCountry() != null)
             sb.append(order.getCountry());
         return sb.toString();
+    }
+
+    public Return findById(Long returnId) {
+        return returnRepository.findById(returnId)
+                .orElseThrow(() -> new AppExceptions.ResourceNotFoundException("Return not found"));
     }
 
 }
