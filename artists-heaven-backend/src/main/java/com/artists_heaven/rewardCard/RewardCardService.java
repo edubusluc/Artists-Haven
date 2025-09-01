@@ -4,7 +4,6 @@ import java.time.LocalDateTime;
 import java.util.Locale;
 
 import org.springframework.context.MessageSource;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -13,7 +12,6 @@ import com.artists_heaven.entities.user.User;
 import com.artists_heaven.entities.user.UserRepository;
 import com.artists_heaven.exception.AppExceptions;
 import com.artists_heaven.rewardCard.RewardCardController.RedeemRequest;
-import com.artists_heaven.standardResponse.StandardResponse;
 
 @Service
 public class RewardCardService {
@@ -28,7 +26,7 @@ public class RewardCardService {
         this.messageSource = messageSource;
     }
 
-    public StandardResponse<RewardCard> redeemRewardCard(RedeemRequest request, String lang) {
+    public RewardCard redeemRewardCard(RedeemRequest request, String lang) {
         User user = getAuthenticatedUser();
         Locale locale = new Locale(lang);
 
@@ -66,8 +64,8 @@ public class RewardCardService {
         card.setRedeemed(false);
         rewardCardRepository.save(card);
 
-        String msg = messageSource.getMessage("rewardCard.rewardCardRedeemedSuccessfully", null, locale);
-        return new StandardResponse<>(msg, card, HttpStatus.OK.value());
+        
+        return (card);
     }
 
     private int getDiscountPercentage(int requiredPoints, Locale locale) {
