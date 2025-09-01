@@ -14,7 +14,8 @@ const OrderDetails = () => {
     const [errorMessage, setErrorMessage] = useState("");
     const [authToken] = useState(localStorage.getItem("authToken"));
     const rol = localStorage.getItem("role");
-    const {t} = useTranslation();
+    const { t } = useTranslation();
+    const [orderReturn, setOrderReturn] = useState(null);
 
     const orderStatuses = [
         "PAID",
@@ -72,6 +73,40 @@ const OrderDetails = () => {
             setLoading(false);
         }
     }, [id, rol, authToken]);
+
+    useEffect(() => {
+        if (!order) return;
+        const fetchReturn = async () => {
+            setLoading(true);
+            setErrorMessage("");
+            try {
+                const res = await fetch(`/api/returns/${order.returnId}/return`, {
+                    headers: {
+                        Authorization: `Bearer ${authToken}`,
+                    },
+                });
+                if (!res.ok) {
+                    throw new Error("Error al obtener la devolución");
+                }
+                const response = await res.json();
+                setOrderReturn(response.data);
+            } catch (err) {
+                setErrorMessage("No se pudo cargar la devolución.");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        if (rol === "ADMIN" && checkTokenExpiration()) {
+            fetchReturn();
+        } else {
+            setErrorMessage("No tienes permisos para acceder a esta página.");
+            setLoading(false);
+        }
+    }, [id, rol, authToken, order]);
+
+    console.log(order)
+    console.log("MI ORDER RETURN" + JSON.stringify(orderReturn));
 
 
     const handleUpdateOrdeStatus = async (orderId, newStatus) => {
@@ -155,14 +190,14 @@ const OrderDetails = () => {
                             onClick={() => navigate("/admin/orders")}
                             className="bg-yellow-500 hover:bg-yellow-600 text-white font-medium py-2 px-6 rounded-full shadow-lg transition-all duration-300 transform hover:scale-105"
                         >
-                           {t('adminOrderDetails.returnToOrders')}
+                            {t('adminOrderDetails.returnToOrders')}
                         </button>
                     </div>
                 </div>
 
                 {/* COLUMNA 2 */}
                 <section className="bg-white rounded-3xl shadow-xl p-10 max-h-[600px] overflow-y-auto ring-1 ring-gray-100">
-                    <h3 className="text-2xl font-bold text-gray-800 mb-6">{t('adminOrderDetails.orderBreakdown')}</h3>
+                    <h3 className="text-2xl font-bold text-gray-800 mb-3">{t('adminOrderDetails.orderBreakdown')}</h3>
                     <ul className="space-y-4">
                         {order.items.map((item, idx) => (
                             <li
@@ -180,6 +215,31 @@ const OrderDetails = () => {
                             </li>
                         ))}
                     </ul>
+                    {orderReturn &&
+                        <div className="mt-2">
+                            <h3 className="text-2xl font-bold text-gray-800 mb-3">{t('adminOrderDetails.orderBreakdown')}</h3>
+                            <div className="border border-gray-200 p-6 rounded-2xl bg-gray-50 shadow-md hover:shadow-lg transition-shadow duration-200">
+                                <div className="text-gray-600 text-sm inter-400">
+                                    <span className="font-semibold text-gray-800">{t('adminOrderDetails.creationDate')}:</span>
+                                    <time
+                                        className="text-gray-700 px-1 rounded-full text-sm font-medium"
+                                        dateTime={orderReturn.returnDate}
+                                    >
+                                        {new Date(orderReturn.returnDate).toLocaleDateString('es-ES', {
+                                            weekday: 'long',
+                                            year: 'numeric',
+                                            month: 'long',
+                                            day: 'numeric'
+                                        })}
+                                    </time>
+                                </div>
+                                <div className="text-gray-600 text-sm inter-400">
+                                    <span className="font-semibold text-gray-800">{t('adminOrderDetails.details')}:</span> {orderReturn.reason}
+                                </div>
+                            </div>
+
+                        </div>
+                    }
                 </section>
             </div>
         </div>

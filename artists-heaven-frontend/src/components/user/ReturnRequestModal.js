@@ -5,11 +5,12 @@ const ReturnRequestModal = ({ isOpen, onClose, onSubmit }) => {
   const [reason, setReason] = useState("");
   const [email, setEmail] = useState("");
   const authToken = localStorage.getItem("authToken");
-  const {t} = useTranslation();
+  const { t } = useTranslation();
+  const [loading, setLoading] = useState(false);
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (reason.trim() === "") {
@@ -30,11 +31,16 @@ const ReturnRequestModal = ({ isOpen, onClose, onSubmit }) => {
       }
     }
 
-    onSubmit(reason, email);
-
-    setReason("");
-    setEmail("");
+    try {
+      setLoading(true);
+      await onSubmit(reason, email);
+      setReason("");
+      setEmail("");
+    } finally {
+      setLoading(false);
+    }
   };
+
 
   return (
     <div
@@ -69,7 +75,7 @@ const ReturnRequestModal = ({ isOpen, onClose, onSubmit }) => {
               type="button"
               onClick={() => {
                 setReason("");
-                if (setEmail) setEmail(""); 
+                if (setEmail) setEmail("");
                 onClose();
               }}
               className="px-4 py-2 rounded bg-gray-300 hover:bg-gray-400"
@@ -78,9 +84,21 @@ const ReturnRequestModal = ({ isOpen, onClose, onSubmit }) => {
             </button>
             <button
               type="submit"
-              className="px-4 py-2 rounded bg-yellow-400 hover:bg-yellow-500 text-black font-semibold"
+              disabled={loading}
+              className={`px-4 py-2 rounded font-semibold flex items-center justify-center gap-2
+                ${loading
+                  ? "bg-yellow-200 cursor-not-allowed text-gray-600"
+                  : "bg-yellow-400 hover:bg-yellow-500 text-black"
+                }`}
             >
-              {t('returnRequestModal.submit')}
+              {loading ? (
+                <>
+                  <div className="inline-block animate-spin border-t-2 border-b-2 border-black rounded-full w-5 h-5"></div>
+                  {t("returnRequestModal.submitting")}
+                </>
+              ) : (
+                t("returnRequestModal.submit")
+              )}
             </button>
           </div>
         </form>

@@ -102,6 +102,7 @@ public class SecurityConfiguration {
                         "/api/admin/userProduct/pending",
                         "/api/admin/userProduct/{id}/approve",
                         "/api/admin/userProduct/{id}/reject",
+                        "/api/returns/{id}/return"
         };
 
         // Endpoints accessible only by ARTIST users

@@ -4,6 +4,7 @@ import instagram from '../util-image/instagram.png';
 import tiktok from '../util-image/tiktok.png';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import youtube from '../util-image/youtube.png';
 
 const Footer = () => {
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
@@ -48,12 +49,14 @@ const Footer = () => {
       >
         {/* Columna izquierda */}
         <div style={{ flex: 1, textAlign: isMobile ? 'center' : 'left' }}>
+          <Link to="/">
           <h2
             className="custom-font-footer"
             style={{ fontSize: '1.5rem', fontWeight: '700', marginBottom: '1rem' }}
           >
             ARTISTS' - HEAVEN
           </h2>
+          </Link>
           <p style={{ fontSize: '0.95rem', lineHeight: '1.5' }}>
             {t('footer.description')}
           </p>
@@ -68,6 +71,7 @@ const Footer = () => {
           <ul style={{ listStyle: 'none', padding: 0, margin: 0, lineHeight: '2' }}>
             <li><Link to="/about" style={{ color: 'white' }}>{t('footer.aboutUs')}</Link></li>
             <li><Link to="/FAQ" style={{ color: 'white' }}>{t('footer.faq')}</Link></li>
+            <li><Link to="/email" style={{ color: 'white' }}>{t('footer.emailReport')}</Link></li>
           </ul>
         </div>
 
@@ -123,6 +127,24 @@ const Footer = () => {
             <img
               src={instagram}
               alt="instagram"
+              style={{ height: '32px', cursor: 'pointer', transition: '0.3s' }}
+              onMouseOver={(e) => (e.currentTarget.style.transform = 'scale(1.1)')}
+              onMouseOut={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+            />
+          </a>
+          <a href="https://x.com/artistsheavenAR" target="_blank" rel="noopener noreferrer" aria-label="Twitter">
+            <img
+              src={twitter}
+              alt="twitter"
+              style={{ height: '32px', cursor: 'pointer', transition: '0.3s' }}
+              onMouseOver={(e) => (e.currentTarget.style.transform = 'scale(1.1)')}
+              onMouseOut={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+            />
+          </a>
+          <a href="https://www.youtube.com/channel/UC4ySZOJAaDiRSaClNaN6_qQ" target="_blank" rel="noopener noreferrer" aria-label="YouTube">
+            <img
+              src={youtube}
+              alt="youtube"
               style={{ height: '32px', cursor: 'pointer', transition: '0.3s' }}
               onMouseOver={(e) => (e.currentTarget.style.transform = 'scale(1.1)')}
               onMouseOut={(e) => (e.currentTarget.style.transform = 'scale(1)')}

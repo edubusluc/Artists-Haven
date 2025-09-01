@@ -49,6 +49,7 @@ const es = {
   "artistForm.error.requiredImage": "Debe subir al menos una imagen",
   "artistForm.error.requiredBanner": "Debe subir una imagen de banner",
   "artistForm.error.registrationFailed": "Error al registrar el artista",
+  "artistForm.submitting": "Registrando artista",
 
   "form.error.requiredFirstName": "El nombre es obligatorio",
   "form.error.requiredLastName": "El apellido es obligatorio",
@@ -82,6 +83,8 @@ const es = {
   "userForm.error.requiredPhone": "El número de teléfono es obligatorio",
   "userForm.error.requiredCountry": "El país es obligatorio",
   "userForm.error.requiredUsername": "El nombre de usuario es obligatorio",
+  "userForm.button.registering": "Registrando Usuario",
+  "userForm.success": "Tu cuenta ha sido creada con éxito. ¡Bienvenido/a!",
 
 
   "eventForm.label.name": "Nombre del evento",
@@ -149,11 +152,12 @@ const es = {
   "accessories": "ACCESORIOS",
   "artists": "ARTISTAS",
   "upCommingEvents": "PRÓXIMOS EVENTOS",
+  "all": "TODO",
 
 
   "login.email": "Correo Electrónico",
   "login.password": "Contraseña",
-  "login.forgotPassword": "¿Olvidaste tu contraseña?",
+  "login.forgotPassword": "¿Has olvidado la contraseña?",
   "login.error": "Credenciales incorrectas. Por favor, inténtalo de nuevo.",
   "login.loginButton": "Iniciar Sesión",
   "login.googleLogin": "Iniciar sesión con Google",
@@ -161,7 +165,6 @@ const es = {
   "login.registerUser": "Usuario",
   "login.welcome": "ARTISTS HEAVEN",
   "login.noAccount": "¿No tienes cuenta? Regístrate como:",
-  "login.forgotPassword": "¿Olvidaste tu contraseña?",
   "userLogin.error.requiredEmail": "Por favor, ingrese su correo electrónico.",
   "userLogin.error.requiredPassword": "Por favor, ingrese su contraseña",
 
@@ -333,7 +336,7 @@ const es = {
   "allMyEvents.previous": "Anterior",
   "allMyEvents.page": "Página",
   "allMyEvents.of": "de",
-  "allMyEvents.next": "Siguiente",
+  "allMyEvents.previous": "Anterior",
   "allMyEvents.totalEvents": "Eventos Totales",
   "allMyEvents.nextEvents": "Eventos Por Realizar",
   "allMyEvents.pastEvents": "Eventos Pasados",
@@ -375,6 +378,8 @@ const es = {
   "createProductForm.shippingDetails": "Envíos, cambios y devoluciones",
   "createProductForm.uploadImages": "Subir imágenes",
   "createProductForm.createProduct": "Crear Producto",
+  "createProductForm.upload3dModel":"Subir modelo 3d",
+
 
   "editProductForm.title": "Crear Nuevo Producto",
   "editProductForm.name": "Nombre del producto",
@@ -396,9 +401,11 @@ const es = {
   "editProductForm.actualImages": "Imágenes actuales",
   "editProductForm.uploadNewImages": "Subir nuevas imágenes",
   "editProductForm.saveChanges": "Guardar Cambios",
+  "editProductForm.upload3dModel": "Actualizar modelo 3d",
 
   "productDetails.loadInfo": "Cargando información...",
   "productDetails.size": "Talla",
+  "productDetails.ProductOutOfStock": "Sin stock",
 
   "productSchema.products": "Productos",
   "productSchema.filterAndSearch": "Filtrar y buscar",
@@ -466,6 +473,13 @@ const es = {
   "mySpace.noCards": "No Hay Tarjetas Disponibles",
   "mySpace.myCards": "Mis Tarjetas",
   "mySpace.notEnough": "Puntos Insuficientes",
+  "mySpace.profile": "Perfil",
+  "mySpace.myOrders": "Mis pedidos",
+  "mySpace.rewardCards": "Aplicar puntos de descuento",
+  "mySpace.myProducts": "Mis Diseños",
+  "mySpace.used": "Cupón canjeado",
+  "mySpace.active": "Cupón activo",
+
 
   "resetPassword.resetPassword": "Restablecer Contraseña",
   "resetPassword.newPassword": "Nueva Contraseña",
@@ -486,6 +500,7 @@ const es = {
   "returnRequestModal.reasonPlaceholder": "Escriba el motivo de la devolución",
   "returnRequestModal.cancel": "Cancelar",
   "returnRequestModal.submit": "Solicitar Devolución",
+  "returnRequestModal.submitting":"Enviando",
 
   "userProfile.loadProfile": "Cargando Perfil...",
   "userProfile.myProfile": "Mi Perfil",
@@ -520,9 +535,9 @@ const es = {
   "artistView.noEventsAvailable": "No hay eventos disponibles",
 
   "cancel.checkingPaymentStatus": "Verificando estado del pago...",
-  "cancel.paymentCanceled": "¡Pago cancelado!",
-  "cancel.failedTransaction": "Tu transacción no se completó. No se ha realizado ningún cargo.",
-  "cancel.help": "Si necesitas ayuda, revisa tu correo o contáctanos.",
+  "cancel.paymentCanceled": "Pago no completado",
+  "cancel.failedTransaction": "La transacción no ha sido completada. No se ha efectuado ningún cargo a su cuenta.",
+  "cancel.help": "Para cualquier consulta o asistencia adicional, por favor póngase en contacto con nuestro equipo de soporte a través del correo electrónico: mod.artistheaven@gmail.com",
   "cancel.backToShop": "Volver a la tienda",
 
   "quavi.message": "¡Hola! Soy Quavi, tu asistente personal 😊. ¿En qué puedo ayudarte hoy?",
@@ -550,12 +565,14 @@ const es = {
   "header.size": "Talla",
   "header.deleteProduct": "Eliminar Producto",
   "header.completePurchase": "Finalizar compra",
-  "header.productPlaceholder": "Buscar producto...",
-  "header.referencePlaceholder": "Referencia...",
+  "header.productPlaceholder": "Referencia de producto",
+  "header.referencePlaceholder": "Número de pedido",
   "header.search": "Buscar",
   "header.searchProduct": "Buscar Producto",
   "header.searchOrder": "Buscar Pedido",
   "header.discount": "Descuento",
+  "header.map": "Mapa",
+  "header.forFan": "Tu Diseño, Tu Premio",
 
   "homepage.viewAll": "Ver TODO",
 
@@ -602,7 +619,7 @@ const es = {
   "forFan.sortedZA": "Ordenar de la Z a la A",
   "forFan.sortByMostVotes": "Ordenar por más votos",
   "forFan.sortByLessVotes": "Ordenar por menos votos",
-  "forFan.requirSortByNewestTerms": "Ordenar por los términos más recientes",
+  "forFan.SortByNewest": "Ordenar por los más recientes",
   "forFan.SortByOldest": "Ordenar por los más antiguos",
 
 
@@ -641,8 +658,11 @@ const es = {
   "footer.email": "📧 mod.artistheaven@gmail.com",
   "footer.location": "📍 España",
   "footer.copyright": "© 2025 Artists' Heaven. Todos los derechos reservados.",
+  "footer.emailReport":"¿Algún Problema?",
 
   "faq.title": "Preguntas Frecuentes",
+
+  "promotion": "PROMOCIÓN",
 
   "forFanTermdAndConditions.title": "Términos y Condiciones",
   "forFanTermdAndConditions.intro": "Al hacer uso de esta plataforma, el usuario reconoce y acepta los siguientes términos relacionados con la participación y el envío de productos.",
@@ -651,7 +671,17 @@ const es = {
   "forFanTermdAndConditions.commercialTitle": "Cesión de Derechos y Comercialización",
   "forFanTermdAndConditions.commercial": "Al subir un producto a la plataforma, el usuario autoriza expresamente a la tienda a utilizar, modificar y comercializar dicho producto sin que ello genere derecho alguno a compensación económica. En caso de que la tienda decida sacar el producto al mercado, se enviará al usuario un ejemplar del producto final como muestra de cortesía. No obstante, bajo ninguna circunstancia se reconocerá remuneración económica, regalías ni participación en los beneficios obtenidos por la venta.",
   "forFanTermdAndConditions.lawTitle": "Legislación Aplicable",
-  "forFanTermdAndConditions.law": "Los presentes términos y condiciones se regirán por la legislación vigente en el país de operación de la tienda. El usuario renuncia a cualquier reclamación económica futura derivada de la comercialización de los productos enviados."
+  "forFanTermdAndConditions.law": "Los presentes términos y condiciones se regirán por la legislación vigente en el país de operación de la tienda. El usuario renuncia a cualquier reclamación económica futura derivada de la comercialización de los productos enviados.",
+
+  "PAID": "Pagado",
+  "IN PREPARATION": "En preparación",
+  "SENT": "Enviado",
+  "DELIVERED": "Entregado",
+
+  "myUserProducts.prodcutsNotFound": "Aún no has creado ningún diseño",
+  "myUserProducts.title":"Mis Productos",
+  "myUserProducts.previous": "Anterior",
+  "myUserProducts.next": "Siguiente",
 
 
 

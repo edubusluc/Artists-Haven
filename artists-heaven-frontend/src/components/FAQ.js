@@ -2,6 +2,7 @@ import { useState } from "react";
 import faqData from "../utils/FAQ.json";
 import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
+import Footer from "./Footer"
 
 const FAQ = () => {
   const [activeIndex, setActiveIndex] = useState(null);
@@ -44,7 +45,7 @@ const FAQ = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white py-12 px-6">
+    <><div className="min-h-screen bg-gradient-to-b from-gray-50 to-white py-12 px-6">
       <div className="max-w-4xl mx-auto">
         <motion.div
           className="bg-white shadow-xl rounded-2xl p-8 border border-gray-100"
@@ -69,8 +70,7 @@ const FAQ = () => {
                   <motion.li
                     key={index}
                     variants={itemVariants}
-                    className={`rounded-2xl border border-gray-200 overflow-hidden transition-shadow ${isOpen ? "shadow-lg" : "shadow-sm"
-                      }`}
+                    className={`rounded-2xl border border-gray-200 overflow-hidden transition-shadow ${isOpen ? "shadow-lg" : "shadow-sm"}`}
                   >
                     <button
                       onClick={() => toggleQuestion(index)}
@@ -111,7 +111,10 @@ const FAQ = () => {
           )}
         </motion.div>
       </div>
+
     </div>
+    <Footer />
+    </>
   );
 };
 

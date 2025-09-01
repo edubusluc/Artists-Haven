@@ -1,13 +1,14 @@
 import { useTranslation } from 'react-i18next';
 import { motion } from "framer-motion";
+import Footer from './Footer';
 
 const PrivacyPolicy = () => {
   const { t } = useTranslation();
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white py-12 px-6">
+    <><div className="min-h-screen bg-gradient-to-b from-gray-50 to-white py-12 px-6">
       <div className="max-w-4xl mx-auto">
-        <motion.div 
+        <motion.div
           className="bg-white shadow-xl rounded-2xl p-8 border border-gray-100"
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
@@ -21,9 +22,9 @@ const PrivacyPolicy = () => {
           </p>
 
           <div className="space-y-8">
-            <motion.div 
-              initial={{ opacity: 0, x: -30 }} 
-              whileInView={{ opacity: 1, x: 0 }} 
+            <motion.div
+              initial={{ opacity: 0, x: -30 }}
+              whileInView={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.5 }}
               viewport={{ once: true }}
             >
@@ -33,9 +34,9 @@ const PrivacyPolicy = () => {
               <p className="text-gray-700 leading-relaxed">{t('privacy.dataCollection')}</p>
             </motion.div>
 
-            <motion.div 
-              initial={{ opacity: 0, x: -30 }} 
-              whileInView={{ opacity: 1, x: 0 }} 
+            <motion.div
+              initial={{ opacity: 0, x: -30 }}
+              whileInView={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
               viewport={{ once: true }}
             >
@@ -45,9 +46,9 @@ const PrivacyPolicy = () => {
               <p className="text-gray-700 leading-relaxed">{t('privacy.dataUse')}</p>
             </motion.div>
 
-            <motion.div 
-              initial={{ opacity: 0, x: -30 }} 
-              whileInView={{ opacity: 1, x: 0 }} 
+            <motion.div
+              initial={{ opacity: 0, x: -30 }}
+              whileInView={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.5, delay: 0.4 }}
               viewport={{ once: true }}
             >
@@ -59,7 +60,7 @@ const PrivacyPolicy = () => {
           </div>
         </motion.div>
       </div>
-    </div>
+    </div><Footer /></>
   );
 };
 

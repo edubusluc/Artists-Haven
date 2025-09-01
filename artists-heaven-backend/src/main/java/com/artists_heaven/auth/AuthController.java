@@ -35,9 +35,11 @@ public class AuthController {
     private final RefreshTokenService refreshTokenService;
     private final PasswordService passwordService;
     private final EmailSenderService emailSenderService;
+    private final static String ERROR = "error";
 
     public AuthController(AuthService authService, UserRepository userRepository,
-            RefreshTokenService refreshTokenService, PasswordService passwordService, EmailSenderService emailSenderService) {
+            RefreshTokenService refreshTokenService, PasswordService passwordService,
+            EmailSenderService emailSenderService) {
         this.authService = authService;
         this.userRepository = userRepository;
         this.refreshTokenService = refreshTokenService;
@@ -64,7 +66,7 @@ public class AuthController {
             // Find user by email
             Optional<User> optionalUser = userRepository.findByEmail(loginRequest.getEmail());
             if (!optionalUser.isPresent()) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "User not found"));
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(ERROR, "User not found"));
             }
 
             User user = optionalUser.get();
@@ -83,7 +85,7 @@ public class AuthController {
         } catch (Exception e) {
             return ResponseEntity
                     .status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("error", "Invalid credentials or server error"));
+                    .body(Map.of(ERROR, "Invalid credentials or server error"));
         }
     }
 
@@ -105,13 +107,13 @@ public class AuthController {
             String role = map.get("role");
 
             if (accessToken == null) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Invalid ID token"));
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(ERROR, "Invalid ID token"));
             }
 
             // Find user by email
             Optional<User> optionalUser = userRepository.findByEmail(email);
             if (!optionalUser.isPresent()) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "User not found"));
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(ERROR, "User not found"));
             }
 
             User user = optionalUser.get();
@@ -126,16 +128,20 @@ public class AuthController {
                     "role", role));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Error verifying token"));
+                    .body(Map.of(ERROR, "Error verifying token"));
         }
     }
 
+    @Operation(summary = "Refresh JWT tokens", description = "Generates a new access token and refresh token by validating and rotating the provided refresh token.")
+    @ApiResponse(responseCode = "200", description = "Tokens successfully refreshed", content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"accessToken\": \"...\", \"refreshToken\": \"...\"}")))
+    @ApiResponse(responseCode = "400", description = "Missing refresh token in request", content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Refresh token is required\"}")))
+    @ApiResponse(responseCode = "401", description = "Invalid or expired refresh token", content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Invalid or expired refresh token\"}")))
     @PostMapping("/refresh-token")
     public ResponseEntity<Map<String, String>> refreshToken(@RequestBody Map<String, String> request) {
         String refreshTokenStr = request.get("refreshToken");
 
         if (refreshTokenStr == null || refreshTokenStr.isBlank()) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Refresh token is required"));
+            return ResponseEntity.badRequest().body(Map.of(ERROR, "Refresh token is required"));
         }
 
         try {
@@ -159,19 +165,25 @@ public class AuthController {
 
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("error", "Invalid or expired refresh token"));
+                    .body(Map.of(ERROR, "Invalid or expired refresh token"));
         }
     }
 
+    @Operation(summary = "Change password", description = "Allows an authenticated user to change their password by providing the current and new password.")
+    @ApiResponse(responseCode = "200", description = "Password successfully updated", content = @Content(mediaType = "application/json", schema = @Schema(example = "\"Contraseña actualizada\"")))
+    @ApiResponse(responseCode = "400", description = "Invalid current password", content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Current password is incorrect\"}")))
     @PostMapping("/change-password")
-    public ResponseEntity<?> changePassword(@AuthenticationPrincipal User user,
+    public ResponseEntity<String> changePassword(@AuthenticationPrincipal User user,
             @RequestBody ChangePasswordRequest request) {
         passwordService.changePassword(user, request.getCurrentPassword(), request.getNewPassword());
         return ResponseEntity.ok("Contraseña actualizada");
     }
 
+    @Operation(summary = "Forgot password", description = "Initiates the password reset process by generating a reset token and sending a reset link to the user's email.")
+    @ApiResponse(responseCode = "200", description = "Reset email sent if the account exists", content = @Content(mediaType = "application/json", schema = @Schema(example = "\"Correo enviado si la cuenta existe\"")))
+    @ApiResponse(responseCode = "400", description = "Missing or invalid email in request", content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Invalid email address\"}")))
     @PostMapping("/forgot-password")
-    public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest request) {
+    public ResponseEntity<String> forgotPassword(@RequestBody ForgotPasswordRequest request) {
         String token = passwordService.createPasswordResetToken(request.getEmail());
         // Aquí envías el email:
         String resetLink = "http://localhost:3000/reset-password?token=" + token;
@@ -181,8 +193,11 @@ public class AuthController {
         return ResponseEntity.ok("Correo enviado si la cuenta existe");
     }
 
+    @Operation(summary = "Reset password", description = "Resets the user's password using a valid reset token and the new password provided.")
+    @ApiResponse(responseCode = "200", description = "Password successfully reset", content = @Content(mediaType = "application/json", schema = @Schema(example = "\"Contraseña restablecida\"")))
+    @ApiResponse(responseCode = "400", description = "Invalid or expired reset token", content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Invalid or expired reset token\"}")))
     @PostMapping("/reset-password")
-    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest request) {
+    public ResponseEntity<String> resetPassword(@RequestBody ResetPasswordRequest request) {
         passwordService.resetPassword(request.getToken(), request.getNewPassword());
         return ResponseEntity.ok("Contraseña restablecida");
     }

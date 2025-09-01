@@ -1,7 +1,9 @@
 import { useAuth } from "./useAuth";
+import { useTranslation } from "react-i18next";
 
 const Logout = () => {
   const { logout } = useAuth();
+  const {t} = useTranslation();
 
   const handleLogout = () => {
     logout();
@@ -11,7 +13,7 @@ const Logout = () => {
   return (
     <div>
       <button onClick={handleLogout} className="w-full rounded-lgtransition text-left">
-        Cerrar Sesión
+        {t('logout')}
       </button>
     </div>
   );

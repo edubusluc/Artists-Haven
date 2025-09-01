@@ -560,7 +560,6 @@ Para más detalles, puedes escribirnos a **mod.artistheaven@gmail.com**.
             <label className="block font-semibold mb-2 text-sm text-gray-600">{t('createProductForm.upload3dModel')}</label>
             <input
               type="file"
-              multiple
               onChange={handleModelReferenceChange}
               className="block w-full text-sm text-gray-500"
             />

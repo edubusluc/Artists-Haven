@@ -310,7 +310,7 @@ button.slide-on-hover:hover span {
 }
 
 .promo-border::after {
-  content: 'PROMOCIÓN';
+  content: attr(data-content);
   position: absolute;
   top: 0;
   right: 0;

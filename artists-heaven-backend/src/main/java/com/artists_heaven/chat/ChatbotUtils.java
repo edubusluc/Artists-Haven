@@ -14,6 +14,8 @@ import java.util.regex.Pattern;
 import org.apache.commons.codec.language.Metaphone;
 import org.apache.commons.text.similarity.LevenshteinDistance;
 
+import com.artists_heaven.exception.AppExceptions;
+
 public class ChatbotUtils {
 
     static final Set<String> STOPWORDS_ES = loadStopwords("/stopwords_es.txt");
@@ -33,12 +35,9 @@ public class ChatbotUtils {
         long enCount = Arrays.stream(tokens).filter(STOPWORDS_EN::contains).count();
         long esCount = Arrays.stream(tokens).filter(STOPWORDS_ES::contains).count();
 
-        // Si no detecta ninguna palabra en ninguna lista, devolver falso (no inglés)
         if (enCount == 0 && esCount == 0) {
             return false;
         }
-
-        // Definimos un margen para evitar empates o falsos positivos
         int margin = 1;
 
         return enCount > esCount + margin;
@@ -80,12 +79,12 @@ public class ChatbotUtils {
                     String dictCode = metaphone.encode(dictWord);
                     return dictCode.equals(wordCode);
                 })
-                .collect(Collectors.toList());
+                .toList();
 
         if (candidates.isEmpty()) {
             candidates = dictionary.stream()
                     .filter(dictWord -> Math.abs(dictWord.length() - word.length()) <= 2)
-                    .collect(Collectors.toList());
+                    .toList();
         }
 
         // Busca mejor coincidencia en candidatos filtrados
@@ -177,8 +176,8 @@ public class ChatbotUtils {
                         .map(String::toLowerCase)
                         .collect(Collectors.toSet());
             }
-        } catch (IOException e) {
-            throw new RuntimeException("Error loading " + label + " from " + resourcePath, e);
+        } catch (Exception e) {
+            throw new AppExceptions.InternalServerErrorException("Error loading " + label + " from " + resourcePath);
         }
     }
 }

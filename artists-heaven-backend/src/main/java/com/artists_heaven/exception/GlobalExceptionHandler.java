@@ -49,6 +49,12 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(ex.getMessage(), HttpStatus.BAD_REQUEST);
     }
 
+     @ExceptionHandler(AppExceptions.InternalServerErrorException.class)
+    public ResponseEntity<StandardResponse<String>> handleInternalServerError(AppExceptions.InternalServerErrorException ex) {
+        return buildErrorResponse(ex.getMessage(), HttpStatus.BAD_REQUEST);
+    }
+
+
 
     @ExceptionHandler(org.springframework.web.bind.MethodArgumentNotValidException.class)
     public ResponseEntity<StandardResponse<String>> handleValidationErrors(

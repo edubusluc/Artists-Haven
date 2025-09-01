@@ -60,7 +60,7 @@ class EventServiceTest {
         SecurityContextHolder.clearContext();
     }
 
-        @AfterEach
+    @AfterEach
     void cleanUp() throws Exception {
         Path uploadDir = Paths.get("artists-heaven-backend/src/main/resources/event_media/");
 

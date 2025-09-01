@@ -35,7 +35,7 @@ const en = {
   "artistForm.lastName": "Last Name",
   "artistForm.email": "Email",
   "artistForm.password": "Password",
-  "artistForm.artistName": "Stage Name",
+  "artistForm.artistName": "Artist Name",
   "artistForm.url": "Artist URL",
   "artistForm.color": "Preferred Color",
   "artistForm.mainImage": "Main Image",
@@ -46,10 +46,12 @@ const en = {
   "artistForm.error.invalidImage": "Only valid image files are allowed (jpg, png, gif, bmp, webp).",
   "artistForm.error.requiredImage": "You must select at least one valid image.",
   "artistForm.error.registrationFailed": "Artist registration failed",
+  "artistForm.error.requiredArtistName": "Artist name is required",
   "artistForm.error.requiredUrl": "Artist URL is required",
   "artistForm.error.requiredImage": "At least one image must be uploaded",
   "artistForm.error.requiredBanner": "Banner image must be uploaded",
   "artistForm.error.registrationFailed": "Failed to register the artist",
+  "artistForm.submitting": "Registering artist",
 
   "form.error.requiredFirstName": "First name is required",
   "form.error.requiredLastName": "Last name is required",
@@ -83,6 +85,8 @@ const en = {
   "userForm.error.requiredPhone": "Phone number is required",
   "userForm.error.requiredCountry": "Country is required",
   "userForm.error.requiredUsername": "Username is required",
+  "userForm.button.registering": "Registering User",
+  "userForm.success": "Your account has been successfully created. Welcome!",
 
   "eventForm.label.name": "Event Name",
   "eventForm.label.description": "Description",
@@ -149,6 +153,7 @@ const en = {
   "accessories": "ACCESSORIES",
   "artists": "ARTISTS",
   "upCommingEvents": "UPCOMING EVENTS",
+  "all": "ALL",
 
   "login.email": "Email",
   "login.password": "Password",
@@ -376,6 +381,8 @@ const en = {
   "createProductForm.shippingDetails": "Shipping, exchanges, and returns",
   "createProductForm.uploadImages": "Upload images",
   "createProductForm.createProduct": "Create Product",
+  "createProductForm.upload3dModel":"Upload 3d model",
+  
 
   "editProductForm.title": "Edit Product",
   "editProductForm.name": "Product Name",
@@ -396,9 +403,11 @@ const en = {
   "editProductForm.actualImages": "Current Images",
   "editProductForm.uploadNewImages": "Upload New Images",
   "editProductForm.saveChanges": "Save Changes",
+  "editProductForm.upload3dModel": "upload New 3d model",
 
   "productDetails.loadInfo": "Loading information...",
   "productDetails.size": "Size",
+  "productDetails.ProductOutOfStock": "Out of Stock",
 
   "productSchema.products": "Products",
   "productSchema.filterAndSearch": "Filter and search",
@@ -466,6 +475,12 @@ const en = {
   "mySpace.noCards": "No Cards Available",
   "mySpace.myCards": "My Cards",
   "mySpace.notEnough": "Not Enough Points",
+  "mySpace.profile": "Profile",
+  "mySpace.myOrders": "My Orders",
+  "mySpace.rewardCards": "Apply Discount Points",
+  "mySpace.myProducts": "My Designs",
+  "mySpace.used": "Coupon redeemed",
+  "mySpace.active": "Active coupon",
 
   "resetPassword.resetPassword": "Reset Password",
   "resetPassword.newPassword": "New Password",
@@ -486,6 +501,7 @@ const en = {
   "returnRequestModal.reasonPlaceholder": "Write the reason for the return",
   "returnRequestModal.cancel": "Cancel",
   "returnRequestModal.submit": "Request Return",
+  "returnRequestModal.submitting": "Submmiting",
 
   "userProfile.loadProfile": "Loading Profile...",
   "userProfile.myProfile": "My Profile",
@@ -550,12 +566,14 @@ const en = {
   "header.size": "Size",
   "header.deleteProduct": "Delete Product",
   "header.completePurchase": "Checkout",
-  "header.productPlaceholder": "Search product...",
-  "header.referencePlaceholder": "Reference...",
+  "header.productPlaceholder": "Product Reference",
+  "header.referencePlaceholder": "Order number",
   "header.search": "Search",
   "header.searchProduct": "Search Product",
   "header.searchOrder": "Search Order",
   "header.discount": "Discount",
+  "header.map": "Map",
+  "header.forFan": "Your Design, Your Prize",
 
   "homepage.viewAll": "View ALL",
 
@@ -601,7 +619,8 @@ const en = {
   "forFan.sortedZA": "Sort from Z to A",
   "forFan.sortByMostVotes": "Sort by most votes",
   "forFan.sortByLessVotes": "Sort by least votes",
-  "forFan.requirSortByNewestTerms": "Sort by the newest terms",
+  "forFan.sortByLessVotes": "Sort by least votes",
+  "forFan.SortByNewest": "Sort by the newest",
   "forFan.SortByOldest": "Sort by the oldest",
 
   "footer.description": "Your space to discover, support, and enjoy emerging talent.",
@@ -615,8 +634,11 @@ const en = {
   "footer.email": "📧 mod.artistheaven@gmail.com",
   "footer.location": "📍 Spain",
   "footer.copyright": "© 2025 Artists' Heaven. All rights reserved.",
+  "footer.emailReport":"Any problems?",
 
   "faq.title": "Frequently Asked Questions",
+
+  "promotion": "ON PROMOTION",
 
   "forFanTermdAndConditions.title": "Terms and Conditions",
   "forFanTermdAndConditions.intro": "By using this platform, the user acknowledges and agrees to the following terms regarding participation and product submission.",
@@ -625,8 +647,17 @@ const en = {
   "forFanTermdAndConditions.commercialTitle": "Transfer of Rights and Commercialization",
   "forFanTermdAndConditions.commercial": "By uploading a product to the platform, the user expressly authorizes the store to use, modify, and commercialize the product without generating any right to financial compensation. If the store decides to release the product for sale, the user will receive a final copy of the product as a courtesy. However, under no circumstances will the user be entitled to monetary compensation, royalties, or participation in the profits derived from its commercialization.",
   "forFanTermdAndConditions.lawTitle": "Applicable Law",
-  "forFanTermdAndConditions.law": "These terms and conditions shall be governed by the laws in force in the country where the store operates. The user waives any future financial claims arising from the commercialization of the submitted products."
+  "forFanTermdAndConditions.law": "These terms and conditions shall be governed by the laws in force in the country where the store operates. The user waives any future financial claims arising from the commercialization of the submitted products.",
 
+  "PAID": "Paid",
+  "IN PREPARATION": "In preparation",
+  "SENT": "Sent",
+  "DELIVERED": "Delivered",
+
+  "myUserProducts.prodcutsNotFound": "You haven't created any designs yet",
+  "myUserProducts.title": "My Products",
+  "myUserProducts.previous": "Previous",
+  "myUserProducts.next": "Next",
 
 };
 export default en;

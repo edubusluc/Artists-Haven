@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { GoogleLogin } from "@react-oauth/google";
 import { useTranslation } from "react-i18next";
+import { Eye, EyeOff } from "lucide-react";
 
 const UserLogin = () => {
     const [email, setEmail] = useState("");
@@ -11,6 +12,7 @@ const UserLogin = () => {
     const { t, i18n } = useTranslation();
     const language = i18n.language;
     const [validationErrors, setValidationErrors] = useState({});
+    const [showPassword, setShowPassword] = useState(false);
 
     useEffect(() => {
         setValidationErrors({})
@@ -101,8 +103,12 @@ const UserLogin = () => {
                 {/* PANEL IZQUIERDO */}
                 <div className="bg-gradient-to-br from-blue-600 to-blue-900 p-12 flex flex-col justify-center space-y-8">
                     <form onSubmit={handleSubmit} className="space-y-6">
+                        {/* EMAIL */}
                         <div>
-                            <label htmlFor="email" className="block text-sm font-semibold text-blue-200 mb-2">
+                            <label
+                                htmlFor="email"
+                                className="block text-sm font-semibold text-blue-200 mb-2"
+                            >
                                 {t("login.email")}
                             </label>
                             <input
@@ -113,49 +119,73 @@ const UserLogin = () => {
                                 className="w-full rounded-lg px-5 py-3 text-gray-800 font-medium focus:outline-none focus:ring-4 focus:ring-blue-400 shadow-md transition"
                             />
                             {validationErrors.email && (
-                            <p className="text-white text-sm">{validationErrors.email}</p>
-                        )}
+                                <p className="text-white text-sm">{validationErrors.email}</p>
+                            )}
                         </div>
 
-                        <div>
-                            <label htmlFor="password" className="block text-sm font-semibold text-blue-200 mb-2">
+                        {/* PASSWORD con toggle 👁️ */}
+                        <div className="relative">
+                            <label
+                                htmlFor="password"
+                                className="block text-sm font-semibold text-blue-200 mb-2"
+                            >
                                 {t("login.password")}
                             </label>
                             <input
-                                type="password"
+                                type={showPassword ? "text" : "password"}
                                 id="password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 placeholder="••••••••"
-                                className="w-full rounded-lg px-5 py-3 text-gray-800 font-medium focus:outline-none focus:ring-4 focus:ring-blue-400 shadow-md transition"
+                                className="w-full rounded-lg px-5 py-3 pr-12 text-gray-800 font-medium focus:outline-none focus:ring-4 focus:ring-blue-400 shadow-md transition"
                             />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute right-3 top-[42px] text-gray-500 hover:text-gray-300"
+                            >
+                                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                            </button>
                             {validationErrors.password && (
-                            <p className="text-white text-sm">{validationErrors.password}</p>
-                        )}
+                                <p className="text-white text-sm">{validationErrors.password}</p>
+                            )}
                         </div>
 
+                        {/* LINK RESET PASSWORD */}
                         <div className="text-right mt-2">
-                            <Link to="/forgot-password" className="text-sm text-blue-200 hover:underline">
+                            <Link
+                                to="/forgot-password"
+                                className="text-sm text-blue-200 hover:underline"
+                            >
                                 {t("login.forgotPassword")}
                             </Link>
                         </div>
 
+                        {/* ERROR */}
                         {error && (
                             <p className="text-sm text-red-700 bg-red-100 px-4 py-2 rounded-lg shadow-inner">
                                 {error}
                             </p>
                         )}
 
+                        {/* LOGIN BUTTON */}
                         <button
                             type="submit"
                             disabled={isLoading}
                             className="w-full py-3 bg-white bg-opacity-30 hover:bg-opacity-40 text-white font-semibold rounded-xl shadow-lg transition duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {isLoading ? t("login.loginButton") + "..." : t("login.loginButton")}
+                            {isLoading
+                                ? t("login.loginButton") + "..."
+                                : t("login.loginButton")}
                         </button>
                     </form>
+
+                    {/* GOOGLE LOGIN */}
                     <div className="w-full bg-white bg-opacity-30 hover:bg-opacity-40 text-white font-semibold rounded-xl shadow-lg transition duration-300 disabled:opacity-50 disabled:cursor-not-allowed">
-                        <GoogleLogin onSuccess={handleGoogleLoginSuccess} onError={handleGoogleLoginError} />
+                        <GoogleLogin
+                            onSuccess={handleGoogleLoginSuccess}
+                            onError={handleGoogleLoginError}
+                        />
                     </div>
                 </div>
 
@@ -183,7 +213,6 @@ const UserLogin = () => {
             </div>
         </div>
     );
-
 };
 
 export default UserLogin;

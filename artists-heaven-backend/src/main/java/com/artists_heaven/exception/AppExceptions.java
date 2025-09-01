@@ -2,6 +2,10 @@ package com.artists_heaven.exception;
 
 public class AppExceptions {
 
+    private AppExceptions() {
+        throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
+    }
+
     public static class ForbiddenActionException extends RuntimeException {
         public ForbiddenActionException(String message) {
             super(message);
@@ -50,6 +54,12 @@ public class AppExceptions {
 
     public static class LimitExceededException extends RuntimeException {
         public LimitExceededException(String message) {
+            super(message);
+        }
+    }
+
+    public static class InternalServerErrorException extends RuntimeException {
+        public InternalServerErrorException(String message) {
             super(message);
         }
     }

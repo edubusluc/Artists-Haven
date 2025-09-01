@@ -19,7 +19,6 @@ import com.artists_heaven.entities.user.User;
 import com.artists_heaven.entities.user.UserRepository;
 import com.artists_heaven.exception.AppExceptions;
 import com.artists_heaven.rewardCard.RewardCardController.RedeemRequest;
-import com.artists_heaven.standardResponse.StandardResponse;
 
 class RewardCardServiceTest {
 
@@ -59,12 +58,9 @@ class RewardCardServiceTest {
         when(messageSource.getMessage(anyString(), any(), any(Locale.class))).thenReturn("OK");
         when(rewardCardRepository.save(any(RewardCard.class))).thenAnswer(i -> i.getArgument(0));
 
-        StandardResponse<RewardCard> response = rewardCardService.redeemRewardCard(request, "en");
+        RewardCard response = rewardCardService.redeemRewardCard(request, "es");
 
         assertNotNull(response);
-        assertEquals("OK", response.getMessage());
-        assertEquals(200, response.getStatus());
-        assertEquals(10, response.getData().getDiscountPercentage());
         verify(userRepository).save(user);
         verify(rewardCardRepository).save(any(RewardCard.class));
     }

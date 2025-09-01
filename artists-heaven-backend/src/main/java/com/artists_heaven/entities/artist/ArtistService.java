@@ -4,8 +4,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.stream.Collectors;
-
 import org.springframework.context.MessageSource;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -51,7 +49,8 @@ public class ArtistService {
 
     public ArtistService(ArtistRepository artistRepository, UserRepository userRepository,
             CategoryRepository categoryRepository, VerificationRepository verificationRepository,
-            ProductService productService, EventService eventService, MessageSource messageSource, ImageServingUtil imageServingUtil) {
+            ProductService productService, EventService eventService, MessageSource messageSource,
+            ImageServingUtil imageServingUtil) {
         this.artistRepository = artistRepository;
         this.userRepository = userRepository;
         this.categoryRepository = categoryRepository;
@@ -119,19 +118,10 @@ public class ArtistService {
     }
 
     public String isArtistVerificated(Long id) {
-        Boolean isVerified = artistRepository.isArtistVerificated(id);
         List<VerificationStatus> latestVerificationStatus = artistRepository.findLatestVerificationStatus(id);
-        String result = "";
-        if (isVerified) {
-            result = "Verified";
-        } else {
-            result = "Not Verified";
-        }
-
-        if (latestVerificationStatus.size() != 0) {
-            result = latestVerificationStatus.get(0).toString();
-        }
-        return result;
+        return latestVerificationStatus.isEmpty()
+                ? (artistRepository.isArtistVerificated(id) ? "Verified" : "Not Verified")
+                : latestVerificationStatus.get(0).toString();
     }
 
     public Integer getFutureEvents(Long id, Integer year) {
@@ -182,7 +172,7 @@ public class ArtistService {
                     dto.setTotalOrders((Long) result[1]);
                     return dto;
                 })
-                .collect(Collectors.toList());
+                .toList();
     }
 
     public List<Artist> getValidArtists() {

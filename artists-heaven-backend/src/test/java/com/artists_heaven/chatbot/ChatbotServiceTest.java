@@ -293,4 +293,60 @@ class ChatbotServiceTest {
         assertTrue(exception.getMessage().contains("Error del servidor de Gemini"));
     }
 
+    @Test
+    void testCallGeminiAPI_ThrowsWhenResponseBodyIsNull() {
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        ChatbotService spyService = spy(chatbotService);
+        doReturn(restTemplate).when(spyService).createRestTemplate();
+
+        ResponseEntity<Map> responseEntity = new ResponseEntity<>(null, HttpStatus.OK);
+        when(restTemplate.postForEntity(anyString(), any(), eq(Map.class)))
+                .thenReturn(responseEntity);
+
+        Exception exception = assertThrows(RuntimeException.class, () -> {
+            spyService.callGeminiAPI("Hola");
+        });
+
+        assertTrue(exception.getMessage().contains("Respuesta inesperada de Gemini"));
+    }
+
+    @Test
+    void testCallGeminiAPI_ThrowsWhenCandidatesIsEmpty() {
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        ChatbotService spyService = spy(chatbotService);
+        doReturn(restTemplate).when(spyService).createRestTemplate();
+
+        Map<String, Object> responseBody = Map.of("candidates", List.of());
+        ResponseEntity<Map> responseEntity = new ResponseEntity<>(responseBody, HttpStatus.OK);
+        when(restTemplate.postForEntity(anyString(), any(), eq(Map.class)))
+                .thenReturn(responseEntity);
+
+        Exception exception = assertThrows(RuntimeException.class, () -> {
+            spyService.callGeminiAPI("Hola");
+        });
+
+        assertTrue(exception.getMessage().contains("No se generó respuesta de Gemini"));
+    }
+
+    @Test
+    void testCallGeminiAPI_ThrowsWhenPartsIsEmpty() {
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        ChatbotService spyService = spy(chatbotService);
+        doReturn(restTemplate).when(spyService).createRestTemplate();
+
+        Map<String, Object> responseBody = Map.of(
+                "candidates", List.of(
+                        Map.of("content", Map.of("parts", List.of())) // 👈 parts vacío
+                ));
+        ResponseEntity<Map> responseEntity = new ResponseEntity<>(responseBody, HttpStatus.OK);
+        when(restTemplate.postForEntity(anyString(), any(), eq(Map.class)))
+                .thenReturn(responseEntity);
+
+        Exception exception = assertThrows(RuntimeException.class, () -> {
+            spyService.callGeminiAPI("Hola");
+        });
+
+        assertTrue(exception.getMessage().contains("Respuesta sin partes de texto"));
+    }
+
 }

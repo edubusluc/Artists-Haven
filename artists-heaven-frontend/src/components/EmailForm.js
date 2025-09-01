@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPaperPlane, faSpinner } from "@fortawesome/free-solid-svg-icons";
 import { useTranslation } from "react-i18next";
+import Footer from "./Footer";
 
 const EmailForm = () => {
     const storedEmail = localStorage.getItem("userEmail");
@@ -87,7 +88,7 @@ const EmailForm = () => {
     };
 
     return (
-        <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-gray-100 to-gray-200 p-6">
+        <><div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-gray-100 to-gray-200 p-6">
             <motion.div
                 initial={{ opacity: 0, y: 40 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -104,8 +105,7 @@ const EmailForm = () => {
                         <span className="font-medium text-gray-700">
                             {emailData.sender}
                         </span>
-                    </p>
-                }
+                    </p>}
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     {/* Email si no está autenticado */}
@@ -119,11 +119,10 @@ const EmailForm = () => {
                                 name="sender"
                                 value={emailData.sender}
                                 onChange={handleChange}
-                                className="w-full rounded-xl border-2 border-gray-100 focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2 transition-all duration-300 ease-in-out"
-                            />
+                                className="w-full rounded-xl border-2 border-gray-100 focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2 transition-all duration-300 ease-in-out" />
                             {validationErrors.sender && (
-                            <p className="text-red-600 text-sm">{validationErrors.sender}</p>
-                        )}
+                                <p className="text-red-600 text-sm">{validationErrors.sender}</p>
+                            )}
                         </div>
                     )}
 
@@ -171,8 +170,7 @@ const EmailForm = () => {
                         disabled={loading}
                         className={`w-full flex items-center justify-center gap-2 font-medium py-2 px-4 rounded-xl shadow-md transition-colors ${loading
                             ? "bg-gray-400 text-white cursor-not-allowed"
-                            : "bg-indigo-600 text-white hover:bg-indigo-700"
-                            }`}
+                            : "bg-indigo-600 text-white hover:bg-indigo-700"}`}
                     >
                         {loading ? (
                             <>
@@ -188,7 +186,7 @@ const EmailForm = () => {
                     </motion.button>
                 </form>
             </motion.div>
-        </div>
+        </div><Footer /></>
     );
 };
 

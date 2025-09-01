@@ -1,7 +1,9 @@
 package com.artists_heaven.rewardCard;
 
 import java.util.List;
+import java.util.Locale;
 
+import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -23,10 +25,12 @@ public class RewardCardController {
 
     private final RewardCardRepository rewardCardRepository;
     private final RewardCardService rewardCardService;
+    private final MessageSource messageSource;
 
-    public RewardCardController(RewardCardRepository rewardCardRepository, RewardCardService rewardCardService) {
+    public RewardCardController(RewardCardRepository rewardCardRepository, RewardCardService rewardCardService, MessageSource messageSource) {
         this.rewardCardRepository = rewardCardRepository;
         this.rewardCardService = rewardCardService;
+        this.messageSource = messageSource;
     }
 
     @GetMapping("/me")
@@ -50,12 +54,15 @@ public class RewardCardController {
 
     // 🔹 Canjear puntos por una reward card
     @PostMapping("/redeem")
-    public ResponseEntity<StandardResponse<RewardCard>> redeemRewardCard(
+    public ResponseEntity<StandardResponse<RewardCardDTO>> redeemRewardCard(
             @RequestBody RedeemRequest request,
             @RequestParam String lang) {
-
-        StandardResponse<RewardCard> response = rewardCardService.redeemRewardCard(request, lang);
-        return ResponseEntity.status(response.getStatus()).body(response);
+        
+        Locale locale = new Locale(lang);
+        RewardCard response = rewardCardService.redeemRewardCard(request, lang);
+        RewardCardDTO responseDTO = new RewardCardDTO(response);
+        String msg = messageSource.getMessage("rewardCard.rewardCardRedeemedSuccessfully", null, locale);
+        return ResponseEntity.ok(new StandardResponse<>(msg, responseDTO, HttpStatus.OK.value()));
     }
 
     // 🔹 Método auxiliar para obtener usuario autenticado

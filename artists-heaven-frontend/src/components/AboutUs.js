@@ -1,13 +1,14 @@
 import { useTranslation } from 'react-i18next';
 import { motion } from "framer-motion";
+import Footer from './Footer';
 
 const AboutUs = () => {
   const { t } = useTranslation();
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white py-12 px-6">
+    <><div className="min-h-screen bg-gradient-to-b from-gray-50 to-white py-12 px-6">
       <div className="max-w-4xl mx-auto">
-        <motion.div 
+        <motion.div
           className="bg-white shadow-xl rounded-2xl p-8 border border-gray-100"
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
@@ -50,7 +51,7 @@ const AboutUs = () => {
           </div>
         </motion.div>
       </div>
-    </div>
+    </div><Footer /></>
   );
 };
 

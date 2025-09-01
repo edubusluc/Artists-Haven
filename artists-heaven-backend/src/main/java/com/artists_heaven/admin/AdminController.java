@@ -25,7 +25,6 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import com.artists_heaven.verification.Verification;
 import com.artists_heaven.verification.VerificationRepository;
 import com.artists_heaven.verification.VerificationService;
@@ -36,7 +35,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 import java.nio.file.Path;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
@@ -103,11 +101,9 @@ public class AdminController {
         }
 
         @Operation(summary = "Validate artist account", description = "Marks an artist as verified, creates a new category using the artist's name, and updates the verification request status to 'ACCEPTED'.")
-        @ApiResponses({
-                        @ApiResponse(responseCode = "200", description = "Artist successfully validated", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
-                        @ApiResponse(responseCode = "400", description = "Missing or invalid payload data", content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"message\": \"Missing artist ID or verification ID\", \"status\": 400}"))),
-                        @ApiResponse(responseCode = "404", description = "Artist or verification request not found", content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"message\": \"Artist not found\", \"status\": 404}")))
-        })
+        @ApiResponse(responseCode = "200", description = "Artist successfully validated", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+        @ApiResponse(responseCode = "400", description = "Missing or invalid payload data", content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"message\": \"Missing artist ID or verification ID\", \"status\": 400}")))
+        @ApiResponse(responseCode = "404", description = "Artist or verification request not found", content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"message\": \"Artist not found\", \"status\": 404}")))
         @PostMapping("/validate_artist")
         public ResponseEntity<StandardResponse<String>> validateArtist(
                         @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Payload containing the artist ID and verification request ID", required = true, content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"id\": 123, \"verificationId\": 456}"))) @RequestBody Map<String, Long> payload) {
@@ -128,10 +124,8 @@ public class AdminController {
         }
 
         @Operation(summary = "Reject verification request", description = "This endpoint marks a verification request as REJECTED by its ID.")
-        @ApiResponses(value = {
-                        @ApiResponse(responseCode = "200", description = "Verification rejected successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class), examples = @ExampleObject(value = "{ \"message\": \"Verification rejected successfully\", \"data\": null, \"status\": 200 }"))),
-                        @ApiResponse(responseCode = "404", description = "Verification not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class), examples = @ExampleObject(value = "{ \"message\": \"Verification not found\", \"data\": null, \"status\": 404 }")))
-        })
+        @ApiResponse(responseCode = "200", description = "Verification rejected successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class), examples = @ExampleObject(value = "{ \"message\": \"Verification rejected successfully\", \"data\": null, \"status\": 200 }")))
+        @ApiResponse(responseCode = "404", description = "Verification not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class), examples = @ExampleObject(value = "{ \"message\": \"Verification not found\", \"data\": null, \"status\": 404 }")))
         @PostMapping("/{verificationId}/refuse")
         public ResponseEntity<StandardResponse<Void>> refuseVerification(
                         @Parameter(description = "ID of the verification request to reject", required = true) @PathVariable Long verificationId) {
@@ -142,9 +136,7 @@ public class AdminController {
         }
 
         @Operation(summary = "Get all pending verifications", description = "Returns a list of all verification requests, regardless of their status. You may want to filter by 'PENDING' on the client side.")
-        @ApiResponses(value = {
-                        @ApiResponse(responseCode = "200", description = "List of verification requests retrieved successfully", content = @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = Verification.class))))
-        })
+        @ApiResponse(responseCode = "200", description = "List of verification requests retrieved successfully", content = @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = Verification.class))))
         @GetMapping("/verification/pending")
         public ResponseEntity<StandardResponse<List<Verification>>> getAllPendingVerifications() {
                 List<Verification> verificationList = verificationRepository
@@ -157,11 +149,9 @@ public class AdminController {
         @Operation(summary = "Get verification video by filename", description = "Retrieves a video file used for artist verification from the local server directory. "
                         + "The file must exist under the verification_media folder. "
                         + "The filename must not contain invalid characters or paths (e.g., '..').")
-        @ApiResponses(value = {
-                        @ApiResponse(responseCode = "200", description = "Video file retrieved successfully", content = @Content(mediaType = "video/mp4", schema = @Schema(type = "string", format = "binary"))),
-                        @ApiResponse(responseCode = "400", description = "Invalid file name"),
-                        @ApiResponse(responseCode = "404", description = "Video file not found")
-        })
+        @ApiResponse(responseCode = "200", description = "Video file retrieved successfully", content = @Content(mediaType = "video/mp4", schema = @Schema(type = "string", format = "binary")))
+        @ApiResponse(responseCode = "400", description = "Invalid file name")
+        @ApiResponse(responseCode = "404", description = "Video file not found")
         @GetMapping("/verification_media/{fileName:.+}")
         public ResponseEntity<Resource> getVerificationVideo(
                         @Parameter(description = "Name of the video file to retrieve", required = true) @PathVariable String fileName) {
@@ -187,10 +177,8 @@ public class AdminController {
         @Operation(summary = "Get yearly platform statistics", description = "Returns statistical data for a given year, including number of orders, total income, email counts, "
                         + "user and artist counts, order statuses, verification statuses, top-selling items, top categories, "
                         + "and countries with the most sales.")
-        @ApiResponses(value = {
-                        @ApiResponse(responseCode = "200", description = "Yearly statistics retrieved successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
-                        @ApiResponse(responseCode = "400", description = "Invalid year parameter or processing error", content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"message\": \"Invalid year parameter\", \"status\": 400}")))
-        })
+        @ApiResponse(responseCode = "200", description = "Yearly statistics retrieved successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+        @ApiResponse(responseCode = "400", description = "Invalid year parameter or processing error", content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"message\": \"Invalid year parameter\", \"status\": 400}")))
         @GetMapping("/staticsPerYear")
         public ResponseEntity<StandardResponse<OrderStatisticsDTO>> getYearlyStatistics(
                         @Parameter(description = "Year for which to retrieve statistics", example = "2024", required = true) @RequestParam int year) {
@@ -215,10 +203,8 @@ public class AdminController {
         }
 
         @Operation(summary = "Get monthly sales data", description = "Returns a list of sales figures per month for the specified year. Each item in the list contains the month, total orders and total revenue.")
-        @ApiResponses(value = {
-                        @ApiResponse(responseCode = "200", description = "Monthly sales data retrieved successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
-                        @ApiResponse(responseCode = "400", description = "Invalid year parameter", content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"message\": \"Invalid year parameter\", \"status\": 400}")))
-        })
+        @ApiResponse(responseCode = "200", description = "Monthly sales data retrieved successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+        @ApiResponse(responseCode = "400", description = "Invalid year parameter", content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"message\": \"Invalid year parameter\", \"status\": 400}")))
         @GetMapping("/sales/monthly")
         public ResponseEntity<StandardResponse<List<MonthlySalesDTO>>> getMonthlySalesData(
                         @Parameter(description = "Year for which to retrieve monthly sales data", example = "2024", required = true) @RequestParam int year) {
@@ -237,10 +223,8 @@ public class AdminController {
         }
 
         @Operation(summary = "Get product management statistics", description = "Retrieves counts of products by status, including not available, available, promoted, and total products.")
-        @ApiResponses(value = {
-                        @ApiResponse(responseCode = "200", description = "Product management statistics retrieved successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
-                        @ApiResponse(responseCode = "400", description = "Failed to retrieve product statistics", content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"message\": \"Failed to retrieve product statistics\", \"status\": 400}")))
-        })
+        @ApiResponse(responseCode = "200", description = "Product management statistics retrieved successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+        @ApiResponse(responseCode = "400", description = "Failed to retrieve product statistics", content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"message\": \"Failed to retrieve product statistics\", \"status\": 400}")))
         @GetMapping("/product-management")
         public ResponseEntity<StandardResponse<ProductManagementDTO>> getProductManagement() {
                 ProductManagementDTO productManagement = new ProductManagementDTO();
@@ -257,9 +241,7 @@ public class AdminController {
         }
 
         @Operation(summary = "Get paginated list of users", description = "Retrieves a paginated list of user profiles. Supports optional search by user attributes.")
-        @ApiResponses(value = {
-                        @ApiResponse(responseCode = "200", description = "Paginated list of users retrieved successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = PageResponse.class)))
-        })
+        @ApiResponse(responseCode = "200", description = "Paginated list of users retrieved successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = PageResponse.class)))
         @GetMapping("/users")
         public PageResponse<UserProfileDTO> getUsers(
                         @Parameter(description = "Page number (0-based)", example = "0") @RequestParam(defaultValue = "0") int page,
@@ -274,9 +256,7 @@ public class AdminController {
         }
 
         @Operation(summary = "Get paginated list of orders", description = "Retrieves a paginated list of orders sorted by date, returning detailed order information.")
-        @ApiResponses(value = {
-                        @ApiResponse(responseCode = "200", description = "Paginated list of orders retrieved successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = PageResponse.class)))
-        })
+        @ApiResponse(responseCode = "200", description = "Paginated list of orders retrieved successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = PageResponse.class)))
         @GetMapping("/orders")
         public PageResponse<OrderDetailsDTO> getOrders(
                         @Parameter(description = "Page number (0-based)", example = "0") @RequestParam(defaultValue = "0") int page,
@@ -292,11 +272,9 @@ public class AdminController {
         }
 
         @Operation(summary = "Update the status of an order", description = "Updates the status of a specific order based on the provided order ID and new status.")
-        @ApiResponses(value = {
-                        @ApiResponse(responseCode = "200", description = "Order status updated successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
-                        @ApiResponse(responseCode = "404", description = "Order not found", content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"message\": \"Order not found\", \"status\": 404}"))),
-                        @ApiResponse(responseCode = "500", description = "Internal server error occurred while updating the order status", content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"message\": \"Unexpected error occurred\", \"status\": 500}")))
-        })
+        @ApiResponse(responseCode = "200", description = "Order status updated successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+        @ApiResponse(responseCode = "404", description = "Order not found", content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"message\": \"Order not found\", \"status\": 404}")))
+        @ApiResponse(responseCode = "500", description = "Internal server error occurred while updating the order status", content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"message\": \"Unexpected error occurred\", \"status\": 500}")))
         @PostMapping("/updateStatus")
         public ResponseEntity<StandardResponse<Void>> updateOrderStatus(
                         @Parameter(description = "Request payload containing order ID and new status", required = true) @RequestBody OrderStatusUpdateDTO request) {
@@ -313,11 +291,9 @@ public class AdminController {
         }
 
         @Operation(summary = "Disable a product", description = "Disables a specific product by its ID. Throws an error if the product is already disabled.")
-        @ApiResponses(value = {
-                        @ApiResponse(responseCode = "200", description = "Product disabled successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
-                        @ApiResponse(responseCode = "404", description = "Product not found", content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"message\": \"Product not found\", \"status\": 404}"))),
-                        @ApiResponse(responseCode = "400", description = "Product is already disabled", content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"message\": \"Product is already disabled\", \"status\": 400}")))
-        })
+        @ApiResponse(responseCode = "200", description = "Product disabled successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+        @ApiResponse(responseCode = "404", description = "Product not found", content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"message\": \"Product not found\", \"status\": 404}")))
+        @ApiResponse(responseCode = "400", description = "Product is already disabled", content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"message\": \"Product is already disabled\", \"status\": 400}")))
         @PostMapping("/{productId}/disable")
         public ResponseEntity<StandardResponse<Void>> disableProduct(@PathVariable Long productId) {
                 productService.disableProduct(productId);
@@ -326,11 +302,9 @@ public class AdminController {
         }
 
         @Operation(summary = "Enable a product", description = "Enables a specific product by its ID. Throws an error if the product is already enabled.")
-        @ApiResponses(value = {
-                        @ApiResponse(responseCode = "200", description = "Product enabled successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
-                        @ApiResponse(responseCode = "404", description = "Product not found", content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"message\": \"Product not found\", \"status\": 404}"))),
-                        @ApiResponse(responseCode = "400", description = "Product is already enabled", content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"message\": \"Product is already enabled\", \"status\": 400}")))
-        })
+        @ApiResponse(responseCode = "200", description = "Product enabled successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+        @ApiResponse(responseCode = "404", description = "Product not found", content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"message\": \"Product not found\", \"status\": 404}")))
+        @ApiResponse(responseCode = "400", description = "Product is already enabled", content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"message\": \"Product is already enabled\", \"status\": 400}")))
         @PostMapping("/{productId}/enable")
         public ResponseEntity<StandardResponse<Void>> enableProduct(@PathVariable Long productId) {
                 productService.enableProduct(productId);
@@ -339,16 +313,14 @@ public class AdminController {
         }
 
         @Operation(summary = "Get all collections", description = "Retrieves a list of all product collections sorted by ID, including promotion status.")
-        @ApiResponses(value = {
-                        @ApiResponse(responseCode = "200", description = "Collections retrieved successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
-        })
+        @ApiResponse(responseCode = "200", description = "Collections retrieved successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
         @GetMapping("/allCollections")
         public ResponseEntity<StandardResponse<List<CollectionDTO>>> getAllCollections() {
                 List<Collection> collections = productService.findAllCollections();
                 List<CollectionDTO> result = collections.stream()
                                 .sorted(Comparator.comparing(Collection::getId))
                                 .map(coll -> new CollectionDTO(coll.getId(), coll.getName(), coll.getIsPromoted()))
-                                .collect(Collectors.toList());
+                                .toList();
 
                 return ResponseEntity.ok(
                                 new StandardResponse<>("Collections retrieved successfully", result,
@@ -356,10 +328,8 @@ public class AdminController {
         }
 
         @Operation(summary = "Create a new category", description = "Creates a new product category with the specified name")
-        @ApiResponses({
-                        @ApiResponse(responseCode = "201", description = "Category created successfully"),
-                        @ApiResponse(responseCode = "400", description = "Invalid request")
-        })
+        @ApiResponse(responseCode = "201", description = "Category created successfully")
+        @ApiResponse(responseCode = "400", description = "Invalid request")
         @PostMapping("newCategory")
         public ResponseEntity<Map<String, String>> createCategory(@RequestBody CategoryDTO categoryDTO) {
                 return handleRequest(
@@ -370,10 +340,8 @@ public class AdminController {
         }
 
         @Operation(summary = "Edit an existing category", description = "Edits the name of an existing category")
-        @ApiResponses({
-                        @ApiResponse(responseCode = "200", description = "Category edited successfully"),
-                        @ApiResponse(responseCode = "400", description = "Invalid request")
-        })
+        @ApiResponse(responseCode = "200", description = "Category edited successfully")
+        @ApiResponse(responseCode = "400", description = "Invalid request")
         @PostMapping("editCategory")
         public ResponseEntity<Map<String, String>> editCategory(@RequestBody CategoryDTO categoryDTO) {
                 return handleRequest(
@@ -384,10 +352,8 @@ public class AdminController {
         }
 
         @Operation(summary = "Create a new collection", description = "Creates a new product collection with the specified name")
-        @ApiResponses({
-                        @ApiResponse(responseCode = "201", description = "Collection created successfully"),
-                        @ApiResponse(responseCode = "400", description = "Invalid request")
-        })
+        @ApiResponse(responseCode = "201", description = "Collection created successfully")
+        @ApiResponse(responseCode = "400", description = "Invalid request")
         @PostMapping("newCollection")
         public ResponseEntity<Map<String, String>> createCollection(@RequestBody CollectionDTO collectionDTO) {
                 return handleRequest(
@@ -398,10 +364,8 @@ public class AdminController {
         }
 
         @Operation(summary = "Edit an existing collection", description = "Edits the name and promotion status of an existing collection")
-        @ApiResponses({
-                        @ApiResponse(responseCode = "200", description = "Collection edited successfully"),
-                        @ApiResponse(responseCode = "400", description = "Invalid request")
-        })
+        @ApiResponse(responseCode = "200", description = "Collection edited successfully")
+        @ApiResponse(responseCode = "400", description = "Invalid request")
         @PostMapping("editCollection")
         public ResponseEntity<Map<String, String>> editCollection(@RequestBody CollectionDTO collectionDTO) {
                 return handleRequest(
@@ -411,16 +375,22 @@ public class AdminController {
                                 HttpStatus.OK);
         }
 
+        @Operation(summary = "Get all pending user products", description = "Retrieves a list of user-submitted products that are currently pending approval.")
+        @ApiResponse(responseCode = "200", description = "List of pending user products retrieved successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
         @GetMapping("userProduct/pending")
         public ResponseEntity<StandardResponse<List<UserProductDetailsDTO>>> getAllUserProductPening() {
                 List<UserProduct> userProducts = userProductService.findUserProductPending();
                 List<UserProductDetailsDTO> userProductsDTO = userProducts.stream()
-                                .map(c -> new UserProductDetailsDTO(c)).toList();
+                                .map(UserProductDetailsDTO::new)
+                                .toList();
                 return ResponseEntity.ok(
                                 new StandardResponse<>("userProducts retrieved successfully", userProductsDTO,
                                                 HttpStatus.OK.value()));
         }
 
+        @Operation(summary = "Approve a user product", description = "Approves a user-submitted product identified by its ID.")
+        @ApiResponse(responseCode = "200", description = "Product approved successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+        @ApiResponse(responseCode = "404", description = "Product not found", content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"message\": \"Product not found\", \"status\": 404}")))
         @PostMapping("userProduct/{id}/approve")
         public ResponseEntity<StandardResponse<UserProductDetailsDTO>> approveProduct(@PathVariable Long id) {
 
@@ -432,6 +402,9 @@ public class AdminController {
 
         }
 
+        @Operation(summary = "Reject a user product", description = "Rejects a user-submitted product identified by its ID.")
+        @ApiResponse(responseCode = "200", description = "Product rejected successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+        @ApiResponse(responseCode = "404", description = "Product not found", content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"message\": \"Product not found\", \"status\": 404}")))
         @PostMapping("userProduct/{id}/reject")
         public ResponseEntity<StandardResponse<UserProductDetailsDTO>> rejectProduct(@PathVariable Long id) {
 

@@ -2,7 +2,6 @@ package com.artists_heaven.rewardCard;
 
 import com.artists_heaven.entities.user.User;
 import com.artists_heaven.exception.GlobalExceptionHandler;
-import com.artists_heaven.standardResponse.StandardResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -11,6 +10,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.MessageSource;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -22,6 +22,7 @@ import java.util.List;
 
 import static org.hamcrest.Matchers.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -36,6 +37,9 @@ class RewardCardControllerTest {
 
     @Mock
     private RewardCardService rewardCardService;
+
+    @Mock
+    private MessageSource messageSource;
 
     @InjectMocks
     private RewardCardController rewardCardController;
@@ -72,7 +76,6 @@ class RewardCardControllerTest {
     @Test
     void getMyRewardCards_success() throws Exception {
         RewardCard card = new RewardCard(1L, 500, 10, user, false, null, null);
-        RewardCardDTO dto = new RewardCardDTO(card);
 
         when(rewardCardRepository.findByUser(user)).thenReturn(List.of(card));
 
@@ -91,9 +94,8 @@ class RewardCardControllerTest {
         request.setRequiredPoints(500);
 
         RewardCard card = new RewardCard(1L, 500, 10, user, false, null, null);
-        StandardResponse<RewardCard> response = new StandardResponse<>("Reward card redeemed", card, 200);
-
-        when(rewardCardService.redeemRewardCard(any(), any())).thenReturn(response);
+        when(rewardCardService.redeemRewardCard(any(), any())).thenReturn(card);
+        when(messageSource.getMessage(anyString(), any(), any())).thenReturn("Reward card redeemed");
 
         mockMvc.perform(post("/api/reward-cards/redeem")
                 .param("lang", "en")

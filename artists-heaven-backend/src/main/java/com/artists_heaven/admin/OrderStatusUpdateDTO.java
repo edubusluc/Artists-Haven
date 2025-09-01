@@ -20,12 +20,12 @@ public class OrderStatusUpdateDTO {
     /**
      * Unique identifier of the order to be updated.
      */
-    @Schema(description = "Unique ID of the order", example = "1024", required = true)
+    @Schema(description = "Unique ID of the order", example = "1024")
     private Long orderId;
 
     /**
      * New status to apply to the order.
      */
-    @Schema(description = "New status to set for the order", example = "SHIPPED", required = true)
+    @Schema(description = "New status to set for the order", example = "SHIPPED")
     private OrderStatus status;
 }

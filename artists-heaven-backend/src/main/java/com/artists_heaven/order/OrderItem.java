@@ -9,12 +9,14 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Getter
 @Setter
 @Entity
 @Table(name = "order_items")
+@NoArgsConstructor
 public class OrderItem {
 
     @Id
@@ -40,9 +42,6 @@ public class OrderItem {
     @Positive(message = "El precio debe ser positivo")
     @Column(nullable = false)
     private Float price;
-
-    public OrderItem() {
-    }
 
     @ManyToOne
     @JoinColumn(name = "order_id", nullable = false)

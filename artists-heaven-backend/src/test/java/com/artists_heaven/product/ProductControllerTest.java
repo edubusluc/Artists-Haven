@@ -184,7 +184,7 @@ class ProductControllerTest {
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$.message").value("Product updated successfully"));
 
-                verify(productService).updateProduct(eq(1L), any(), any(), any(), any());
+                verify(productService).updateProduct(eq(1L), any(), any(), any(), any(), any());
         }
 
         @Test

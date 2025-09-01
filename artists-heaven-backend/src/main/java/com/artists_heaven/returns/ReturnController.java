@@ -23,6 +23,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -69,7 +70,7 @@ public class ReturnController {
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(new StandardResponse<>(
-                        message + returnRequestDTO.getOrderId(),
+                        message,
                         HttpStatus.CREATED.value()));
     }
 
@@ -95,12 +96,15 @@ public class ReturnController {
                 throw new AppExceptions.ForbiddenActionException("You are not allowed to access this return label");
             }
         } else {
-            if (email == null || !order.getUser().getEmail().equalsIgnoreCase(email)) {
+            if (email == null || !order.getEmail().equalsIgnoreCase(email)) {
                 throw new AppExceptions.ForbiddenActionException("You are not allowed to access this return label");
             }
         }
         
-        byte[] pdf = returnService.generateReturnLabelPdf(orderId);
+        boolean isAnonymous = authentication == null 
+                      || authentication instanceof AnonymousAuthenticationToken;
+        
+        byte[] pdf = returnService.generateReturnLabelPdf(orderId, isAnonymous) ;
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_PDF);
@@ -109,5 +113,16 @@ public class ReturnController {
 
         return new ResponseEntity<>(pdf, headers, HttpStatus.OK);
     }
+
+    @GetMapping("/{returnId}/return")
+    public ResponseEntity<StandardResponse<Return>> getMethodName(@Parameter(description = "ID of the order to get the return label for", required = true) @PathVariable Long returnId) {
+        Return data = returnService.findById(returnId);
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(new StandardResponse<>(
+                        "Return found",
+                        data,
+                        HttpStatus.OK.value()));
+    }
+    
 
 }

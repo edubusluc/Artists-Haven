@@ -172,7 +172,6 @@ const UserProfile = () => {
             const result = await response.json();
 
             if (!response.ok) {
-                // Si la API devuelve errores de validación, los ponemos en el formulario
                 if (result.errors) {
                     setFormErrors(result.errors);
                 }

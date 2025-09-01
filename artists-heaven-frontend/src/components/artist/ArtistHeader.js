@@ -93,7 +93,7 @@ const ArtistHeader = () => {
                 </button>
                 <h3 className="p-4 font-semibold border-b">{t('artistHeader.myProfile')}</h3>
                 <div className="p-4 space-y-2">
-                    <Link to="/users/profile" onClick={closeSidebar} className="block">
+                    <Link to="/artist/profile" onClick={closeSidebar} className="block">
                         <FontAwesomeIcon icon={faUser} className="mr-2" />
                         {t('artistHeader.myProfile')}
                     </Link>

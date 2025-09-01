@@ -3,6 +3,8 @@ package com.artists_heaven.product;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.LocalDate;
@@ -19,6 +21,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.nio.file.Path;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -87,6 +90,20 @@ class ProductServiceTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+    }
+
+    @AfterEach
+    void cleanUp() throws Exception {
+        Path uploadDir = Paths.get("artists-heaven-backend/src/main/resources/product_media/");
+
+        if (Files.exists(uploadDir)) {
+            // Borrar todos los archivos dentro de la carpeta
+            try (DirectoryStream<Path> stream = Files.newDirectoryStream(uploadDir)) {
+                for (Path filePath : stream) {
+                    Files.deleteIfExists(filePath);
+                }
+            }
+        }
     }
 
     @Test
@@ -256,10 +273,17 @@ class ProductServiceTest {
         productDTO.setSizes(new HashMap<>());
         productDTO.setImages(new ArrayList<>());
 
+        MultipartFile model3d = new MockMultipartFile(
+                "file",                             
+                "test.glb",                        
+                "test/glb",                       
+                "contenido-de-la-imagen".getBytes(StandardCharsets.UTF_8)  
+        );
+
         List<MultipartFile> newImages = new ArrayList<>();
         List<MultipartFile> removedImages = new ArrayList<>();
         when(productRepository.findById(anyLong())).thenReturn(Optional.of(product));
-        productService.updateProduct(product.getId(), removedImages, newImages, productDTO, null);
+        productService.updateProduct(product.getId(), removedImages, newImages, productDTO, null,model3d);
 
         assertEquals(productDTO.getName(), product.getName());
         assertEquals(productDTO.getDescription(), product.getDescription());
@@ -291,10 +315,15 @@ class ProductServiceTest {
         when(newImage.getInputStream()).thenReturn(new ByteArrayInputStream("image data".getBytes()));
         List<MultipartFile> newImages = List.of(newImage);
 
+        MultipartFile model3d = mock(MultipartFile.class);
+        when(model3d.getOriginalFilename()).thenReturn("newModel.glb");
+        when(model3d.getInputStream()).thenReturn(new ByteArrayInputStream("model data".getBytes()));
+
+
         try (MockedStatic<Files> mockedFiles = Mockito.mockStatic(Files.class)) {
             mockedFiles.when(() -> Files.copy(any(InputStream.class), any(Path.class))).thenAnswer(invocation -> null);
 
-            productService.updateProduct(product.getId(), null, newImages, productDTO, null);
+            productService.updateProduct(product.getId(), null, newImages, productDTO, null, model3d);
 
             assertEquals(productDTO.getName(), product.getName());
             assertEquals(productDTO.getDescription(), product.getDescription());
@@ -331,11 +360,15 @@ class ProductServiceTest {
         when(newImage.getInputStream()).thenReturn(new ByteArrayInputStream("image data".getBytes()));
         List<MultipartFile> newImages = List.of(newImage);
 
+        MultipartFile model3d = mock(MultipartFile.class);
+        when(model3d.getOriginalFilename()).thenReturn("newModel.glb");
+        when(model3d.getInputStream()).thenReturn(new ByteArrayInputStream("model data".getBytes()));
+
         try (MockedStatic<Files> mockedFiles = Mockito.mockStatic(Files.class)) {
             mockedFiles.when(() -> Files.delete(any(Path.class))).thenAnswer(invocation -> null);
             mockedFiles.when(() -> Files.copy(any(InputStream.class), any(Path.class))).thenAnswer(invocation -> null);
 
-            productService.updateProduct(product.getId(), removedImages, newImages, productDTO, null);
+            productService.updateProduct(product.getId(), removedImages, newImages, productDTO, null, model3d);
 
             assertEquals(productDTO.getName(), product.getName());
             assertEquals(productDTO.getDescription(), product.getDescription());
@@ -354,8 +387,10 @@ class ProductServiceTest {
         productDTO.setName("Name");
         productDTO.setPrice(100f);
 
+        MultipartFile model3d = mock(MultipartFile.class);
+
         assertThrows(AppExceptions.ResourceNotFoundException.class,
-                () -> productService.updateProduct(1L, null, null, productDTO, null));
+                () -> productService.updateProduct(1L, null, null, productDTO, null, model3d));
     }
 
     @Test
@@ -369,7 +404,7 @@ class ProductServiceTest {
         productDTO.setPrice(100f);
 
         assertThrows(AppExceptions.InvalidInputException.class,
-                () -> productService.updateProduct(1L, null, null, productDTO, null));
+                () -> productService.updateProduct(1L, null, null, productDTO, null, null));
     }
 
     @Test
@@ -383,7 +418,7 @@ class ProductServiceTest {
         productDTO.setPrice(0f);
 
         assertThrows(AppExceptions.InvalidInputException.class,
-                () -> productService.updateProduct(1L, null, null, productDTO, null));
+                () -> productService.updateProduct(1L, null, null, productDTO, null, null));
     }
 
     @Test
@@ -403,7 +438,7 @@ class ProductServiceTest {
 
         List<String> reorderedImages = List.of("img3.jpg", "img1.jpg"); // img2 se moverá al final
 
-        productService.updateProduct(1L, null, null, productDTO, reorderedImages);
+        productService.updateProduct(1L, null, null, productDTO, reorderedImages, null);
 
         List<String> expectedOrder = List.of("img3.jpg", "img1.jpg", "img2.jpg");
         assertEquals(expectedOrder, product.getImages());
@@ -431,7 +466,7 @@ class ProductServiceTest {
 
         // Llamar al método y verificar que lance la excepción correcta
         assertThrows(AppExceptions.ResourceNotFoundException.class,
-                () -> productService.updateProduct(1L, null, null, productDTO, null));
+                () -> productService.updateProduct(1L, null, null, productDTO, null, null));
     }
 
     @Test

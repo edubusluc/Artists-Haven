@@ -271,11 +271,6 @@ public class PaymentGatewayService {
                             SessionCreateParams.Discount.builder()
                                     .setCoupon(couponId)
                                     .build());
-
-                    // Marcar la RewardCard como usada
-                    card.setRedeemed(true);
-                    card.setRedeemedAt(LocalDateTime.now());
-                    rewardCardRepository.save(card);
                 } catch (StripeException e) {
                     throw new RuntimeException("Error creando cupón en Stripe", e);
                 }
@@ -418,12 +413,21 @@ public class PaymentGatewayService {
             Session.TotalDetails totalDetails = session.getTotalDetails();
             Long discountAmount = 0L;
             if (totalDetails != null) {
-                discountAmount = totalDetails.getAmountDiscount()/100; 
+                discountAmount = totalDetails.getAmountDiscount() / 100;
+            }
+
+            // Marcar la RewardCard como usada
+            if (user != null) {
+                rewardCardRepository.findFirstByUserAndRedeemedFalse(user).ifPresent(card -> {
+                    card.setRedeemed(true);
+                    card.setRedeemedAt(LocalDateTime.now());
+                    rewardCardRepository.save(card);
+                });
             }
 
             Order order = createOrder(session, userId, user, discountAmount);
             createOrderItems(session, order, userId);
-            handlePostOrderActions(userId, email, order,discountAmount);
+            handlePostOrderActions(userId, email, order, discountAmount);
         }
     }
 
@@ -636,7 +640,8 @@ public class PaymentGatewayService {
      * @param email  the email address of the user to send the confirmation.
      * @throws MessagingException
      */
-    private void handlePostOrderActions(Long userId, String email, Order order, Long discount) throws MessagingException {
+    private void handlePostOrderActions(Long userId, String email, Order order, Long discount)
+            throws MessagingException {
         // If the user is registered, delete the items from their shopping cart.
         if (userId != null) {
             shoppingCartService.deleteShoppingCartUserItems(userId);

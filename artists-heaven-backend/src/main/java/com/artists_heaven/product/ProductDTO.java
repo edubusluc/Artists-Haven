@@ -14,98 +14,117 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 /**
- * Data Transfer Object representing the data required to create or update a
- * product.
- * Includes basic information like name, description, price, sizes, categories,
- * and images.
+ * Data Transfer Object representing the data required to create or update a product.
+ * <p>
+ * This DTO contains all relevant information about a product, including its name, description, price,
+ * available sizes and quantities, categories, images, and other metadata.
+ * </p>
+ * <p>
+ * Fields:
+ * <ul>
+ *     <li>{@code id}: Unique identifier of the product.</li>
+ *     <li>{@code name}: Name of the product (required, max 255 characters).</li>
+ *     <li>{@code description}: Detailed description of the product (optional, max 1000 characters).</li>
+ *     <li>{@code price}: Price of the product (required, positive).</li>
+ *     <li>{@code sizes}: Map of available sizes to their corresponding stock quantities (required).</li>
+ *     <li>{@code categories}: Set of categories associated with the product.</li>
+ *     <li>{@code images}: List of image URLs or filenames (at least one required).</li>
+ *     <li>{@code collectionId}: Identifier of the collection this product belongs to (optional).</li>
+ *     <li>{@code createdDate}: Date when the product was created.</li>
+ *     <li>{@code onPromotion}: Indicates whether the product is on promotion.</li>
+ *     <li>{@code discount}: Discount percentage (0-100) if on promotion.</li>
+ *     <li>{@code section}: Section of the store where the product belongs (required).</li>
+ *     <li>{@code availableUnits}: Number of units available in stock (minimum 0).</li>
+ *     <li>{@code available}: Whether the product is currently available for purchase.</li>
+ *     <li>{@code reference}: Optional reference number for the product.</li>
+ *     <li>{@code composition}: Composition details of the product (required).</li>
+ *     <li>{@code shippingDetails}: Shipping instructions or details (required).</li>
+ *     <li>{@code modelReference}: Optional model reference for the product.</li>
+ * </ul>
+ * </p>
  */
 @Getter
 @Setter
 @Schema(name = "ProductDTO", description = "Represents product data including name, description, price, sizes, categories, and images.")
+@NoArgsConstructor
 public class ProductDTO {
 
-    /**
-     * Name of the product.
-     */
-    @Schema(description = "Name of the product", example = "Abstract Landscape Painting", required = true)
+    @Schema(description = "Name of the product", example = "Abstract Landscape Painting")
     @NotBlank(message = "{product.name.required}")
     @Size(max = 255, message = "{product.name.maxlength}")
     @Column(nullable = false)
     private String name;
 
-    /**
-     * Description of the product (up to 1000 characters).
-     */
-    @Size(max = 1000, message = "{product.description.maxlength}")
     @Schema(description = "Detailed description of the product", example = "A beautiful hand-painted abstract landscape in vivid colors.")
+    @Size(max = 1000, message = "{product.description.maxlength}")
     private String description;
 
-    /**
-     * Price of the product (must be positive).
-     */
+    @Schema(description = "Price of the product", example = "129.99")
     @NotNull(message = "{product.price.required}")
     @Positive(message = "{product.price.positive}")
-    @Schema(description = "Price of the product", example = "129.99", required = true)
     private Float price;
 
-    /**
-     * Available sizes and their corresponding stock quantities.
-     * Example: { "M": 10, "L": 5 }
-     */
     @Schema(description = "Map of sizes to available quantities", example = "{ \"S\": 5, \"M\": 10, \"L\": 3 }")
     @Column(nullable = false)
     private Map<String, Integer> sizes;
 
-    /**
-     * Categories the product belongs to (e.g., Painting, Sculpture).
-     */
     @Schema(description = "Set of categories associated with the product", example = "[ \"PAINTING\", \"MODERN_ART\" ]")
     private Set<Category> categories;
 
+    @Schema(description = "Identifier of the collection this product belongs to", example = "12")
     private Long collectionId;
 
-    /**
-     * List of image URLs associated with the product.
-     */
     @Schema(description = "List of image URLs or filenames for the product", example = "[ \"https://example.com/image1.jpg\", \"https://example.com/image2.jpg\" ]")
     @Size(min = 1, message = "{product.images.required}")
     private List<String> images;
 
+    @Schema(description = "Date when the product was created", example = "2025-08-01T10:30:00Z")
     private Date createdDate;
 
+    @Schema(description = "Unique identifier of the product", example = "101")
     private Long id;
 
+    @Schema(description = "Indicates if the product is currently on promotion", example = "true")
     private Boolean onPromotion;
 
+    @Schema(description = "Discount percentage applied to the product (0-100)", example = "20")
     @Min(value = 0, message = "{product.discount.min}")
     @Max(value = 100, message = "{product.discount.max}")
     private Integer discount;
 
+    @Schema(description = "Section of the store where the product belongs", example = "PAINTINGS")
     @NotNull(message = "{product.section.required}")
     private Section section;
 
+    @Schema(description = "Number of units available in stock", example = "50")
     @Min(value = 0, message = "{product.availableUnits.min}")
     private Integer availableUnits;
 
+    @Schema(description = "Whether the product is currently available", example = "true")
     private Boolean available;
 
+    @Schema(description = "Optional reference number for the product", example = "REF12345")
     private Long reference;
 
+    @Schema(description = "Composition details of the product", example = "Canvas and acrylic paint")
     @NotBlank(message = "{product.composition.required}")
     private String composition;
 
+    @Schema(description = "Shipping instructions or details", example = "Ships within 3-5 business days")
     @NotBlank(message = "{product.shippingDetails.required}")
     private String shippingDetails;
 
+    @Schema(description = "Optional model 3dreference for the product", example = "tshirt.glb")
     private String modelReference;
 
     /**
-     * Constructor that maps a Product entity to ProductDTO.
-     *
-     * @param product the Product entity to map.
+     * Constructor that maps a {@link Product} entity to {@code ProductDTO}.
+     * 
+     * @param product the {@code Product} entity to map.
      */
     public ProductDTO(Product product) {
         this.id = product.getId();
@@ -126,10 +145,5 @@ public class ProductDTO {
         this.shippingDetails = product.getShippingDetails();
         this.collectionId = product.getCollection() != null ? product.getCollection().getId() : null;
         this.modelReference = product.getModelReference();
-
-    }
-
-    public ProductDTO() {
-
     }
 }

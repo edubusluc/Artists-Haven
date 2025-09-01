@@ -14,9 +14,9 @@ const OrderAnonymous = () => {
   const [selectedOrderId, setSelectedOrderId] = useState(null);
 
   const orderSteps = ['PAID', 'IN_PREPARATION', 'SENT', 'DELIVERED'];
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const currentLang = i18n.language;
 
-  console.log(response);
   useEffect(() => {
     if (response.orders) {
       setOrder(response.orders);
@@ -40,29 +40,33 @@ const OrderAnonymous = () => {
     setSelectedOrderId(null);
   };
 
-  const handleSubmitReason = (reason, email) => {
-    fetch(`/api/returns/create`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${authToken}`,
-      },
-      body: JSON.stringify({
-        orderId: selectedOrderId,
-        reason: reason,
-        email: email,
-      }),
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error('Failed to create return request');
-        return res.text();
-      })
-      .then((msg) => {
-        alert(msg);
-        setOrder((prev) => ({ ...prev, status: 'RETURN_REQUEST' }));
-        handleCloseModal();
-      })
-      .catch((err) => alert(err.message));
+  const handleSubmitReason = async (reason, email) => {
+    try {
+      const res = await fetch(`/api/returns/create?lang=${currentLang}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({
+          orderId: selectedOrderId,
+          reason: reason,
+          email: email,
+        }),
+      });
+
+      const response = await res.json();
+
+      if (!res.ok) {
+        throw new Error(response.message);
+      }
+      alert(response.message || 'Return request created successfully');
+
+      setOrder((prev) => ({ ...prev, status: 'RETURN_REQUEST' }));
+      handleCloseModal();
+    } catch (err) {
+      alert(err.message);
+    }
   };
 
   const handleDownloadLabel = async (orderId) => {
@@ -190,7 +194,7 @@ export default OrderAnonymous;
  */
 const OrderProgressBar = ({ status, orderSteps }) => {
   // Estados especiales
-  const {t} = useTranslation();
+  const { t } = useTranslation();
   if (status === 'CANCELED') {
     return (
       <div className="p-4 border border-red-300 bg-red-50 rounded-lg text-red-600 text-center font-semibold">
@@ -304,7 +308,7 @@ const OrderProgressBar = ({ status, orderSteps }) => {
                 .filter(Boolean)
                 .join(' ')}
             >
-              {step.replace('_', ' ')}
+              {t(step.replace("_", " "))}
             </div>
           ))}
         </div>
