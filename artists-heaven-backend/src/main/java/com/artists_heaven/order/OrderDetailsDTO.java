@@ -5,6 +5,7 @@ import java.util.List;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 /**
@@ -14,6 +15,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @Schema(name = "OrderDetailsDTO", description = "Detailed representation of an order, including items, user, address, and payment info.")
+@NoArgsConstructor
 public class OrderDetailsDTO {
 
     @Schema(description = "Unique internal ID of the order", example = "123")
@@ -61,6 +63,9 @@ public class OrderDetailsDTO {
     @Schema(description = "Stripe or payment gateway intent/ID for this order", example = "pi_3NMFAI2eZvKYlo2CgE")
     private String paymentIntent;
 
+    @Schema(description = "Unique identifier for the return", example = "12345")
+    private Long returnId;
+
     /**
      * Constructs an OrderDetailsDTO from an Order entity.
      *
@@ -82,9 +87,7 @@ public class OrderDetailsDTO {
         this.email = order.getEmail();
         this.phone = order.getPhone();
         this.paymentIntent = order.getPaymentIntent();
+        this.returnId = order.getReturnRequest() != null ? order.getReturnRequest().getId() : null;
     }
 
-    public OrderDetailsDTO() {
-
-    }
 }
