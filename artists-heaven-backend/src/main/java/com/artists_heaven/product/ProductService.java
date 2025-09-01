@@ -42,7 +42,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 public class ProductService {
@@ -309,7 +308,8 @@ public class ProductService {
             List<MultipartFile> removedImages,
             List<MultipartFile> newImages,
             ProductDTO productDTO,
-            List<String> reorderedImages) {
+            List<String> reorderedImages,
+            MultipartFile model3d) {
 
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new AppExceptions.ResourceNotFoundException("Product not found with id: " + id));
@@ -319,6 +319,11 @@ public class ProductService {
         }
         if (productDTO.getPrice() == null || productDTO.getPrice().doubleValue() <= 0) {
             throw new AppExceptions.InvalidInputException("Product price must be greater than 0");
+        }
+
+        if (model3d != null && !model3d.isEmpty()) {
+            String modelUrl = saveModel(model3d);
+            productDTO.setModelReference(modelUrl);
         }
 
         // --- Manejo de imágenes ---
@@ -336,10 +341,10 @@ public class ProductService {
 
         List<String> finalOrderedImages;
         if (reorderedImages != null && !reorderedImages.isEmpty()) {
-            finalOrderedImages = reorderedImages.stream()
+            finalOrderedImages = new ArrayList<>(reorderedImages.stream()
                     .filter(existingImages::contains)
                     .distinct()
-                    .collect(Collectors.toList());
+                    .toList());
 
             existingImages.stream()
                     .filter(img -> !finalOrderedImages.contains(img))
@@ -367,8 +372,10 @@ public class ProductService {
                         .orElseThrow(() -> new AppExceptions.ResourceNotFoundException(
                                 "Collection not found with id: " + productDTO.getCollectionId()))
                 : null);
+        product.setModelReference(productDTO.getModelReference());
 
         save(product);
+
     }
 
     public void promoteProduct(Long productId, Integer discount) {
@@ -644,7 +651,7 @@ public class ProductService {
             // Convertimos todos los Product a ProductDTO
             List<ProductDTO> productDTOs = products.stream()
                     .map(ProductDTO::new)
-                    .collect(Collectors.toList());
+                    .toList();
 
             return new PageResponse<>(
                     productDTOs,

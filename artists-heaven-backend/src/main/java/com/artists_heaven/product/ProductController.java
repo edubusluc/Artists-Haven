@@ -19,7 +19,6 @@ import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.Valid;
 
 import java.util.List;
@@ -59,10 +58,8 @@ public class ProductController {
         @Operation(summary = "Retrieve list of products", description = "Returns a list of products. Supports optional search by product name or description. "
                         +
                         "If size = -1, returns all matching products.")
-        @ApiResponses(value = {
-                        @ApiResponse(responseCode = "200", description = "Successfully retrieved products list", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
-                        @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
-        })
+        @ApiResponse(responseCode = "200", description = "Successfully retrieved products list", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+        @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
         public ResponseEntity<StandardResponse<PageResponse<ProductDTO>>> getAllProducts(
                         @Parameter(description = "Page number to retrieve (0-based)", example = "0") @RequestParam(defaultValue = "0") int page,
 
@@ -79,10 +76,8 @@ public class ProductController {
 
         @GetMapping("/product_media/{fileName:.+}")
         @Operation(summary = "Retrieve product image by file name", description = "Returns the product image file corresponding to the given file name. Supports serving PNG images stored in the product_media directory.")
-        @ApiResponses(value = {
-                        @ApiResponse(responseCode = "200", description = "Image file successfully retrieved", content = @Content(mediaType = "image/png")),
-                        @ApiResponse(responseCode = "404", description = "Image file not found", content = @Content)
-        })
+        @ApiResponse(responseCode = "200", description = "Image file successfully retrieved", content = @Content(mediaType = "image/png"))
+        @ApiResponse(responseCode = "404", description = "Image file not found", content = @Content)
         public ResponseEntity<Resource> getProductImage(
                         @Parameter(description = "File name including extension", required = true) @PathVariable String fileName) {
                 String basePath = System.getProperty("user.dir")
@@ -92,10 +87,8 @@ public class ProductController {
 
         @GetMapping("/categories")
         @Operation(summary = "Retrieve all product categories", description = "Returns a set of all available product categories.")
-        @ApiResponses(value = {
-                        @ApiResponse(responseCode = "200", description = "Successfully retrieved categories", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
-                        @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
-        })
+        @ApiResponse(responseCode = "200", description = "Successfully retrieved categories", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+        @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
         public ResponseEntity<StandardResponse<Set<CategoryDTO>>> getAllCategories() {
                 Set<Category> categories = productService.getAllCategories();
                 Set<CategoryDTO> categoriesDTO = categories.stream()
@@ -111,11 +104,11 @@ public class ProductController {
         @Operation(summary = "Create a new product", description = "Creates a new product with provided product details and associated images. "
                         +
                         "The images are saved, their URLs are linked to the product, and the product is registered.")
-        @ApiResponses(value = {
-                        @ApiResponse(responseCode = "201", description = "Product created successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
-                        @ApiResponse(responseCode = "400", description = "Bad request - invalid product data or images", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
-                        @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
-        })
+
+        @ApiResponse(responseCode = "201", description = "Product created successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+        @ApiResponse(responseCode = "400", description = "Bad request - invalid product data or images", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+        @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+
         public ResponseEntity<StandardResponse<Product>> newProduct(
                         @Parameter(description = "Product data to create", required = true) @RequestPart("product") @Valid ProductDTO productDTO,
 
@@ -140,16 +133,15 @@ public class ProductController {
                                 .body(new StandardResponse<>("Product created successfully", newProduct,
                                                 HttpStatus.CREATED.value()));
         }
-        
 
         // Endpoint to retrieve details of a specific product by its ID
         @GetMapping("/details/{id}")
         @Operation(summary = "Retrieve product details by ID", description = "Returns detailed information of a specific product identified by its ID.")
-        @ApiResponses(value = {
-                        @ApiResponse(responseCode = "200", description = "Product found and returned successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
-                        @ApiResponse(responseCode = "404", description = "Product not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
-                        @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
-        })
+
+        @ApiResponse(responseCode = "200", description = "Product found and returned successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+        @ApiResponse(responseCode = "404", description = "Product not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+        @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+
         public ResponseEntity<StandardResponse<ProductDTO>> productDetails(
                         @Parameter(description = "ID of the product to retrieve", required = true) @PathVariable("id") Long id) {
 
@@ -164,12 +156,11 @@ public class ProductController {
         @PutMapping("/edit/{id}")
         @PreAuthorize("hasRole('ADMIN')")
         @Operation(summary = "Update an existing product by ID", description = "Updates the product data, optionally adding new images, removing specified images, and reordering images.")
-        @ApiResponses(value = {
-                        @ApiResponse(responseCode = "200", description = "Product updated successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
-                        @ApiResponse(responseCode = "400", description = "Bad request - invalid update data", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
-                        @ApiResponse(responseCode = "404", description = "Product not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
-                        @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
-        })
+
+        @ApiResponse(responseCode = "200", description = "Product updated successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+        @ApiResponse(responseCode = "400", description = "Bad request - invalid update data", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+        @ApiResponse(responseCode = "404", description = "Product not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+        @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
         public ResponseEntity<StandardResponse<ProductDTO>> updateProduct(
                         @Parameter(description = "ID of the product to update", required = true) @PathVariable("id") Long id,
 
@@ -179,10 +170,11 @@ public class ProductController {
 
                         @Parameter(description = "List of images to remove", required = false, content = @Content(mediaType = "image/*")) @RequestPart(value = "removedImages", required = false) List<MultipartFile> removedImages,
 
-                        @Parameter(description = "Ordered list of image URLs/names", required = false, content = @Content(mediaType = "application/json")) @RequestPart(value = "reorderedImages", required = false) List<String> reorderedImages) {
+                        @Parameter(description = "Ordered list of image URLs/names", required = false, content = @Content(mediaType = "application/json")) @RequestPart(value = "reorderedImages", required = false) List<String> reorderedImages,
+                        @Parameter(description = "3D model file", required = false, content = @Content(mediaType = "model/*")) @RequestPart(value = "model", required = false) MultipartFile modelFile) {
 
                 productService.updateProduct(id, removedImages, newImages, productDTO,
-                                reorderedImages);
+                                reorderedImages, modelFile);
 
                 return ResponseEntity.ok(
                                 new StandardResponse<>("Product updated successfully", null, HttpStatus.OK.value()));
@@ -191,12 +183,12 @@ public class ProductController {
         @PutMapping("/promote/{id}")
         @PreAuthorize("hasRole('ADMIN')")
         @Operation(summary = "Promote a product by applying a discount", description = "Allows an admin user to promote a product by setting a discount percentage.")
-        @ApiResponses(value = {
-                        @ApiResponse(responseCode = "200", description = "Product promoted successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
-                        @ApiResponse(responseCode = "400", description = "Bad request - invalid input data", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
-                        @ApiResponse(responseCode = "401", description = "Unauthorized - authentication is required", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
-                        @ApiResponse(responseCode = "403", description = "Forbidden - only admins can promote products", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
-        })
+
+        @ApiResponse(responseCode = "200", description = "Product promoted successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+        @ApiResponse(responseCode = "400", description = "Bad request - invalid input data", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+        @ApiResponse(responseCode = "401", description = "Unauthorized - authentication is required", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+        @ApiResponse(responseCode = "403", description = "Forbidden - only admins can promote products", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+
         public ResponseEntity<StandardResponse<ProductDTO>> promoteProduct(
                         @Parameter(description = "ID of the product to promote", required = true) @PathVariable Long id,
 
@@ -211,12 +203,12 @@ public class ProductController {
         @PutMapping("/demote/{id}")
         @PreAuthorize("hasRole('ADMIN')")
         @Operation(summary = "Remove promotion from a product", description = "Allows an admin user to remove the promotion (discount) from a specific product.")
-        @ApiResponses(value = {
-                        @ApiResponse(responseCode = "200", description = "Product demoted successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
-                        @ApiResponse(responseCode = "400", description = "Bad request - invalid input data", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
-                        @ApiResponse(responseCode = "401", description = "Unauthorized - authentication is required", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
-                        @ApiResponse(responseCode = "403", description = "Forbidden - only admins can demote products", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
-        })
+
+        @ApiResponse(responseCode = "200", description = "Product demoted successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+        @ApiResponse(responseCode = "400", description = "Bad request - invalid input data", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+        @ApiResponse(responseCode = "401", description = "Unauthorized - authentication is required", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+        @ApiResponse(responseCode = "403", description = "Forbidden - only admins can demote products", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+
         public ResponseEntity<StandardResponse<ProductDTO>> demoteProduct(
                         @Parameter(description = "ID of the product to demote", required = true) @PathVariable Long id,
                         String lang) { // <- importante: inyectar la Locale actual
@@ -276,12 +268,10 @@ public class ProductController {
 
         @GetMapping("/related")
         @Operation(summary = "Retrieve related products", description = "Fetches up to 4 related products from the same section, excluding the current product ID.")
-        @ApiResponses(value = {
-                        @ApiResponse(responseCode = "200", description = "Related products retrieved successfully", content = @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = ProductDTO.class)))),
-                        @ApiResponse(responseCode = "400", description = "Invalid section or ID parameter", content = @Content),
-                        @ApiResponse(responseCode = "404", description = "No related products found", content = @Content),
-                        @ApiResponse(responseCode = "500", description = "Unexpected server error", content = @Content)
-        })
+        @ApiResponse(responseCode = "200", description = "Related products retrieved successfully", content = @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = ProductDTO.class))))
+        @ApiResponse(responseCode = "400", description = "Invalid section or ID parameter", content = @Content)
+        @ApiResponse(responseCode = "404", description = "No related products found", content = @Content)
+        @ApiResponse(responseCode = "500", description = "Unexpected server error", content = @Content)
         public ResponseEntity<StandardResponse<List<ProductDTO>>> getRelatedProduct(
                         @Parameter(description = "Section name (e.g. TSHIRT, PANTS)", required = true) @RequestParam String section,
                         @Parameter(description = "ID of the current product to exclude", required = true) @RequestParam Long id) {
@@ -300,12 +290,10 @@ public class ProductController {
 
         @GetMapping("/by-reference")
         @Operation(summary = "Find product by reference", description = "Searches for a product using its unique reference number and returns its ID.")
-        @ApiResponses(value = {
-                        @ApiResponse(responseCode = "200", description = "Product found successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = Long.class))),
-                        @ApiResponse(responseCode = "400", description = "Invalid reference parameter", content = @Content),
-                        @ApiResponse(responseCode = "404", description = "No product found with the given reference", content = @Content),
-                        @ApiResponse(responseCode = "500", description = "Unexpected server error", content = @Content)
-        })
+        @ApiResponse(responseCode = "200", description = "Product found successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = Long.class)))
+        @ApiResponse(responseCode = "400", description = "Invalid reference parameter", content = @Content)
+        @ApiResponse(responseCode = "404", description = "No product found with the given reference", content = @Content)
+        @ApiResponse(responseCode = "500", description = "Unexpected server error", content = @Content)
         public ResponseEntity<StandardResponse<Long>> getProductByReference(
                         @Parameter(description = "Reference number of the product", required = true) @RequestParam Long reference,
                         @RequestParam String lang) {
@@ -321,11 +309,9 @@ public class ProductController {
 
         @GetMapping("/promoted-collections")
         @Operation(summary = "Get promoted collections", description = "Fetches all collections that are marked as promoted.")
-        @ApiResponses(value = {
-                        @ApiResponse(responseCode = "200", description = "Successfully retrieved promoted collections", content = @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = CollectionDTO.class)))),
-                        @ApiResponse(responseCode = "400", description = "Invalid request data", content = @Content),
-                        @ApiResponse(responseCode = "500", description = "Unexpected server error", content = @Content)
-        })
+        @ApiResponse(responseCode = "200", description = "Successfully retrieved promoted collections", content = @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = CollectionDTO.class))))
+        @ApiResponse(responseCode = "400", description = "Invalid request data", content = @Content)
+        @ApiResponse(responseCode = "500", description = "Unexpected server error", content = @Content)
         public ResponseEntity<StandardResponse<List<CollectionDTO>>> getPromotedCollections() {
 
                 List<CollectionDTO> promotedCollections = productService.findAllCollections().stream()
@@ -341,10 +327,8 @@ public class ProductController {
 
         @GetMapping("/collection/{collectionName}")
         @Operation(summary = "Retrieve products by collection", description = "Fetches all products belonging to a specific collection.")
-        @ApiResponses(value = {
-                        @ApiResponse(responseCode = "200", description = "Products retrieved successfully", content = @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = ProductDTO.class)))),
-                        @ApiResponse(responseCode = "404", description = "No products found for the given collection", content = @Content)
-        })
+        @ApiResponse(responseCode = "200", description = "Products retrieved successfully", content = @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = ProductDTO.class))))
+        @ApiResponse(responseCode = "404", description = "No products found for the given collection", content = @Content)
         public ResponseEntity<StandardResponse<List<ProductDTO>>> getProductByCollection(
                         @Parameter(description = "Name of the collection", required = true) @PathVariable String collectionName) {
 
