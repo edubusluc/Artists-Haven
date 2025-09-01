@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
@@ -106,7 +105,7 @@ class ReturnControllerTest {
         SecurityContextHolder.getContext().setAuthentication(auth);
 
         when(orderService.findOrderById(orderId)).thenReturn(order);
-        when(returnService.generateReturnLabelPdf(orderId)).thenReturn(fakePdf);
+        when(returnService.generateReturnLabelPdf(orderId, false)).thenReturn(fakePdf);
 
         ResponseEntity<byte[]> response = returnController.getReturnLabel(orderId, null);
 
@@ -127,12 +126,13 @@ class ReturnControllerTest {
         Order order = new Order();
         order.setUser(user);
         order.setIdentifier(999L);
+        order.setEmail("test@example.com");
 
         // No authentication
         SecurityContextHolder.clearContext();
 
         when(orderService.findOrderById(orderId)).thenReturn(order);
-        when(returnService.generateReturnLabelPdf(orderId)).thenReturn(fakePdf);
+        when(returnService.generateReturnLabelPdf(orderId, true)).thenReturn(fakePdf);
 
         ResponseEntity<byte[]> response = returnController.getReturnLabel(orderId, "test@example.com");
 
@@ -151,6 +151,7 @@ class ReturnControllerTest {
 
         Order order = new Order();
         order.setUser(user);
+        order.setEmail("test@example.com");
 
         // Simulamos la respuesta del servicio
         when(orderService.findOrderById(orderId)).thenReturn(order);
@@ -170,7 +171,7 @@ class ReturnControllerTest {
                 .andExpect(jsonPath("$.status").value(403));
 
         verify(orderService).findOrderById(orderId);
-        verify(returnService, never()).generateReturnLabelPdf(anyLong());
+        verify(returnService, never()).generateReturnLabelPdf(1L, false);
     }
 
     // Escenario 3: Usuario autenticado pero NO dueño -> 403
@@ -205,7 +206,28 @@ class ReturnControllerTest {
                 .andExpect(jsonPath("$.message").value("You are not allowed to access this return label"))
                 .andExpect(jsonPath("$.status").value(403));
 
-        verify(returnService, never()).generateReturnLabelPdf(anyLong());
+        verify(returnService, never()).generateReturnLabelPdf(1L, true);
+    }
+
+    @Test
+    void testGetReturnById_ReturnExists_ReturnsOk() throws Exception {
+        Long returnId = 1L;
+
+        Return returnData = new Return();
+        returnData.setId(returnId);
+        returnData.setReason("Damaged item");
+
+        when(returnService.findById(returnId)).thenReturn(returnData);
+
+        mockMvc.perform(get("/api/returns/{returnId}/return", returnId)
+                .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Return found"))
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.data.id").value(returnId))
+                .andExpect(jsonPath("$.data.reason").value("Damaged item"));
+
+        verify(returnService).findById(returnId);
     }
 
     @AfterEach

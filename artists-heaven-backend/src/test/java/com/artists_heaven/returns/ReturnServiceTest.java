@@ -11,6 +11,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -119,7 +120,7 @@ class ReturnServiceTest {
 
         when(orderService.findOrderById(1L)).thenReturn(order);
 
-        byte[] pdf = returnService.generateReturnLabelPdf(1L);
+        byte[] pdf = returnService.generateReturnLabelPdf(1L, false);
 
         assertNotNull(pdf);
         assertTrue(pdf.length > 0);
@@ -167,6 +168,14 @@ class ReturnServiceTest {
 
         verify(returnRepository, times(1)).save(any(Return.class));
         verify(orderService, times(1)).save(order);
+    }
+
+    @Test
+    void testFindById(){
+        Return result = new Return();
+        when(returnRepository.findById(1L)).thenReturn(Optional.of(result));
+        Return response = returnService.findById(1L);
+        assertNotNull(response);
     }
 
     @AfterEach
