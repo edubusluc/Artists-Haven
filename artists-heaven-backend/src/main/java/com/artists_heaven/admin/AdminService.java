@@ -1,6 +1,7 @@
 package com.artists_heaven.admin;
 
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -61,7 +62,7 @@ public class AdminService {
 
     public Map<OrderStatus, Integer> getOrderStatusCounts(int year) {
         List<Object[]> results = adminRepository.findOrderStatusCounts(year);
-        Map<OrderStatus, Integer> orderStatusMap = new HashMap<>();
+        Map<OrderStatus, Integer> orderStatusMap = new EnumMap<>(OrderStatus.class);
         for (Object[] result : results) {
             OrderStatus status = OrderStatus.valueOf(result[0].toString());
             int count = Integer.parseInt(result[1].toString());
@@ -72,13 +73,13 @@ public class AdminService {
 
     public Map<VerificationStatus, Integer> getVerificationStatusCount(int year) {
         List<Object[]> results = adminRepository.findVerificationStatusCounts(year);
-        Map<VerificationStatus, Integer> verificationSatusMap = new HashMap<>();
+        Map<VerificationStatus, Integer> verificationStatusMap = new EnumMap<>(VerificationStatus.class);
         for (Object[] result : results) {
             VerificationStatus status = VerificationStatus.valueOf(result[0].toString());
             int count = Integer.parseInt(result[1].toString());
-            verificationSatusMap.put(status, count);
+            verificationStatusMap.put(status, count);
         }
-        return verificationSatusMap;
+        return verificationStatusMap;
     }
 
     public Map<String, Integer> getMostSoldItems(int year) {
@@ -146,8 +147,7 @@ public class AdminService {
     }
 
     public Page<Order> getAllOrderSortByDate(Pageable pageable) {
-        Page<Order> orders = adminRepository.findAllOrderSortByDate(pageable);
-        return orders;
+        return adminRepository.findAllOrderSortByDate(pageable);
     }
 
     public void updateOrderStatus(Long id, OrderStatus orderStatus) {
