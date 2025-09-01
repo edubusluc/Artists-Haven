@@ -21,7 +21,6 @@ import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -42,10 +41,8 @@ public class ArtistController {
         }
 
         @Operation(summary = "Get artist by ID", description = "Retrieve an artist along with their products and events for the current year.")
-        @ApiResponses(value = {
-                        @ApiResponse(responseCode = "200", description = "Artist found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
-                        @ApiResponse(responseCode = "404", description = "Artist not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
-        })
+        @ApiResponse(responseCode = "200", description = "Artist found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+        @ApiResponse(responseCode = "404", description = "Artist not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
         @GetMapping("/{artistId}")
         public ResponseEntity<StandardResponse<ArtistDTO>> getArtistById(@PathVariable final Long artistId) {
                 ArtistDTO artistDTO = artistService.getArtistWithDetails(artistId);
@@ -56,14 +53,11 @@ public class ArtistController {
         }
 
         @Operation(summary = "Register a new artist", description = "Registers a new artist with images, email, password, and personal details.")
-        @ApiResponses(value = {
-                        @ApiResponse(responseCode = "201", description = "Artist successfully registered", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
-                        @ApiResponse(responseCode = "400", description = "Invalid request or artist already exists", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
-        })
+        @ApiResponse(responseCode = "201", description = "Artist successfully registered", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+        @ApiResponse(responseCode = "400", description = "Invalid request or artist already exists", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
         @PostMapping(value = "/register", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
         public ResponseEntity<StandardResponse<Artist>> registerArtist(@ModelAttribute ArtistRegisterDTO request,
                         @RequestParam(name = "lang", defaultValue = "en") String lang) {
-                
 
                 Artist registeredArtist = artistService.registerArtist(request, lang);
 
@@ -75,11 +69,9 @@ public class ArtistController {
         @Operation(summary = "Get artist dashboard", description = "Retrieve the dashboard data for the authenticated artist for a specific year. "
                         +
                         "Includes verification status, past and future events, order item counts, and top countries sold.")
-        @ApiResponses(value = {
-                        @ApiResponse(responseCode = "200", description = "Dashboard retrieved successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
-                        @ApiResponse(responseCode = "404", description = "Artist not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
-                        @ApiResponse(responseCode = "401", description = "Unauthorized, the user is not authenticated", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
-        })
+        @ApiResponse(responseCode = "200", description = "Dashboard retrieved successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+        @ApiResponse(responseCode = "404", description = "Artist not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+        @ApiResponse(responseCode = "401", description = "Unauthorized, the user is not authenticated", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
         @GetMapping("/dashboard")
         public ResponseEntity<StandardResponse<ArtistDashboardDTO>> getArtistDashboard(@RequestParam int year) {
                 Artist artist = (Artist) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
@@ -98,12 +90,10 @@ public class ArtistController {
         @Operation(summary = "Get monthly sales data", description = "Retrieve the monthly sales data for the authenticated artist for a specific year, "
                         +
                         "excluding orders with status RETURN_ACCEPTED.")
-        @ApiResponses(value = {
-                        @ApiResponse(responseCode = "200", description = "Monthly sales data retrieved successfully", content = @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = MonthlySalesDTO.class)))),
-                        @ApiResponse(responseCode = "400", description = "Invalid request", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
-                        @ApiResponse(responseCode = "401", description = "Unauthorized, user not authenticated", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
-                        @ApiResponse(responseCode = "404", description = "Artist not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
-        })
+        @ApiResponse(responseCode = "200", description = "Monthly sales data retrieved successfully", content = @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = MonthlySalesDTO.class))))
+        @ApiResponse(responseCode = "400", description = "Invalid request", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+        @ApiResponse(responseCode = "401", description = "Unauthorized, user not authenticated", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+        @ApiResponse(responseCode = "404", description = "Artist not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
         @GetMapping("/sales/monthly")
         public ResponseEntity<StandardResponse<List<MonthlySalesDTO>>> getMonthlySalesData(
                         @Parameter(description = "Year for which to retrieve monthly sales data", example = "2024", required = true) @RequestParam int year) {
@@ -122,10 +112,8 @@ public class ArtistController {
         }
 
         @Operation(summary = "Get main view of artists", description = "Retrieve a list of all valid artists for displaying in the main view.")
-        @ApiResponses(value = {
-                        @ApiResponse(responseCode = "200", description = "Artists retrieved successfully", content = @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = ArtistMainViewDTO.class)))),
-                        @ApiResponse(responseCode = "400", description = "Invalid request", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
-        })
+        @ApiResponse(responseCode = "200", description = "Artists retrieved successfully", content = @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = ArtistMainViewDTO.class))))
+        @ApiResponse(responseCode = "400", description = "Invalid request", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
         @GetMapping("/main")
         public ResponseEntity<StandardResponse<List<ArtistMainViewDTO>>> getArtistMainView() {
                 List<Artist> artists = artistService.getValidArtists();
