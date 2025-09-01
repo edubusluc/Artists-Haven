@@ -9,13 +9,6 @@ import { useTranslation } from "react-i18next";
 import RewardCards from "./RewardCards";
 import MyUserProducts from "./MyUserProducts";
 
-const menuItems = [
-    { key: "profile", label: "Profile" },
-    { key: "orders", label: "My Orders" },
-    { key: "rewards", label: "Reward Cards" },
-    { key: "userProducts", label: "My Products" }
-];
-
 const getView = (key) => {
     switch (key) {
         case "profile":
@@ -35,6 +28,14 @@ const MySpace = () => {
     const [active, setActive] = useState("profile");
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const { t } = useTranslation();
+
+    const menuItems = [
+        { key: "profile", label: t('mySpace.profile') },
+        { key: "orders", label: t('mySpace.myOrders') },
+        { key: "rewards", label: t('mySpace.rewardCards') },
+        { key: "userProducts", label: t('mySpace.myProducts') },
+    ];
+
 
     useEffect(() => {
         window.scrollTo(0, 0);

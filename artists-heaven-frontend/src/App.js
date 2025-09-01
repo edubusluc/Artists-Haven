@@ -31,6 +31,7 @@ import ArtistsRegister from './components/artist/ArtistsRegister';
 import ArtistDashboard from './components/artist/ArtistDashboard';
 import ArtistHeader from './components/artist/ArtistHeader';
 import ArtistView from './components/ArtistView';
+import ArtistProfile from './components/artist/ArtistProfile'
 
 // Components - Orders
 import OrderAnonymous from './components/order/OrderAnonymous';
@@ -96,6 +97,7 @@ const AppRoutes = ({ role }) => (
     <Route path="/artists/register" element={<ArtistsRegister />} />
     <Route path="/auth/login" element={<UserLogin />} />
     <Route path="/users/profile" element={<UserProfile />} />
+    <Route path="/artist/profile" element={<ArtistProfile />} />
     <Route path="/users/mySpace" element={<MySpace />} />
     <Route path="/email" element={<EmailForm />} />
     <Route path="/verification" element={<VerificationForm />} />

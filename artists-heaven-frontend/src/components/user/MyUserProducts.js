@@ -68,11 +68,11 @@ const MyUserProducts = () => {
     return (
         <div className="w-full">
             <h2 className="text-3xl font-bold mb-8 text-gray-900 text-center">
-                ✨ My Products
+                ✨{t('myUserProducts.title')}
             </h2>
 
             {currentProducts.length === 0 ? (
-                <p className="text-gray-500 text-center py-10">No products found</p>
+                <p className="text-gray-500 text-center py-10">{t('myUserProducts.prodcutsNotFound')}</p>
             ) : (
                 <div className="grid gap-8 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
                     {currentProducts.map((prod, idx) => (
@@ -140,7 +140,7 @@ const MyUserProducts = () => {
                         disabled={page === 1}
                         className="px-4 py-2 rounded-full border bg-white text-gray-700 shadow-sm hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
                     >
-                        ⬅ Prev
+                        ⬅ {t('myUserProducts.previous')}
                     </button>
 
                     {Array.from({ length: totalPages }, (_, i) => (
@@ -161,7 +161,7 @@ const MyUserProducts = () => {
                         disabled={page === totalPages}
                         className="px-4 py-2 rounded-full border bg-white text-gray-700 shadow-sm hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
                     >
-                        Next ➡
+                        {t('myUserProducts.next')} ➡ 
                     </button>
                 </div>
             )}

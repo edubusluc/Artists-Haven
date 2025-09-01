@@ -57,11 +57,11 @@ const RewardCards = () => {
             const result = await response.json();
             const errorMessage = result.message;
 
-            if (!result.ok) throw new Error(errorMessage);
+            if (!response.ok) throw new Error(errorMessage);
 
             // 🔄 refrescar datos
             fetchData();
-            window.location.reload();
+            window.location.href = "/users/mySpace";
         } catch (err) {
             alert(err.message);
         }
@@ -129,16 +129,18 @@ const RewardCards = () => {
                     <p className="text-gray-500">{t("mySpace.noCards")}</p>
                 ) : (
                     <ul className="space-y-2">
-                        {cards.map((c) => (
-                            <li
-                                key={c.id}
-                                className={`p-3 rounded-lg border ${c.redeemed ? "bg-gray-100 text-gray-500" : "bg-green-50"
-                                    }`}
-                            >
-                                {c.discountPercentage}% OFF –{" "}
-                                {c.redeemed ? t("mySpace.used") : t("mySpace.active")}
-                            </li>
-                        ))}
+                        {cards
+                            .sort((a, b) => (a.redeemed ? 1 : 0) - (b.redeemed ? 1 : 0))
+                            .map((c) => (
+                                <li
+                                    key={c.id}
+                                    className={`p-3 rounded-lg border ${c.redeemed ? "bg-gray-100 text-gray-500" : "bg-green-50"
+                                        }`}
+                                >
+                                    {c.discountPercentage}% OFF –{" "}
+                                    {c.redeemed ? t("mySpace.used") : t("mySpace.active")}
+                                </li>
+                            ))}
                     </ul>
                 )}
             </div>

@@ -94,7 +94,7 @@ const MyOrders = () => {
                                 key={index}
                                 className={`flex-1 min-w-[60px] ${alignment} whitespace-normal break-words`}
                             >
-                                {step.replace("_", " ")}
+                                {t(step.replace("_", " "))}
                             </div>
                         );
                     })}
@@ -242,7 +242,7 @@ const MyOrders = () => {
                                 onClick={() => handleDownloadLabel(order.id)}
                                 className="w-full md:w-auto bg-yellow-400 text-black font-semibold py-2 px-6 rounded-md shadow-md transition hover:bg-yellow-500"
                             >
-                                {t('myOrders.orderCandownloadReturnLabelceled')}
+                                {t('myOrders.downloadReturnLabel')}
                             </button>
                         </div>
                     )}

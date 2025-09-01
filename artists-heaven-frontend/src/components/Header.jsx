@@ -6,13 +6,13 @@ import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from 'react-i18next';
 import Logout from "./Logout";
 import { checkTokenExpiration } from "../utils/authUtils";
+import { HashLink } from 'react-router-hash-link';
 
 // Lazy load de paneles para optimizar carga inicial
 const SlidingPanel = lazy(() => import("../utils/SlidingPanel"));
 
 const Header = () => {
-  const { shoppingCart: contextShoppingCart, handleDeleteProduct } = useContext(CartContext);
-  const [shoppingCart, setShoppingCart] = useState({ items: [] });
+  const { shoppingCart, setShoppingCart, handleDeleteProduct } = useContext(CartContext);
   const authToken = useMemo(() => localStorage.getItem("authToken"), []);
   const [isLeftPanelOpen, setLeftPanelOpen] = useState(false);
   const [isCartPanelOpen, setCartPanelOpen] = useState(false);
@@ -27,8 +27,14 @@ const Header = () => {
 
   const [promotedCollections, setPromotedCollections] = useState([]);
   const [activeRewardCard, setActiveRewardCard] = useState(null);
+  const [prevItemsCount, setPrevItemsCount] = useState(0);
 
   const navigate = useNavigate();
+
+  const totalProducts = useMemo(() =>
+    shoppingCart.items?.reduce((total, item) => total + item.quantity, 0) || 0,
+    [shoppingCart.items]
+  );
 
   // Fetch colecciones solo una vez
   useEffect(() => {
@@ -50,10 +56,8 @@ const Header = () => {
     if (!authToken) {
       const storedCart = localStorage.getItem("shoppingCart");
       if (storedCart) setShoppingCart(JSON.parse(storedCart));
-    } else {
-      setShoppingCart(contextShoppingCart);
     }
-  }, [authToken, contextShoppingCart]);
+  }, [authToken, setShoppingCart]);
 
   // Manejo de scroll optimizado con requestAnimationFrame
   useEffect(() => {
@@ -75,6 +79,12 @@ const Header = () => {
 
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useEffect(() => {
+    const openCartHandler = () => setCartPanelOpen(true);
+    window.addEventListener("openCartPanel", openCartHandler);
+    return () => window.removeEventListener("openCartPanel", openCartHandler);
   }, []);
 
   //Obtener tarjeta
@@ -113,16 +123,16 @@ const Header = () => {
 
   const links = useMemo(() => [
     { to: "users/mySpace", label: "MY SPACE" },
-    { to: "shop/camisetas", label: "CAMISETAS" },
-    { to: "shop/pantalones", label: "PANTALONES" },
-    { to: "shop/sudaderas", label: "SUDADERAS" },
-    { to: "shop/accesorios", label: "ACCESORIOS" },
-  ], []);
+    { to: "shop", label: t('all') },
+    { to: "shop/camisetas", label: t('t-shirts') },
+    { to: "shop/pantalones", label: t('pants') },
+    { to: "shop/sudaderas", label: t('hoodies') },
+    { to: "shop/accesorios", label: t('accessories') },
+    { to: "forFan", label: t('header.forFan') },
+    { to: "/#upcoming-events", label: t('upCommingEvents') }
+  ], [t, i18n.language]);
 
-  const totalProducts = useMemo(() =>
-    shoppingCart.items?.reduce((total, item) => total + item.quantity, 0) || 0,
-    [shoppingCart.items]
-  );
+
 
   const totalPrice = useMemo(() =>
     shoppingCart.items?.reduce((total, item) => total + item.product.price * item.quantity, 0) || 0,
@@ -272,6 +282,11 @@ const Header = () => {
                 <FontAwesomeIcon icon={faUser} />
               </Link>
             )}
+            {authToken && (
+              <Link to="/users/mySpace">
+                <FontAwesomeIcon icon={faUser} />
+              </Link>
+            )}
             <div style={{ position: "relative", cursor: "pointer" }} onClick={toggleCartPanel}>
               <FontAwesomeIcon icon={faBagShopping} />
               {totalProducts > 0 && (
@@ -317,9 +332,19 @@ const Header = () => {
               .filter(link => authToken || !["MY ORDERS", "MY PROFILE", "MY SPACE"].includes(link.label))
               .filter(link => link.label !== "MY SPACE")
               .map((link, index) => (
-                <Link to={link.to} key={index} onClick={toggleLeftPanel}>
-                  <p className="transform origin-center hover:scale-110 transition-transform duration-300 ease-in-out">{link.label}</p>
-                </Link>
+                link.to.startsWith("/#") ? (
+                  <HashLink smooth to={link.to} key={index} onClick={toggleLeftPanel}>
+                    <p className="transform origin-center hover:scale-110 transition-transform duration-300 ease-in-out">
+                      {link.label}
+                    </p>
+                  </HashLink>
+                ) : (
+                  <Link to={link.to} key={index} onClick={toggleLeftPanel}>
+                    <p className="transform origin-center hover:scale-110 transition-transform duration-300 ease-in-out">
+                      {link.label}
+                    </p>
+                  </Link>
+                )
               ))}
 
             {authToken && (
@@ -391,26 +416,26 @@ const Header = () => {
           )}
           {shoppingCart.items?.length > 0 && (
             <>
-            
-            <div className="p-4 space-y-2">
-              {activeRewardCard && (
-              <><div className="flex justify-between">
+
+              <div className="p-4 space-y-2">
+                {activeRewardCard && (
+                  <><div className="flex justify-between">
                     <p className="custom-font-shop custom-font-shop-black">Subtotal</p>
                     <p className="custom-font-shop custom-font-shop-black">{totalPrice}€</p>
                   </div><div className="flex justify-between text-green-700 font-semibold">
                       <p>{`${t('header.discount')} (${activeRewardCard.discountPercentage}%)`}</p>
                       <p>-{(totalPrice * activeRewardCard.discountPercentage / 100).toFixed(2)}€</p>
                     </div></>
-              )}
+                )}
 
-              <div className="flex justify-between font-bold">
-                <p>Total</p>
-                <p>{discountedTotalPrice.toFixed(2)}€</p>
-              </div>
+                <div className="flex justify-between font-bold">
+                  <p>Total</p>
+                  <p>{discountedTotalPrice.toFixed(2)}€</p>
+                </div>
 
-              <div className="p-4 border border-black flex justify-center cursor-pointer" onClick={handleRedirectToPayment}>
-                <p className="custom-font-shop custom-font-shop-black">{t('header.completePurchase')}</p>
-              </div>
+                <div className="p-4 border border-black flex justify-center cursor-pointer" onClick={handleRedirectToPayment}>
+                  <p className="custom-font-shop custom-font-shop-black">{t('header.completePurchase')}</p>
+                </div>
               </div>
             </>
           )}

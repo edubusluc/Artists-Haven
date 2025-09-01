@@ -203,11 +203,11 @@ const HomePage = () => {
 
           {/* Navegación categorías */}
           <div className="flex gap-4 mt-6 overflow-y-auto custom-font-shop text-3xl">
-            <Link to="/shop" className="transition-all duration-300 transform  hover:scale-105 hover:text-black focus:scale-105 focus:text-black active:scale-105 active:text-black">ALL</Link>
+            <Link to="/shop" className="transition-all duration-300 transform  hover:scale-105 hover:text-black focus:scale-105 focus:text-black active:scale-105 active:text-black">{t('all')}</Link>
             <Link to="/shop/camisetas" className="transition-all duration-300 transform hover:scale-105 hover:text-black focus:scale-105 focus:text-black active:scale-105 active:text-black">{t('t-shirts')}</Link>
-            <Link to="/shop/pantalones" className="transition-all duration-300 transform hover:scale-105 hover:text-black focus:scale-105 focus:text-black active:scale-105 active:text-black">{t('t-shirts')}</Link>
-            <Link to="/shop/sudaderas" className="transition-all duration-300 transform hover:scale-105 hover:text-black focus:scale-105 focus:text-black active:scale-105 active:text-black">{t('t-shirts')}</Link>
-            <Link to="/shop/accesorios" className="transition-all duration-300 transform hover:scale-105 hover:text-black focus:scale-105 focus:text-black active:scale-105 active:text-black">{t('t-shirts')}</Link>
+            <Link to="/shop/pantalones" className="transition-all duration-300 transform hover:scale-105 hover:text-black focus:scale-105 focus:text-black active:scale-105 active:text-black">{t('pants')}</Link>
+            <Link to="/shop/sudaderas" className="transition-all duration-300 transform hover:scale-105 hover:text-black focus:scale-105 focus:text-black active:scale-105 active:text-black">{t('hoodies')}</Link>
+            <Link to="/shop/accesorios" className="transition-all duration-300 transform hover:scale-105 hover:text-black focus:scale-105 focus:text-black active:scale-105 active:text-black">{t('accessories')}</Link>
           </div>
 
           {/* Lista 12 productos */}
@@ -261,6 +261,7 @@ const HomePage = () => {
               ))}
             </Swiper>
           </div>
+          <p className="mt-5 custom-font-shop custom-font-shop-black text-3xl">{t('header.forFan')}</p>
           <div className="relative w-full h-[600px] md:h-[800px] mt-5 overflow-hidden">
             <img
               src={userProduct}
@@ -277,7 +278,7 @@ const HomePage = () => {
             </div>
           </div>
 
-          <div className='mt-5'>
+          <div id="upcoming-events" className='mt-5'>
             <p className='custom-font-shop text-3xl custom-font-shop-black mb-5'>{t('upCommingEvents')}</p>
             <ConcertMap />
           </div>

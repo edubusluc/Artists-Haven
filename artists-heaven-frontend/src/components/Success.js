@@ -1,12 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useContext } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheckCircle } from "@fortawesome/free-solid-svg-icons";
 import { useTranslation } from "react-i18next";
+import { CartContext } from "../context/CartContext";
 
 export default function Success() {
     const [status, setStatus] = useState("loading");
     const [details, setDetails] = useState(null);
     const { t } = useTranslation();
+    const { shoppingCart, setShoppingCart, handleDeleteProduct } = useContext(CartContext);
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
@@ -23,6 +25,7 @@ export default function Success() {
                 if (data.status === "success") {
                     setStatus("success");
                     setDetails(data);
+                    setShoppingCart({ items: [] });
                 } else {
                     setStatus("pending");
                 }
@@ -50,7 +53,7 @@ export default function Success() {
                     {t("success.paymentSuccess")}
                 </h1>
                 <p className="text-gray-600 text-lg mb-6">
-                    {t("success.paymentReceived")}  
+                    {t("success.paymentReceived")}
                     {t("success.paymentStatus")} <span className="font-semibold text-green-600">{t("success.completed")}</span>
                 </p>
                 <div className="bg-gray-100 rounded-xl p-4 mb-6">
@@ -58,7 +61,7 @@ export default function Success() {
                         <span className="font-semibold">{t("success.total")}: </span> {details.amount_total} {details.currency.toUpperCase()}
                     </p>
                     <p className="text-gray-600 mt-2">
-                        {t("success.confirmationEmail")}  
+                        {t("success.confirmationEmail")}
                         <span className="font-semibold"> {details.email}</span>
                     </p>
                 </div>

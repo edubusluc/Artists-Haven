@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext, useMemo, useCallback } from "react";
+import { useState, useEffect, useContext, useMemo, useCallback, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { CartContext } from "../../context/CartContext";
 import Footer from "../Footer";
@@ -7,6 +7,7 @@ import AddReviewModal from "./AddReviewModal";
 import ProductCard from "./ProductCard";
 import guiaCamiseta from "../../util-image/guiaCamiseta.png";
 import guiaPantalon from "../../util-image/guiaPantalon.png";
+import guiaSudadera from "../../util-image/guiaSudadera.png";
 import ReviewsModal from "./ReviewsModal";
 import MoreInfoSlide from "./MoreInfoSlide";
 import { checkTokenExpiration } from "../../utils/authUtils";
@@ -33,14 +34,11 @@ const ProductImages = ({ images, name }) => (
         {/* Desktop */}
         <div className="hidden lg:grid grid-cols-2 mt-10 auto-rows-auto gap-4">
             {images?.map((image, index) => (
-                <div key={index} className="w-full">
-                    <img
-                        src={`/api/product${image}`}
-                        alt={name}
-                        className="w-full h-full object-contain"
-                        loading="lazy"
-                    />
-                </div>
+                <ZoomableImage
+                    key={index}
+                    src={`/api/product${image}`}
+                    alt={name}
+                />
             ))}
         </div>
     </>
@@ -59,7 +57,7 @@ const SizeSelector = ({ sizes, selectedSize, onSelect, sizeOrder, t }) => {
     if (availableSizes.length === 0) {
         return (
             <p className="inter-400 text-sm flex items-center gap-2 text-red-500">
-                🚫 {t("Product out of stock")}
+                🚫 {t("productDetails.ProductOutOfStock")}
             </p>
         );
     }
@@ -85,6 +83,36 @@ const SizeSelector = ({ sizes, selectedSize, onSelect, sizeOrder, t }) => {
                 </label>
             ))}
         </div>
+    );
+};
+
+const ZoomableImage = ({ src, alt }) => {
+    const [zoom, setZoom] = useState(false);
+    const [pos, setPos] = useState({ x: 50, y: 50 });
+    const containerRef = useRef(null);
+
+    const handleMouseMove = (e) => {
+        const { left, top, width, height } = containerRef.current.getBoundingClientRect();
+        const x = ((e.pageX - left) / width) * 100;
+        const y = ((e.pageY - top) / height) * 100;
+        setPos({ x, y });
+    };
+
+    return (
+        <div
+            ref={containerRef}
+            className="relative w-full aspect-[4/5]"
+            onMouseEnter={() => setZoom(true)}
+            onMouseLeave={() => setZoom(false)}
+            onMouseMove={handleMouseMove}
+            style={{
+                backgroundImage: `url(${src})`,
+                backgroundSize: zoom ? "200%" : "contain",
+                backgroundPosition: `${pos.x}% ${pos.y}%`,
+                backgroundRepeat: "no-repeat",
+            }}
+            aria-label={alt}
+        />
     );
 };
 
@@ -276,6 +304,9 @@ const ProductDetails = () => {
 
             const data = await response.json();
             setShoppingCart(data);
+
+            const event = new CustomEvent("openCartPanel");
+            window.dispatchEvent(event);
         } catch (error) {
             console.error("Error al añadir el producto al carrito:", error);
         }
@@ -379,15 +410,6 @@ const ProductDetails = () => {
                                 </div>
                             )}
 
-                            {product.section === "ACCESSORIES" && (
-                                <div className="text-black w-full mx-auto mb-4">
-                                    <p className="inter-400 text-sm">
-                                        {t("AvailableUnits")}: {product.availableUnits}
-                                    </p>
-                                    <hr className="border-t border-black my-4 w-full" />
-                                </div>
-                            )}
-
                             {/* Añadir a carrito */}
                             <div className="text-black w-full mx-auto">
                                 {!product.available && (
@@ -428,7 +450,7 @@ const ProductDetails = () => {
                                 </div>
 
                                 {/* Botón Ver en AR */}
-                                {product.section !== "ACCESSORIES" && product.section !== "PANTS" &&
+                                {product.modelReference  &&
                                     <div className="w-full mx-auto">
                                         <button
                                             onClick={() => setIsAROpen(true)}
@@ -465,6 +487,13 @@ const ProductDetails = () => {
                                             {product.section === "PANTS" && (
                                                 <img
                                                     src={guiaPantalon}
+                                                    alt="Guía de tallas - Pantalón"
+                                                    className="w-full max-w-md mx-auto"
+                                                />
+                                            )}
+                                            {product.section === "HOODIES" && (
+                                                <img
+                                                    src={guiaSudadera}
                                                     alt="Guía de tallas - Pantalón"
                                                     className="w-full max-w-md mx-auto"
                                                 />
@@ -567,7 +596,7 @@ const ProductDetails = () => {
                 <ProductAR
                     onClose={() => setIsAROpen(false)}
                     modelReference={product.modelReference}
-                    section = {product.section}
+                    section={product.section}
                 />
             )}
         </>

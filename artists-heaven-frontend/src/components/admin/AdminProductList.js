@@ -354,6 +354,8 @@ const AdminProductList = () => {
         return <SessionExpired />;
     }
 
+    console.log(products);
+
     return (
         <>
             <div className="min-h-screen bg-gradient-to-r from-gray-300 to-white flex flex-col">
@@ -401,7 +403,7 @@ const AdminProductList = () => {
                                                 )}
                                             </div>
                                             <div className="mb-2">
-                                                {product.on_Promotion && product.discount > 0 ? (
+                                                {product.onPromotion && product.discount > 0 ? (
                                                     <div className="flex items-center gap-2">
                                                         <span className="text-sm text-gray-500 line-through">{(product.price / ((100 - product.discount) / 100)).toFixed(2)}€</span>
                                                         <span className="text-base font-bold text-rose-600">
@@ -415,13 +417,19 @@ const AdminProductList = () => {
                                                     <span className="text-base font-semibold text-gray-900">{product.price.toFixed(2)}€</span>
                                                 )}
                                             </div>
-                                            <div className="text-sm text-gray-600 mb-2">
-                                                {t('adminProductList.sizes')}:{" "}
-                                                {Object.entries(product.size ?? {})
-                                                    .filter(([, stock]) => stock > 0)
-                                                    .map(([size]) => size)
-                                                    .join(", ") || "Sin stock"}
-                                            </div>
+                                            {Object.keys(product.sizes ?? {}).length > 0 || product.section !== 'ACCESSORIES' ? (
+                                                <div className="text-sm text-gray-600 mb-2">
+                                                    {t('adminProductList.sizes')}:{" "}
+                                                    {Object.entries(product.sizes ?? {})
+                                                        .filter(([, stock]) => stock > 0)
+                                                        .map(([size]) => size)
+                                                        .join(", ") || "Sin stock"}
+                                                </div>
+                                            ) : (
+                                                <div className="text-sm text-gray-600 mb-2">
+                                                    <p>{t('editProductForm.availableUnits')}: {product.availableUnits}</p>
+                                                </div>
+                                            )}
                                             <div className="text-xs text-gray-500 italic">
                                                 {Array.from(product.categories || [])
                                                     .sort((a, b) => a.name.localeCompare(b.name))
@@ -440,7 +448,7 @@ const AdminProductList = () => {
                                         </Link>
                                         {/* Botón de promoción/despromoción */}
                                         <div className="mt-2 flex flex-col gap-2 text-center">
-                                            {product.on_Promotion ? (
+                                            {product.onPromotion ? (
                                                 <button
                                                     onClick={(e) => handleDemoteProduct(e, product.id)}
                                                     className="w-full bg-red-500 text-white py-2 px-4 rounded-lg text-xs font-bold transition-all hover:bg-red-600"
@@ -507,7 +515,7 @@ const AdminProductList = () => {
                                     {t('adminProductList.labelsManagement')}
                                 </p>
                                 <button
-                                    onClick={() => setShowModal(true)}  // Abre el modal
+                                    onClick={() => setShowModal(true)} 
                                     className="w-full md:w-auto bg-yellow-400 text-black font-semibold py-2 px-6 rounded-md shadow-md transition duration-300 ease-in-out hover:bg-yellow-500 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-yellow-300"
                                 >
                                     {t('adminProductList.createLabel')}
@@ -523,7 +531,11 @@ const AdminProductList = () => {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-200">
-                                    {categories.length > 0 ? categories.map((category) => (
+                                    {categories.length > 0 ? 
+                                    categories
+                                    .slice()
+                                    .sort((a, b) => a.id - b.id)
+                                    .map((category) => (
                                         <tr key={category.id}>
                                             <td className="px-4 py-3">{category.id}</td>
                                             <td className="px-4 py-3">{category.name}</td>
@@ -557,7 +569,7 @@ const AdminProductList = () => {
                                     {t('adminProductList.collectionManagement')}
                                 </p>
                                 <button
-                                    onClick={() => setShowCollectionModal(true)}  // Abre el modal
+                                    onClick={() => setShowCollectionModal(true)} 
                                     className="w-full md:w-auto bg-yellow-400 text-black font-semibold py-2 px-6 rounded-md shadow-md transition duration-300 ease-in-out hover:bg-yellow-500 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-yellow-300"
                                 >
                                     {t('adminProductList.newCollection')}

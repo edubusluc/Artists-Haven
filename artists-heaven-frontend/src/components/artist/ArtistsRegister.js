@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from 'react-router-dom';
 import Footer from '../Footer'
 import { useTranslation } from 'react-i18next';
+import { Eye, EyeOff } from "lucide-react";
 
 const ArtistForm = () => {
   const [formData, setFormData] = useState({
@@ -17,37 +18,47 @@ const ArtistForm = () => {
   const { t, i18n } = useTranslation();
   const currentLang = i18n.language;
 
+  useEffect(() => {
+    setValidationErrors({})
+  }, [currentLang]);
+
 
   const [errorMessage, setErrorMessage] = useState("");
   const navigate = useNavigate();
-  const [images, setImages] = useState([]);
-  const [bannerImage, setBannerImage] = useState([]);
+  const [images, setImages] = useState(null);
+  const [bannerImage, setBannerImage] = useState(null);
   const [validationErrors, setValidationErrors] = useState({});
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const handleImageChange = (e) => {
-    const files = Array.from(e.target.files);
+    const file = e.target.files[0];
     const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/bmp", "image/webp"];
-    const invalidFiles = files.filter(file => !allowedTypes.includes(file.type));
-    if (invalidFiles.length > 0) {
+
+    if (file && !allowedTypes.includes(file.type)) {
       setErrorMessage(t('artistForm.error.invalidImage'));
-      setImages([]);
+      setImages(null);
+      setLoading(false);
       return;
     }
+
     setErrorMessage("");
-    setImages(files);
+    setImages(file);
   };
 
   const handleBannerImage = (e) => {
-    const files = Array.from(e.target.files);
+    const file = e.target.files[0];
     const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/bmp", "image/webp"];
-    const invalidFiles = files.filter(file => !allowedTypes.includes(file.type));
-    if (invalidFiles.length > 0) {
+
+    if (file && !allowedTypes.includes(file.type)) {
       setErrorMessage(t('artistForm.error.invalidImage'));
-      setBannerImage([]);
+      setBannerImage(null);
+      setLoading(false);
       return;
     }
+
     setErrorMessage("");
-    setBannerImage(files);
+    setBannerImage(file);
   };
 
   const handleChange = (e) => {
@@ -64,6 +75,7 @@ const ArtistForm = () => {
     setValidationErrors({});
 
     let errors = {};
+    setLoading(true);
 
     if (!formData.firstName) errors.firstName = t('form.error.requiredFirstName');
     if (!formData.lastName) errors.lastName = t('form.error.requiredLastName');
@@ -72,23 +84,21 @@ const ArtistForm = () => {
     if (!formData.artistName) errors.artistName = t('artistForm.error.requiredArtistName');
     if (!formData.url) errors.url = t('artistForm.error.requiredUrl');
 
-    if (images.length === 0) errors.images = t('artistForm.error.requiredImage');
-    if (bannerImage.length === 0) errors.bannerImage = t('artistForm.error.requiredBanner');
-
-
+    if (!images) errors.images = t('artistForm.error.requiredImage');
+    if (!bannerImage) errors.bannerImage = t('artistForm.error.requiredBanner');
 
     const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/bmp", "image/webp"];
 
-    const invalidMainImages = images.filter(file => !allowedTypes.includes(file.type));
-    const invalidBannerImages = bannerImage.filter(file => !allowedTypes.includes(file.type));
-
-    if (invalidMainImages.length > 0 || invalidBannerImages.length > 0) {
-      setValidationErrors(t('artistForm.error.invalidImage'));
-      return;
+    if (images && !allowedTypes.includes(images.type)) {
+      errors.images = t('artistForm.error.invalidImage');
+    }
+    if (bannerImage && !allowedTypes.includes(bannerImage.type)) {
+      errors.bannerImage = t('artistForm.error.invalidImage');
     }
 
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);
+      setLoading(false);
       return;
     }
 
@@ -113,10 +123,9 @@ const ArtistForm = () => {
 
       if (!response.ok) {
         throw new Error(errorMessage);
-
       }
 
-      // Limpiar estado tras registro
+      // Reset form
       setFormData({
         firstName: "",
         lastName: "",
@@ -128,9 +137,12 @@ const ArtistForm = () => {
       });
       setImages([]);
       setBannerImage([]);
+      alert(t('userForm.success'));
       navigate('/auth/login');
     } catch (error) {
       setErrorMessage(error.message || "Error al registrar el artista");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -197,19 +209,29 @@ const ArtistForm = () => {
         </div>
 
         {/* Contraseña */}
-        <div>
-          <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-            {t('artistForm.password')} <span className="text-red-500">*</span>
+        <div className="relative">
+          <label
+            htmlFor="password"
+            className="block text-sm font-medium text-gray-700 mb-1">
+            {t("artistForm.password")}
           </label>
           <input
-            type="password"
+            type={showPassword ? "text" : "password"}
             id="password"
             name="password"
             value={formData.password}
             onChange={handleChange}
+            placeholder="••••••••"
             className="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500" />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-3 mt-3 text-gray-500 hover:text-gray-300"
+          >
+            {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+          </button>
           {validationErrors.password && (
-            <p className="text-red-600 text-sm">{validationErrors.password}</p>
+            <p className="text-white text-sm">{validationErrors.password}</p>
           )}
         </div>
 
@@ -306,9 +328,18 @@ const ArtistForm = () => {
         <div className="flex justify-center">
           <button
             type="submit"
-            className="bg-purple-600 hover:bg-purple-700 text-white font-semibold w-full md:w-1/2 py-3 rounded-xl shadow transition-all"
+            disabled={loading}
+            className={`w-full md:w-1/2 py-3 rounded-xl font-semibold shadow transition-all 
+                ${loading ? 'bg-purple-300 text-gray-700 cursor-not-allowed' : 'bg-purple-600 hover:bg-purple-700 text-white'}`}
           >
-            {t('artistForm.submit')}
+            {loading ? (
+              <div className="flex items-center justify-center gap-2">
+                <div className="inline-block animate-spin border-t-2 border-b-2 border-black rounded-full w-5 h-5"></div>
+                {t('artistForm.submitting')}
+              </div>
+            ) : (
+              t('artistForm.submit')
+            )}
           </button>
         </div>
 

@@ -21,9 +21,11 @@ const EditProduct = () => {
         section: "",
         composition: "",
         shippingDetails: "",
+        modelReference: ""
     });
 
     const [loading, setLoading] = useState(true);
+    const [modelFile, setModelFile] = useState(null);
     const [errorMessage, setErrorMessage] = useState("");
     const [successMessage, setSuccessMessage] = useState("");
     const [categoriesList, setCategoriesList] = useState([]);
@@ -116,6 +118,8 @@ const EditProduct = () => {
             });
     }, [id, rol]);
 
+    console.log(product);
+
     // Cargar lista de categorías
     useEffect(() => {
         if (!checkTokenExpiration || rol !== 'ADMIN') {
@@ -165,6 +169,29 @@ const EditProduct = () => {
         setProduct({ ...product, [name]: value });
     };
 
+    const handleModelReferenceChange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const allowedExtensions = ["glb", "gltf"];
+        const fileExtension = file.name.split(".").pop().toLowerCase();
+
+        if (!allowedExtensions.includes(fileExtension)) {
+            setValidationErrors((prev) => ({
+                ...prev,
+                modelReference: "Solo se permiten archivos .glb o .gltf",
+            }));
+            return;
+        }
+
+        setValidationErrors((prev) => ({ ...prev, modelReference: "" }));
+        setModelFile(file);
+        setProduct((prev) => ({
+            ...prev,
+            modelReference: file.name
+        }));
+    };
+
     const handleImageChange = (e) => {
         const files = Array.from(e.target.files);
         setNewImages([...newImages, ...files]);
@@ -197,6 +224,8 @@ const EditProduct = () => {
     };
 
     const formRef = useRef(null);
+
+    console.log("EO")
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -253,6 +282,10 @@ const EditProduct = () => {
         removedImages.forEach((file) => {
             formData.append("removedImages", file);
         });
+
+        if (modelFile) {
+            formData.append("model", modelFile);
+        }
 
         formData.append(
             "reorderedImages",
@@ -549,6 +582,25 @@ const EditProduct = () => {
                         />
                         {validationErrors.images && (
                             <p className="text-red-600 text-sm">{validationErrors.images}</p>
+                        )}
+                    </div>
+
+                    {product.modelReference && !modelFile && (
+                        <p className="text-sm text-gray-600">
+                            Modelo actual:
+                            {product.modelReference.replace("/product_media/", "")}
+                        </p>
+                    )}
+
+                    <div>
+                        <label className="block font-semibold mb-2 text-sm text-gray-600">{t('editProductForm.upload3dModel')}</label>
+                        <input
+                            type="file"
+                            onChange={handleModelReferenceChange}
+                            className="block w-full text-sm text-gray-500"
+                        />
+                        {validationErrors.modelReference && (
+                            <p className="text-red-600 text-sm">{validationErrors.modelReference}</p>
                         )}
                     </div>
 
