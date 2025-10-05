@@ -252,9 +252,65 @@ class AdminServiceTest {
         Page<Order> orderPage = new PageImpl<>(List.of(order), pageable, 1);
         when(adminRepository.findAllOrderSortByDate(pageable)).thenReturn(orderPage);
 
-        Page<Order> result = adminService.getAllOrderSortByDate(pageable);
+        Page<Order> result = adminService.getOrdersFiltered(null, null, pageable);
 
         assertEquals(1, result.getTotalElements());
+    }
+
+    @Test
+    void testGetOrdersFiltered_statusAndSearchNotNull() {
+        Pageable pageable = PageRequest.of(0, 10);
+        Order order = new Order();
+        Page<Order> orderPage = new PageImpl<>(List.of(order), pageable, 1);
+
+        when(adminRepository.findByStatusAndSearch("DELIVERED", "john", pageable)).thenReturn(orderPage);
+
+        Page<Order> result = adminService.getOrdersFiltered("DELIVERED", "john", pageable);
+
+        assertEquals(1, result.getTotalElements());
+        verify(adminRepository).findByStatusAndSearch("DELIVERED", "john", pageable);
+    }
+
+    @Test
+    void testGetOrdersFiltered_statusNotNull_searchNull() {
+        Pageable pageable = PageRequest.of(0, 10);
+        Order order = new Order();
+        Page<Order> orderPage = new PageImpl<>(List.of(order), pageable, 1);
+
+        when(adminRepository.findByStatus(OrderStatus.PAID, pageable)).thenReturn(orderPage);
+
+        Page<Order> result = adminService.getOrdersFiltered("PAID", null, pageable);
+
+        assertEquals(1, result.getTotalElements());
+        verify(adminRepository).findByStatus(OrderStatus.PAID, pageable);
+    }
+
+    @Test
+    void testGetOrdersFiltered_statusNull_searchNotNull() {
+        Pageable pageable = PageRequest.of(0, 10);
+        Order order = new Order();
+        Page<Order> orderPage = new PageImpl<>(List.of(order), pageable, 1);
+
+        when(adminRepository.findBySearch("alice", pageable)).thenReturn(orderPage);
+
+        Page<Order> result = adminService.getOrdersFiltered(null, "alice", pageable);
+
+        assertEquals(1, result.getTotalElements());
+        verify(adminRepository).findBySearch("alice", pageable);
+    }
+
+    @Test
+    void testGetOrdersFiltered_statusNull_searchNull() {
+        Pageable pageable = PageRequest.of(0, 10);
+        Order order = new Order();
+        Page<Order> orderPage = new PageImpl<>(List.of(order), pageable, 1);
+
+        when(adminRepository.findAllOrderSortByDate(pageable)).thenReturn(orderPage);
+
+        Page<Order> result = adminService.getOrdersFiltered(null, null, pageable);
+
+        assertEquals(1, result.getTotalElements());
+        verify(adminRepository).findAllOrderSortByDate(pageable);
     }
 
     @Test
@@ -282,7 +338,6 @@ class AdminServiceTest {
         // Simulamos que el repositorio no encuentra la orden y lanza una excepción
         when(orderService.findOrderById(orderId))
                 .thenThrow(new AppExceptions.ResourceNotFoundException("Order not found with id: " + orderId));
-
 
         // Llamamos al método updateOrderStatus y verificamos que se lanza la excepción
         ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class, () -> {

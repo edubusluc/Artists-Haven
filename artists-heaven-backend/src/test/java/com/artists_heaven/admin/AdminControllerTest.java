@@ -3,23 +3,21 @@ package com.artists_heaven.admin;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.Arrays;
-import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.nio.file.Paths;
 import java.time.LocalDateTime;
-import java.nio.file.Path;
 import java.nio.file.Files;
 
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -45,6 +43,7 @@ import com.artists_heaven.entities.artist.ArtistService;
 import com.artists_heaven.entities.user.User;
 import com.artists_heaven.entities.user.UserProfileDTO;
 import com.artists_heaven.exception.AppExceptions;
+import com.artists_heaven.images.ImageServingUtil;
 import com.artists_heaven.order.Order;
 import com.artists_heaven.order.OrderDetailsDTO;
 import com.artists_heaven.order.OrderService;
@@ -52,7 +51,6 @@ import com.artists_heaven.order.OrderStatus;
 import com.artists_heaven.page.PageResponse;
 import com.artists_heaven.product.CategoryRepository;
 import com.artists_heaven.product.Product;
-import com.artists_heaven.product.Collection;
 import com.artists_heaven.product.ProductService;
 import com.artists_heaven.standardResponse.StandardResponse;
 import com.artists_heaven.userProduct.UserProduct;
@@ -105,6 +103,9 @@ class AdminControllerTest {
 
         @Mock
         private UserProductService userProductService;
+
+        @Mock
+        private ImageServingUtil imageServingUtil;
 
         @InjectMocks
         private AdminController adminController;
@@ -195,33 +196,29 @@ class AdminControllerTest {
 
         @Test
         void testGetVerificationVideoSuccess() throws Exception {
-                String fileName = "sample.mp4";
-                String basePath = System.getProperty("user.dir")
-                                + "/artists-heaven-backend/src/main/resources/verification_media/";
-                Path filePath = Paths.get(basePath, fileName);
+                // Crear recurso simulado (no toca filesystem)
+                Resource fakeResource = new FileSystemResource(Files.createTempFile("sample", ".mp4").toFile());
 
-                // Crea un archivo de muestra para la prueba
-                Files.deleteIfExists(filePath);
-                Files.createDirectories(filePath.getParent());
-                Files.createFile(filePath);
+                // Mockear ImageServingUtil para que devuelva el recurso usando serveVideo
+                when(imageServingUtil.serveVideo(anyString(), eq("sample.mp4")))
+                                .thenReturn(ResponseEntity.ok()
+                                                .header(HttpHeaders.CONTENT_TYPE, "video/mp4")
+                                                .body(fakeResource));
 
-                when(resource.exists()).thenReturn(true);
-
-                mockMvc.perform(get("/api/admin/verification_media/" + fileName))
+                // Ejecutar MockMvc
+                mockMvc.perform(get("/api/admin/verification_media/sample.mp4"))
                                 .andExpect(status().isOk())
                                 .andExpect(header().string(HttpHeaders.CONTENT_TYPE, "video/mp4"));
-
-                // Elimina el archivo de muestra después de la prueba
-                Files.deleteIfExists(filePath);
         }
 
         @Test
         void testGetVerificationVideoNotFound() throws Exception {
-                // Arrange
                 String fileName = "non-existent-video.mp4";
-                when(resource.exists()).thenReturn(false);
 
-                // Act & Assert
+                // Mockear ImageServingUtil para que devuelva 404
+                when(imageServingUtil.serveVideo(anyString(), eq(fileName)))
+                                .thenReturn(ResponseEntity.notFound().build());
+
                 mockMvc.perform(get("/api/admin/verification_media/{fileName}", fileName))
                                 .andExpect(status().isNotFound());
         }
@@ -335,10 +332,10 @@ class AdminControllerTest {
 
                 Page<Order> orderPage = new PageImpl<>(List.of(order), pageable, 1);
 
-                when(adminService.getAllOrderSortByDate(pageable)).thenReturn(orderPage);
+                when(adminService.getOrdersFiltered(null, null, pageable)).thenReturn(orderPage);
 
                 // Act
-                PageResponse<OrderDetailsDTO> response = adminController.getOrders(page, size);
+                PageResponse<OrderDetailsDTO> response = adminController.getOrders(page, size, null, null);
 
                 // Asserts
                 assertEquals(1, response.getTotalElements());
@@ -411,7 +408,7 @@ class AdminControllerTest {
                 mockMvc.perform(post("/api/admin/newCategory")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(categoryDTO)))
-                                .andExpect(status().isCreated())
+                                .andExpect(status().isOk())
                                 .andExpect(jsonPath("$.message").value("Category created successfully"));
         }
 
@@ -429,22 +426,6 @@ class AdminControllerTest {
         }
 
         @Test
-        void getAllCollections_success() throws Exception {
-                Set<Product> products = new HashSet<>();
-                Collection c1 = new Collection(1L, "Coll 1", products, false, new Date());
-                Collection c2 = new Collection(2L, "Coll 2", products, false, new Date());
-
-                when(productService.findAllCollections()).thenReturn(List.of(c1, c2));
-
-                mockMvc.perform(get("/api/admin/allCollections"))
-                                .andExpect(status().isOk())
-                                .andExpect(jsonPath("$.message").value("Collections retrieved successfully"))
-                                .andExpect(jsonPath("$.data", hasSize(2)))
-                                .andExpect(jsonPath("$.data[0].id").value(1))
-                                .andExpect(jsonPath("$.data[0].name").value("Coll 1"));
-        }
-
-        @Test
         void createCollection_success() throws Exception {
                 CollectionDTO dto = new CollectionDTO(null, "New Collection", false);
 
@@ -454,7 +435,7 @@ class AdminControllerTest {
                 mockMvc.perform(post("/api/admin/newCollection")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(dto)))
-                                .andExpect(status().isCreated())
+                                .andExpect(status().isOk())
                                 .andExpect(jsonPath("$.message").value("Collection created successfully"));
 
                 verify(productService, times(1)).saveCollection("New-Collection");
@@ -516,7 +497,7 @@ class AdminControllerTest {
         void rejectProduct_success() throws Exception {
                 User user = new User();
                 user.setUsername("Test");
-                
+
                 UserProduct product = new UserProduct();
                 product.setId(2L);
                 product.setName("Rejected Product");

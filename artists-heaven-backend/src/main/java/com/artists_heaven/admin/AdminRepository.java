@@ -67,4 +67,21 @@ public interface AdminRepository extends JpaRepository<User, Long> {
         @Query("SELECT o FROM Order o ORDER BY o.createdDate")
         Page<Order> findAllOrderSortByDate(Pageable pageable);
 
+        @Query("SELECT o FROM Order o WHERE o.status = :status ORDER BY o.createdDate DESC")
+        Page<Order> findByStatus(@Param("status") OrderStatus status, Pageable pageable);
+
+        @Query("SELECT o FROM Order o WHERE " +
+                        "(STR(o.identifier) LIKE CONCAT('%', :search, '%') " +
+                        "OR LOWER(o.paymentIntent) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+                        "ORDER BY o.createdDate DESC")
+        Page<Order> findBySearch(@Param("search") String search, Pageable pageable);
+
+        @Query("SELECT o FROM Order o WHERE o.status = :status " +
+                        "AND (STR(o.identifier) LIKE CONCAT('%', :search, '%') " +
+                        "OR LOWER(o.paymentIntent) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+                        "ORDER BY o.createdDate DESC")
+        Page<Order> findByStatusAndSearch(@Param("status") String status,
+                        @Param("search") String search,
+                        Pageable pageable);
+
 }
