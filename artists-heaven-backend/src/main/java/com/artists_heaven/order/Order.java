@@ -26,12 +26,14 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
 @Getter
 @Setter
 @Table(name = "orders")
+@NoArgsConstructor
 public class Order {
 
     @Id
@@ -101,11 +103,5 @@ public class Order {
     private LocalDateTime lastUpdateDateTime = LocalDateTime.now();
 
     private Long discountApplied;
-
-    public Order() {
-        // No-argument constructor required by JPA for entity instantiation via
-        // reflection
-    }
-
 
 }

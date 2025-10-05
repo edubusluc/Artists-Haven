@@ -28,6 +28,12 @@ public class ChatbotUtils {
 
     private static final LevenshteinDistance LD = new LevenshteinDistance(MAX_LEVENSHTEIN_DISTANCE);
 
+    /**
+     * Detects if a given text is in English by comparing stopword frequency.
+     *
+     * @param text input text
+     * @return {@code true} if text is more likely English, {@code false} otherwise
+     */
     public static boolean isEnglish(String text) {
         String normalized = normalizeText(text.toLowerCase());
         String[] tokens = normalized.split("\\s+");
@@ -43,6 +49,14 @@ public class ChatbotUtils {
         return enCount > esCount + margin;
     }
 
+    /**
+     * Corrects spelling of words in the given text using phonetic (Metaphone) and
+     * Levenshtein distance.
+     *
+     * @param text      input text
+     * @param isEnglish whether the text is in English (true) or Spanish (false)
+     * @return corrected text with spelling fixes
+     */
     public static String correctSpelling(String text, boolean isEnglish) {
         Pattern wordPattern = Pattern.compile("\\p{L}+");
         Matcher matcher = wordPattern.matcher(text);
@@ -69,6 +83,14 @@ public class ChatbotUtils {
         return corrected.toString();
     }
 
+    /**
+     * Finds the closest dictionary match for a given word using phonetic and
+     * distance algorithms.
+     *
+     * @param word       word to check
+     * @param dictionary language dictionary
+     * @return best match or {@code null} if none found
+     */
     private static String getClosestMatch(String word, Set<String> dictionary) {
         Metaphone metaphone = new Metaphone();
 
@@ -87,7 +109,6 @@ public class ChatbotUtils {
                     .toList();
         }
 
-        // Busca mejor coincidencia en candidatos filtrados
         String bestMatch = null;
         int bestScore = Integer.MAX_VALUE;
 
@@ -111,6 +132,13 @@ public class ChatbotUtils {
         return (bestMatch != null && !bestMatch.equals(word)) ? bestMatch : null;
     }
 
+    /**
+     * Calculates the length of the common prefix between two words.
+     *
+     * @param a first word
+     * @param b second word
+     * @return length of common prefix
+     */
     private static int commonPrefixLength(String a, String b) {
         int min = Math.min(a.length(), b.length());
         int i = 0;
@@ -120,6 +148,13 @@ public class ChatbotUtils {
         return i;
     }
 
+    /**
+     * Counts the number of distinct common letters between two words.
+     *
+     * @param a first word
+     * @param b second word
+     * @return number of shared characters
+     */
     private static int countCommonLetters(String a, String b) {
         Set<Character> setA = a.toLowerCase().chars().mapToObj(c -> (char) c).collect(Collectors.toSet());
         Set<Character> setB = b.toLowerCase().chars().mapToObj(c -> (char) c).collect(Collectors.toSet());
@@ -127,12 +162,25 @@ public class ChatbotUtils {
         return setA.size();
     }
 
+    /**
+     * Normalizes text by removing diacritics and non-alphanumeric characters.
+     *
+     * @param text input text
+     * @return normalized text
+     */
     public static String normalizeText(String text) {
         String normalized = Normalizer.normalize(text, Normalizer.Form.NFD);
         normalized = normalized.replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
         return normalized.replaceAll("[^\\p{L}\\p{Nd}\\s]", "");
     }
 
+    /**
+     * Tokenizes text into a set of words, filtering out stopwords.
+     *
+     * @param texto     input text
+     * @param isEnglish whether the text is English or Spanish
+     * @return set of tokens without stopwords
+     */
     public static Set<String> tokenize(String texto, boolean isEnglish) {
         texto = normalizeText(texto);
 
@@ -143,6 +191,13 @@ public class ChatbotUtils {
                 .collect(Collectors.toSet());
     }
 
+    /**
+     * Calculates the Jaccard similarity between two sets of tokens.
+     *
+     * @param set1 first set of tokens
+     * @param set2 second set of tokens
+     * @return similarity value between 0.0 and 1.0
+     */
     public static double jaccardSimilarity(Set<String> set1, Set<String> set2) {
         Set<String> intersection = new HashSet<>(set1);
         intersection.retainAll(set2);
@@ -153,16 +208,37 @@ public class ChatbotUtils {
         return union.isEmpty() ? 0.0 : (double) intersection.size() / union.size();
     }
 
+    /**
+     * Loads stopwords from a resource file.
+     *
+     * @param resourcePath path to stopwords file
+     * @return set of stopwords
+     */
     private static Set<String> loadStopwords(String resourcePath) {
         return loadWordSet(resourcePath, "stopwords");
     }
 
+    /**
+     * Loads dictionary words from a resource file, excluding multi-word entries.
+     *
+     * @param resourcePath path to dictionary file
+     * @return set of dictionary words
+     */
     private static Set<String> loadDictionary(String resourcePath) {
         return loadWordSet(resourcePath, "dictionary").stream()
                 .filter(word -> !word.contains(" "))
                 .collect(Collectors.toSet());
     }
 
+    /**
+     * Loads a generic word set from a resource file.
+     *
+     * @param resourcePath path to resource file
+     * @param label        descriptive label for error handling
+     * @return set of words
+     * @throws AppExceptions.InternalServerErrorException if resource cannot be
+     *                                                    loaded
+     */
     private static Set<String> loadWordSet(String resourcePath, String label) {
         try {
             var stream = ChatbotUtils.class.getResourceAsStream(resourcePath);

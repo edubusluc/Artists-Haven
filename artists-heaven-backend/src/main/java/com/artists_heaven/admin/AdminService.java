@@ -36,14 +36,30 @@ public class AdminService {
         this.orderService = orderService;
     }
 
+    /**
+     * Counts the total number of users in the system.
+     *
+     * @return the total number of users
+     */
     public int countUsers() {
         return adminRepository.countUsers();
     }
 
+    /**
+     * Counts the total number of registered artists.
+     *
+     * @return the number of artists
+     */
     public Integer countArtists() {
         return adminRepository.countArtist();
     }
 
+    /**
+     * Retrieves monthly sales data for a given year.
+     *
+     * @param year the year to fetch sales data for
+     * @return a list of {@link MonthlySalesDTO} containing sales details
+     */
     public List<MonthlySalesDTO> getMonthlySalesData(int year) {
         List<Object[]> results = adminRepository.findMonthlySalesData(year, OrderStatus.RETURN_ACCEPTED);
         List<MonthlySalesDTO> monthlySalesDTOList = new ArrayList<>();
@@ -60,6 +76,12 @@ public class AdminService {
         return monthlySalesDTOList;
     }
 
+    /**
+     * Retrieves the count of orders grouped by their status for a given year.
+     *
+     * @param year the year to filter orders by
+     * @return a map of {@link OrderStatus} to their respective counts
+     */
     public Map<OrderStatus, Integer> getOrderStatusCounts(int year) {
         List<Object[]> results = adminRepository.findOrderStatusCounts(year);
         Map<OrderStatus, Integer> orderStatusMap = new EnumMap<>(OrderStatus.class);
@@ -71,6 +93,12 @@ public class AdminService {
         return orderStatusMap;
     }
 
+    /**
+     * Retrieves the verification status counts for users in a given year.
+     *
+     * @param year the year to filter verification statuses
+     * @return a map of {@link VerificationStatus} to their respective counts
+     */
     public Map<VerificationStatus, Integer> getVerificationStatusCount(int year) {
         List<Object[]> results = adminRepository.findVerificationStatusCounts(year);
         Map<VerificationStatus, Integer> verificationStatusMap = new EnumMap<>(VerificationStatus.class);
@@ -82,6 +110,12 @@ public class AdminService {
         return verificationStatusMap;
     }
 
+    /**
+     * Retrieves the most sold items in a given year.
+     *
+     * @param year the year to filter orders by
+     * @return a map of item names to the total quantity sold
+     */
     public Map<String, Integer> getMostSoldItems(int year) {
         List<Order> ordersByYear = adminRepository.getOrdersPerYear(year);
         Map<String, Integer> itemsCount = new HashMap<>();
@@ -95,6 +129,12 @@ public class AdminService {
         return itemsCount;
     }
 
+    /**
+     * Retrieves the number of orders placed per country in a given year.
+     *
+     * @param year the year to filter orders by
+     * @return a map of country names to their respective order counts
+     */
     public Map<String, Integer> getCountrySold(int year) {
         List<Order> ordersByYear = adminRepository.getOrdersPerYear(year);
         Map<String, Integer> itemsCount = new HashMap<>();
@@ -105,6 +145,12 @@ public class AdminService {
         return itemsCount;
     }
 
+    /**
+     * Retrieves the most sold product categories in a given year.
+     *
+     * @param year the year to filter orders by
+     * @return a map of category names to their respective counts
+     */
     public Map<String, Integer> getMostCategory(int year) {
         List<Order> ordersByYear = adminRepository.getOrdersPerYear(year);
         Map<String, Integer> categoryCount = new HashMap<>();
@@ -119,37 +165,94 @@ public class AdminService {
         return categoryCount;
     }
 
+    /**
+     * Counts categories for a given product and updates the provided map.
+     *
+     * @param product       the product to extract categories from
+     * @param categoryCount the map to update with category counts
+     */
     private void countProductCategories(Product product, Map<String, Integer> categoryCount) {
         for (Category category : product.getCategories()) {
             categoryCount.merge(category.getName(), 1, Integer::sum);
         }
     }
 
+    /**
+     * Retrieves the number of products that are not available.
+     *
+     * @return the count of unavailable products
+     */
     public Integer getNotAvailableProducts() {
         return adminRepository.findNotAvailableProducts();
     }
 
+    /**
+     * Retrieves the number of available products.
+     *
+     * @return the count of available products
+     */
     public Integer getAvailableProducts() {
         return adminRepository.findAvailableProducts();
     }
 
+    /**
+     * Retrieves the number of promoted products.
+     *
+     * @return the count of promoted products
+     */
     public Integer getPromotedProducts() {
         return adminRepository.findPromotedProducts();
     }
 
+    /**
+     * Retrieves the total number of products.
+     *
+     * @return the total count of products
+     */
     public Integer getTotalProducts() {
         return adminRepository.findTotalProductsCount();
     }
 
+    /**
+     * Retrieves all users with optional search filtering and pagination.
+     *
+     * @param search   the search term to filter users by (can be null)
+     * @param pageable pagination and sorting information
+     * @return a paginated list of {@link UserProfileDTO}
+     */
     public Page<UserProfileDTO> getAllUsers(String search, Pageable pageable) {
         Page<User> users = adminRepository.findAllSort(search, pageable);
         return users.map(UserProfileDTO::new);
     }
 
-    public Page<Order> getAllOrderSortByDate(Pageable pageable) {
-        return adminRepository.findAllOrderSortByDate(pageable);
+    /**
+     * Retrieves orders filtered by status, search term, and pagination.
+     *
+     * @param status   the status to filter by (can be null)
+     * @param search   the search term to filter by (can be null)
+     * @param pageable pagination and sorting information
+     * @return a paginated list of {@link Order}
+     */
+    public Page<Order> getOrdersFiltered(String status, String search, Pageable pageable) {
+        if (status != null && search != null) {
+            return adminRepository.findByStatusAndSearch(status, search, pageable);
+        } else if (status != null) {
+            OrderStatus orderStatus = OrderStatus.valueOf(status);
+            return adminRepository.findByStatus(orderStatus, pageable);
+        } else if (search != null) {
+            return adminRepository.findBySearch(search, pageable);
+        } else {
+            return adminRepository.findAllOrderSortByDate(pageable);
+        }
     }
 
+    /**
+     * Updates the status of a specific order.
+     *
+     * @param id          the ID of the order
+     * @param orderStatus the new status to set
+     * @throws IllegalArgumentException if the order is not found
+     */
     public void updateOrderStatus(Long id, OrderStatus orderStatus) {
         Order order = orderService.findOrderById(id);
         order.setStatus(orderStatus);

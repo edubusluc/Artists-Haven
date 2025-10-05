@@ -27,6 +27,28 @@ public class ProductVoteService {
         this.messageSource = messageSource;
     }
 
+    /**
+     * Registers a positive vote for a product by a user.
+     *
+     * <p>
+     * Rules:
+     * <ul>
+     * <li>A user cannot vote for their own product.</li>
+     * <li>A user can only vote once per product.</li>
+     * <li>The owner's points are increased by 5 for each vote.</li>
+     * </ul>
+     * </p>
+     *
+     * @param productId the ID of the product being voted on
+     * @param userId    the ID of the user casting the vote
+     * @param lang      the language code for localized messages
+     * @throws AppExceptions.ResourceNotFoundException if the user or product does
+     *                                                 not exist
+     * @throws AppExceptions.BadRequestException       if the user tries to vote for
+     *                                                 their own product
+     *                                                 or has already voted for this
+     *                                                 product
+     */
     public void votePositive(Long productId, Long userId, String lang) {
         Locale locale = new Locale(lang);
         String userNotFound = messageSource.getMessage("user.NotFound", null, locale);
@@ -36,25 +58,21 @@ public class ProductVoteService {
         UserProduct product = userProductRepository.findById(productId)
                 .orElseThrow(() -> new AppExceptions.ResourceNotFoundException(productNotFound));
 
-        // Validar que no sea el mismo dueño
         String voteOwnProduct = messageSource.getMessage("vote.ownProduct", null, locale);
         if (product.getOwner().getId().equals(user.getId())) {
             throw new AppExceptions.BadRequestException(voteOwnProduct);
         }
 
-        // Validar si ya votó
         String alreadyVote = messageSource.getMessage("vote.alreadyVote", null, locale);
         if (productVoteRepository.existsByUserAndProduct(user, product)) {
             throw new AppExceptions.BadRequestException(alreadyVote);
         }
 
-        // Guardar voto
         ProductVote vote = new ProductVote();
         vote.setUser(user);
         vote.setProduct(product);
         productVoteRepository.save(vote);
 
-        // Actualizar numVotes y puntos
         product.setNumVotes(product.getNumVotes() == null ? 1 : product.getNumVotes() + 1);
         userProductRepository.save(product);
 

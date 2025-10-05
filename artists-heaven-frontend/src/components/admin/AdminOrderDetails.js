@@ -105,10 +105,6 @@ const OrderDetails = () => {
         }
     }, [id, rol, authToken, order]);
 
-    console.log(order)
-    console.log("MI ORDER RETURN" + JSON.stringify(orderReturn));
-
-
     const handleUpdateOrdeStatus = async (orderId, newStatus) => {
         try {
             await updateOrderStatus(authToken, orderId, newStatus);
@@ -206,7 +202,11 @@ const OrderDetails = () => {
                             >
                                 <div className="mb-3 sm:mb-0">
                                     <p className="text-gray-800 font-semibold">{item.name}</p>
-                                    <p className="text-sm text-gray-600">{t('adminOrderDetails.size')}: {item.size}</p>
+                                    <p className="text-sm text-gray-600">
+                                        {item.section === "ACCESSORIES"
+                                            ? `${t('adminOrderDetails.color')}: ${item.color}`
+                                            : `${t('adminOrderDetails.size')}: ${item.size}`}
+                                    </p>
                                 </div>
                                 <div className="flex gap-6 text-sm text-gray-700">
                                     <p><span className="font-medium">{t('adminOrderDetails.quantity')}:</span> {item.quantity}</p>

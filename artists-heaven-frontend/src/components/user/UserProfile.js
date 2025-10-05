@@ -10,7 +10,6 @@ const UserProfile = () => {
     const [error, setError] = useState(null);
     const [formErrors, setFormErrors] = useState({});
     const [images, setImages] = useState([]);
-    const [bannerImage, setBannerImage] = useState([]);
     const [errorMessage, setErrorMessage] = useState("");
     const [saving, setSaving] = useState(false);
     const [saveError, setSaveError] = useState(null);
@@ -18,7 +17,7 @@ const UserProfile = () => {
 
     const { t, i18n } = useTranslation();
     const currentLang = i18n.language;
-    
+
     useEffect(() => {
         setFormErrors({})
     }, [currentLang]);
@@ -69,19 +68,6 @@ const UserProfile = () => {
         setImages(files);
     };
 
-    const handleBannerImage = (e) => {
-        const files = Array.from(e.target.files);
-        const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/bmp", "image/webp"];
-        const invalidFiles = files.filter(file => !allowedTypes.includes(file.type));
-        if (invalidFiles.length > 0) {
-            setErrorMessage(t('userProfile.imageFormatError'));
-            setBannerImage([]);
-            return;
-        }
-        setErrorMessage("");
-        setBannerImage(files);
-    };
-
     const validateForm = () => {
         const errors = {};
 
@@ -120,16 +106,12 @@ const UserProfile = () => {
             if (images.length === 0 && !formData.image) {
                 errors.image = t('artistForm.error.requiredImage');
             }
-            if (bannerImage.length === 0 && !formData.bannerImage) {
-                errors.bannerImage = t('artistForm.error.requiredBanner');
-            }
 
             const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/bmp", "image/webp"];
 
             const invalidMainImages = images.filter(file => !allowedTypes.includes(file.type));
-            const invalidBannerImages = bannerImage.filter(file => !allowedTypes.includes(file.type));
 
-            if (invalidMainImages.length > 0 || invalidBannerImages.length > 0) {
+            if (invalidMainImages.length > 0) {
                 setValidationErrors(t('artistForm.error.invalidImage'));
                 return;
             }
@@ -148,13 +130,12 @@ const UserProfile = () => {
 
         const data = new FormData();
         Object.keys(formData).forEach(key => {
-            if (key !== 'image' && key !== 'bannerImage') {
+            if (key !== 'image') {
                 data.append(key, formData[key] ?? '');
             }
         });
 
         if (images.length > 0) data.append("image", images[0]);
-        if (bannerImage.length > 0) data.append("bannerImage", bannerImage[0]);
 
         const token = localStorage.getItem("authToken");
 
@@ -182,7 +163,6 @@ const UserProfile = () => {
             setFormData(data);
             setIsEditing(false);
             setImages([]);
-            setBannerImage([]);
             window.location.reload();
         } catch (error) {
             setSaveError(error.message);
@@ -326,31 +306,6 @@ const UserProfile = () => {
                                     )}
                                 </div>
 
-                                <div>
-                                    <label htmlFor="bannerImage" className="block text-sm font-medium text-gray-700 mb-1">{t('userProfile.bannerImage')}</label>
-                                    <input
-                                        type="file"
-                                        onChange={handleBannerImage}
-                                        id="bannerImage"
-                                        className="block w-full text-sm text-gray-500"
-                                        accept="image/*"
-                                    />
-                                    {bannerImage.length > 0 ? (
-                                        <img
-                                            src={URL.createObjectURL(bannerImage[0])}
-                                            alt="Preview de banner"
-                                            className="mt-2 w-full h-32 object-cover rounded-lg border"
-                                        />
-                                    ) : (
-                                        formData.bannerImage && (
-                                            <img
-                                                src={`/api/artists/${formData.bannerImage}`}
-                                                alt="Imagen actual de banner"
-                                                className="mt-2 w-full h-32 object-cover rounded-lg border"
-                                            />
-                                        )
-                                    )}
-                                </div>
                             </div>
                         </div>
                     ) : (
@@ -387,19 +342,6 @@ const UserProfile = () => {
                                         <p className="italic text-gray-400">{t('userProfile.noProfileImage')}</p>
                                     )}
                                 </div>
-
-                                <div>
-                                    <p className="text-gray-600 font-semibold mb-1">{t('userProfile.bannerImage')}</p>
-                                    {formData.bannerImage ? (
-                                        <img
-                                            src={`/api/artists/${formData.bannerImage}`}
-                                            alt="Imagen de banner"
-                                            className="w-full h-32 object-cover rounded-lg border"
-                                        />
-                                    ) : (
-                                        <p className="italic text-gray-400">{t('userProfile.noBannerImage')}</p>
-                                    )}
-                                </div>
                             </div>
                         </div>
                     )}
@@ -429,7 +371,6 @@ const UserProfile = () => {
                                 setIsEditing(false);
                                 setFormData(profile);
                                 setImages([]);
-                                setBannerImage([]);
                                 setFormErrors({});
                                 setErrorMessage('');
                                 setSaveError(null);

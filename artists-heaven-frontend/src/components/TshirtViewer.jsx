@@ -3,6 +3,7 @@ import { OrbitControls, useGLTF } from '@react-three/drei';
 import { Suspense, useEffect, useRef, useMemo } from 'react';
 import bgMainShop from '../util-image/bgMainShop.png';
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 
 const TshirtModel = () => {
   const { scene } = useGLTF('/models/tshirt.glb');
@@ -82,8 +83,8 @@ const TshirtViewer = () => {
         <OrbitControls
           enableZoom={false}
           enablePan={false}
-          minPolarAngle={Math.PI / 2}   
-          maxPolarAngle={Math.PI / 2}   
+          minPolarAngle={Math.PI / 2}
+          maxPolarAngle={Math.PI / 2}
         />
       </Canvas>
 
@@ -104,9 +105,11 @@ const TshirtViewer = () => {
 
       {/* Botón de orden */}
       <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-10">
-        <button className="button-yellow-border">
-          ORDER NOW
-        </button>
+        <Link to="/shop">
+          <button className="button-yellow-border">
+            GO TO SHOP
+          </button>
+        </Link>
       </div>
     </div>
   );

@@ -19,9 +19,9 @@ import ProductAR from "./ProductAR";
 const ProductImages = ({ images, name }) => (
     <>
         {/* Mobile */}
-        <div className="lg:hidden flex overflow-x-auto space-x-4 px-6 py-4 scroll-snap-x snap-mandatory">
+        <div className="md:hidden flex overflow-x-auto space-x-4 px-6 py-4 scroll-snap-x snap-mandatory">
             {images?.map((image, index) => (
-                <div key={index} style={{ flexShrink: 0 }}>
+                <div key={index} className="flex justify-center w-1/2" style={{ flexShrink: 0 }}>
                     <img
                         src={`/api/product${image}`}
                         alt={name}
@@ -32,7 +32,7 @@ const ProductImages = ({ images, name }) => (
             ))}
         </div>
         {/* Desktop */}
-        <div className="hidden lg:grid grid-cols-2 mt-10 auto-rows-auto gap-4">
+        <div className="hidden md:grid grid-cols-2 mt-10 auto-rows-auto gap-4">
             {images?.map((image, index) => (
                 <ZoomableImage
                     key={index}
@@ -45,7 +45,7 @@ const ProductImages = ({ images, name }) => (
 );
 
 // ✅ Componente para seleccionar tallas
-const SizeSelector = ({ sizes, selectedSize, onSelect, sizeOrder, t }) => {
+const SizeSelector = ({ sizes, selectedSize, onSelect, sizeOrder, t, selectedColor }) => {
     const availableSizes = useMemo(
         () =>
             Object.entries(sizes || {})
@@ -74,10 +74,11 @@ const SizeSelector = ({ sizes, selectedSize, onSelect, sizeOrder, t }) => {
                 >
                     <input
                         type="radio"
-                        name="size"
+                        name={`size-${selectedColor}`}   // 🔹 cambia el name dinámicamente por color
                         value={size}
-                        className="hidden"
+                        checked={selectedSize === size}  // 🔹 React controla cuál está seleccionado
                         onChange={(e) => onSelect(e.target.value)}
+                        className="hidden"
                     />
                     {size}
                 </label>
@@ -182,7 +183,6 @@ const ProductDetails = () => {
     const [authToken] = useState(localStorage.getItem("authToken"));
     const { shoppingCart, setShoppingCart } = useContext(CartContext);
     const [selectedSize, setSelectedSize] = useState("");
-    const navigate = useNavigate();
     const [reviews, setReviews] = useState([]);
     const { t } = useTranslation();
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -197,6 +197,7 @@ const ProductDetails = () => {
     const [sessionExpired, setSessionExpired] = useState(false);
     const sizeOrder = ["XS", "S", "M", "L", "XL", "XXL"];
     const [isAROpen, setIsAROpen] = useState(false);
+    const [selectedColor, setSelectedColor] = useState(null);
 
     const averageRating = useMemo(() => {
         if (reviews.length === 0) return null;
@@ -245,10 +246,27 @@ const ProductDetails = () => {
         window.scrollTo(0, 0);
     }, [id]);
 
+    useEffect(() => {
+        if (product.colors && product.colors.length > 0 && selectedColor === null) {
+            setSelectedColor(0);
+        }
+    }, [product, selectedColor]);
+
     const handleAddProduct = useCallback(async () => {
-        // 🔹 Si NO es accesorio, seguir pidiendo talla
+        if (selectedColor == null) {
+            alert(t("shoppinCart.selectColorFirst"));
+            return;
+        }
+
+        const color = product.colors?.[selectedColor];
+        if (!color) {
+            alert(t("shoppinCart.invalidColor"));
+            return;
+        }
+
+        // 🔹 Si NO es accesorio, necesitamos talla
         if (product.section !== "ACCESSORIES" && !selectedSize) {
-            alert(t('shoppinCart.selectSizeFirst'));
+            alert(t("shoppinCart.selectSizeFirst"));
             return;
         }
 
@@ -256,23 +274,21 @@ const ProductDetails = () => {
         let alreadyInCart;
 
         if (product.section === "ACCESSORIES") {
-            // Para accesorios, usamos availableUnits
-            availableStock = product.availableUnits;
+            availableStock = color.availableUnits ?? 0;
             alreadyInCart =
                 shoppingCart?.items
-                    ?.filter(item => item.product.id === product.id)
+                    ?.filter(item => item.product.id === product.id && item.colorId === color.id)
                     .reduce((sum, item) => sum + item.quantity, 0) || 0;
         } else {
-            // Para ropa, usamos tallas
-            availableStock = product.sizes[selectedSize];
+            availableStock = color.sizes?.[selectedSize] ?? 0;
             alreadyInCart =
                 shoppingCart?.items
-                    ?.filter(item => item.product.id === product.id && item.size === selectedSize)
+                    ?.filter(item => item.product.id === product.id && item.colorId === color.id && item.size === selectedSize)
                     .reduce((sum, item) => sum + item.quantity, 0) || 0;
         }
 
-        if (alreadyInCart >= availableStock) {
-            alert("No puedes añadir más unidades. Stock insuficiente.");
+        if (alreadyInCart > availableStock) {
+            alert(t("shoppinCart.noStock"));
             return;
         }
 
@@ -284,10 +300,17 @@ const ProductDetails = () => {
             : `/api/myShoppingCart/addProductsNonAuthenticate`;
 
         const payload = authToken
-            ? { productId: product.id, ...(product.section !== "ACCESSORIES" && { size: selectedSize }) }
-            : { shoppingCart, productId: product.id, ...(product.section !== "ACCESSORIES" && { size: selectedSize }) };
-
-
+            ? {
+                productId: product.id,
+                color: color.colorName,
+                ...(product.section !== "ACCESSORIES" && { size: selectedSize })
+            }
+            : {
+                shoppingCart,
+                productId: product.id,
+                color: color.colorName,
+                ...(product.section !== "ACCESSORIES" && { size: selectedSize })
+            };
         try {
             const response = await fetch(endpoint, {
                 method: "POST",
@@ -310,7 +333,8 @@ const ProductDetails = () => {
         } catch (error) {
             console.error("Error al añadir el producto al carrito:", error);
         }
-    }, [selectedSize, product, shoppingCart, authToken, setShoppingCart]);
+    }, [selectedSize, selectedColor, product, shoppingCart, authToken, setShoppingCart, t]);
+
 
     const handleAddProductThrottled = () => {
         if (!checkTokenExpiration()) {
@@ -340,19 +364,17 @@ const ProductDetails = () => {
         return <SessionExpired />;
     }
 
-    console.log(product);
-
     return (
         <>
             <div className="p-6 bg-white">
                 <div className="grid grid-cols-1 lg:grid-cols-2">
                     {/* Columna 1 */}
                     <div className="mt-10">
-                        <ProductImages images={product.images} name={product.name} />
+                        <ProductImages images={product.colors?.[selectedColor]?.images} name={product.name} />
                     </div>
 
                     {/* Columna 2 */}
-                    <div className="flex flex-col items-center justify-start sm:p-6 md:p-0 w-full mt-10">
+                    <div className="flex flex-col items-center justify-start sm:p-6 md:p-0 w-full md:mt-10">
                         <div className="w-full lg:w-1/2 sticky top-20 mt-10">
                             {/* Nombre + Precio */}
                             <div className="text-black space-y-2">
@@ -395,15 +417,44 @@ const ProductDetails = () => {
                                 <hr className="border-t border-black my-4 w-full" />
                             </div>
 
-                            {/* Selector de tallas */}
-                            {product.section !== "ACCESSORIES" && (
+                            {/* SELECTOR DE COLOR */}
+                            <div className="flex gap-2 my-4">
+                                {product.colors?.map((color, index) => (
+                                    <button
+                                        key={index}
+                                        type="button"
+                                        className={`w-8 h-8 rounded-full border flex items-center justify-center 
+        ${selectedColor === index ? "ring-2 ring-black" : ""}`}
+                                        style={{ backgroundColor: color.hexCode }}
+                                        onClick={() => {
+                                            setSelectedColor(index);
+                                            setSelectedSize("");
+                                        }}
+                                    >
+                                        {selectedColor === index && "✔"}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {/* Selector de tallas o unidades */}
+                            {product.section === "ACCESSORIES" ? (
+                                <div className="text-black my-4">
+                                    <p className="text-sm">
+                                    </p>
+                                </div>
+                            ) : (
                                 <div className="text-black w-full mx-auto">
-                                    {selectedSize && <p className="inter-400 text-sm mb-2">{t('productDetails.size')}: {selectedSize}</p>}
+                                    {selectedSize && (
+                                        <p className="inter-400 text-sm mb-2">
+                                            {t("productDetails.size")}: {selectedSize}
+                                        </p>
+                                    )}
                                     <SizeSelector
-                                        sizes={product.sizes}
+                                        sizes={product.colors?.[selectedColor]?.sizes || {}}
                                         selectedSize={selectedSize}
                                         onSelect={setSelectedSize}
                                         sizeOrder={sizeOrder}
+                                        selectedColor={selectedColor}
                                         t={t}
                                     />
                                     <hr className="border-t border-black my-4 w-full" />
@@ -421,16 +472,18 @@ const ProductDetails = () => {
                                         !product.available ||
                                         (
                                             product.section === "ACCESSORIES"
-                                                ? product.availableUnits <= 0
-                                                : !product.sizes || Object.entries(product.sizes).every(([_, qty]) => qty === 0)
+                                                ? (product.colors?.[selectedColor]?.availableUnits ?? 0) <= 0
+                                                : !product.colors?.[selectedColor]?.sizes ||
+                                                Object.values(product.colors?.[selectedColor]?.sizes || {}).every(qty => qty === 0)
                                         )
                                     }
                                     className={`w-full py-4 px-4 ${added ? "added" : ""}
-        ${product.available &&
+    ${product.available &&
                                             (
                                                 product.section === "ACCESSORIES"
-                                                    ? product.availableUnits > 0
-                                                    : product.sizes && Object.values(product.sizes).some(qty => qty > 0)
+                                                    ? (product.colors?.[selectedColor]?.availableUnits ?? 0) > 0
+                                                    : product.colors?.[selectedColor]?.sizes &&
+                                                    Object.values(product.colors?.[selectedColor]?.sizes).some(qty => qty > 0)
                                             )
                                             ? "button-custom cursor-pointer"
                                             : "bg-gray-300 text-gray-600 cursor-not-allowed"
@@ -450,13 +503,13 @@ const ProductDetails = () => {
                                 </div>
 
                                 {/* Botón Ver en AR */}
-                                {product.modelReference  &&
+                                {product.colors?.[selectedColor].modelReference &&
                                     <div className="w-full mx-auto">
                                         <button
                                             onClick={() => setIsAROpen(true)}
                                             className="w-full mt-2 bg-yellow-400 py-2 px-4 border-none cursor-pointer"
                                         >
-                                            <p className="text-black inter-400 text-sm">👓 Ver en AR</p>
+                                            <p className="text-black inter-400 text-sm">{t('productDetails.model3d')}</p>
                                         </button>
                                     </div>
                                 }
@@ -595,7 +648,7 @@ const ProductDetails = () => {
             {isAROpen && (
                 <ProductAR
                     onClose={() => setIsAROpen(false)}
-                    modelReference={product.modelReference}
+                    modelReference={product.colors?.[selectedColor]?.modelReference}
                     section={product.section}
                 />
             )}

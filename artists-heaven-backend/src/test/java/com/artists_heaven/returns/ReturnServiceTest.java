@@ -11,6 +11,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.LocalDateTime;
+import java.util.Locale;
 import java.util.Optional;
 
 import org.junit.jupiter.api.AfterEach;
@@ -19,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.context.MessageSource;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -36,6 +38,9 @@ class ReturnServiceTest {
 
     @Mock
     private ReturnRepository returnRepository;
+
+    @Mock 
+    private MessageSource messageSource;
 
     @InjectMocks
     private ReturnService returnService;
@@ -67,7 +72,7 @@ class ReturnServiceTest {
         order.setCreatedDate(LocalDateTime.now().minusDays(10));
         order.setUser(user);
 
-        returnService.createReturnForOrder(order, "Producto dañado", "test@example.com");
+        returnService.createReturnForOrder(order, "Producto dañado", "test@example.com", "es");
 
         verify(returnRepository, times(1)).save(any(Return.class));
         verify(orderService, times(1)).save(order);
@@ -79,11 +84,14 @@ class ReturnServiceTest {
         order.setEmail("test@example.com");
         order.setCreatedDate(LocalDateTime.now().minusDays(40));
 
+        when(messageSource.getMessage("return.message.pasted_deadline ", null, new Locale("en")))
+                .thenReturn("The 30-day deadline to request a return has passed.");
+
         ForbiddenActionException exception = assertThrows(ForbiddenActionException.class, () -> {
-            returnService.createReturnForOrder(order, "Producto tarde", "test@example.com");
+            returnService.createReturnForOrder(order, "Producto tarde", "test@example.com", "en");
         });
 
-        assertEquals("Return request can only be created within 30 days of order creation.", exception.getMessage());
+        assertEquals("The 30-day deadline to request a return has passed.", exception.getMessage());
     }
 
     @Test
@@ -95,11 +103,14 @@ class ReturnServiceTest {
         order.setCreatedDate(LocalDateTime.now().minusDays(10));
         order.setReturnRequest(returns);
 
+        when(messageSource.getMessage("return.message.duplicated", null, new Locale("en")))
+                .thenReturn("A return request for this order already exists.");
+
         DuplicateActionException exception = assertThrows(DuplicateActionException.class, () -> {
-            returnService.createReturnForOrder(order, "Motivo duplicado", "test@example.com");
+            returnService.createReturnForOrder(order, "Motivo duplicado", "test@example.com", "en");
         });
 
-        assertEquals("This order already has a return request.", exception.getMessage());
+        assertEquals("A return request for this order already exists.", exception.getMessage());
     }
 
     @Test
@@ -158,11 +169,14 @@ class ReturnServiceTest {
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
+        when(messageSource.getMessage("return.message.unauthenticated", null, new Locale("en")))
+                .thenReturn("This email is not associated with the order.");
+
         ForbiddenActionException exception = assertThrows(ForbiddenActionException.class, () -> {
-            returnService.createReturnForOrder(order, "Razón inválida", "user@otrodominio.com");
+            returnService.createReturnForOrder(order, "Razón inválida", "user@otrodominio.com", "en");
         });
 
-        assertEquals("Invalid email or unauthenticated user", exception.getMessage());
+        assertEquals("This email is not associated with the order.", exception.getMessage());
     }
 
     @Test
@@ -184,7 +198,7 @@ class ReturnServiceTest {
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
-        returnService.createReturnForOrder(order, "Razón válida", "otro@example.com");
+        returnService.createReturnForOrder(order, "Razón válida", "otro@example.com", "en");
 
         verify(returnRepository, times(1)).save(any(Return.class));
         verify(orderService, times(1)).save(order);

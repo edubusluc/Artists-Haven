@@ -7,7 +7,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 
 @SpringBootTest
-@ActiveProfiles("test")  // Activa el perfil 'test' para las pruebas
+@ActiveProfiles("test")
 @TestPropertySource("classpath:application-test.properties")
 class ArtistsHeavenBackendApplicationTests {
 

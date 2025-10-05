@@ -57,7 +57,7 @@ const PromoteProductForm = () => {
 
             const message = await response.text();
             if (response.ok) {
-                alert("Promoción añadida con éxito!");
+                alert(t('promoteProductForm.success'));
                 setDiscount("");
                 navigate(`/admin/products/store`);
             } else {

@@ -20,6 +20,7 @@ import com.artists_heaven.order.OrderItem;
 import com.artists_heaven.order.OrderRepository;
 import com.artists_heaven.order.OrderStatus;
 import com.artists_heaven.product.Product;
+import com.artists_heaven.product.ProductColor;
 import com.artists_heaven.product.ProductService;
 import com.artists_heaven.product.Section;
 import com.artists_heaven.rewardCard.RewardCardRepository;
@@ -163,11 +164,10 @@ public class PaymentGatewayService {
     public List<SessionCreateParams.LineItem> buildLineItems(List<CartItemDTO> items) {
         List<SessionCreateParams.LineItem> lineItems = new ArrayList<>();
 
-        // Recorremos los productos y construimos los line items
         for (CartItemDTO item : items) {
             String productName = "Artists Heaven - " + item.getProduct().getName();
             if (!Section.ACCESSORIES.equals(item.getProduct().getSection())) {
-                productName += " - Size: " + item.getSize();
+                productName += " - Size: " + item.getSize() + " - Color: " + item.getColor();
             }
 
             SessionCreateParams.LineItem.PriceData.ProductData productData = SessionCreateParams.LineItem.PriceData.ProductData
@@ -215,9 +215,11 @@ public class PaymentGatewayService {
             // Create a string that includes the product quantity and size.
             String productMetadata = "";
             if (item.getProduct().getSection().equals(Section.ACCESSORIES)) {
-                productMetadata = item.getQuantity() + "";
+                productMetadata = item.getQuantity() + "|" + (item.getColor() != null ? item.getColor() : "");
+
             } else {
-                productMetadata = item.getQuantity() + "|" + item.getSize();
+                productMetadata = item.getQuantity() + "|" + item.getSize() + "|"
+                        + (item.getColor() != null ? item.getColor() : "");
             }
 
             // Merge the metadata for the product, appending new values if the product
@@ -251,22 +253,18 @@ public class PaymentGatewayService {
                 .setCancelUrl("http://localhost:3000/cancel")
                 .addAllLineItem(lineItems);
 
-        // Añadimos metadatos
         metadata.forEach(params::putMetadata);
 
-        // 🔑 Si hay usuario, comprobamos RewardCard activa
         if (user != null) {
             rewardCardRepository.findFirstByUserAndRedeemedFalse(user).ifPresent(card -> {
                 try {
-                    // Crear cupón en Stripe
                     CouponCreateParams couponParams = CouponCreateParams.builder()
                             .setPercentOff(BigDecimal.valueOf(card.getDiscountPercentage()))
-                            .setDuration(CouponCreateParams.Duration.ONCE) // Se aplica solo a esta compra
+                            .setDuration(CouponCreateParams.Duration.ONCE)
                             .build();
 
                     String couponId = Coupon.create(couponParams).getId();
 
-                    // Agregar descuento a la sesión
                     params.addDiscount(
                             SessionCreateParams.Discount.builder()
                                     .setCoupon(couponId)
@@ -416,7 +414,6 @@ public class PaymentGatewayService {
                 discountAmount = totalDetails.getAmountDiscount() / 100;
             }
 
-            // Marcar la RewardCard como usada
             if (user != null) {
                 rewardCardRepository.findFirstByUserAndRedeemedFalse(user).ifPresent(card -> {
                     card.setRedeemed(true);
@@ -533,10 +530,12 @@ public class PaymentGatewayService {
                 .map(field -> field.getText().getValue())
                 .toList();
 
-        String city = userId != null ? fields.get(0) : session.getCustomerDetails().getAddress().getCity();
-        String addressLine1 = userId != null ? fields.get(1) : session.getCustomerDetails().getAddress().getLine1();
-        String addressLine2 = userId != null ? null : session.getCustomerDetails().getAddress().getLine2();
-        String postalCode = userId != null ? fields.get(2) : session.getCustomerDetails().getAddress().getPostalCode();
+        boolean hasCustomFields = userId != null && fields.size() >= 3;
+
+        String city = hasCustomFields ? fields.get(0) : session.getCustomerDetails().getAddress().getCity();
+        String addressLine1 = hasCustomFields ? fields.get(1) : session.getCustomerDetails().getAddress().getLine1();
+        String addressLine2 = hasCustomFields ? null : session.getCustomerDetails().getAddress().getLine2();
+        String postalCode = hasCustomFields ? fields.get(2) : session.getCustomerDetails().getAddress().getPostalCode();
         String phone = session.getCustomerDetails().getPhone();
         String email = session.getCustomerDetails().getEmail();
         String country = getCountryName(session.getCustomerDetails().getAddress().getCountry());
@@ -580,20 +579,39 @@ public class PaymentGatewayService {
         for (String entry : value.split(",")) {
             String[] values = entry.split("\\|");
             int quantity = Integer.parseInt(values[0]);
+            String size = "";
 
-            OrderItem item = new OrderItem();
             if (product.getSection().equals(Section.ACCESSORIES)) {
-                product.setAvailableUnits(product.getAvailableUnits() - quantity);
-                item = new OrderItem(productId, quantity, "", product.getName(), product.getPrice(), order,
-                        product.getSection());
-            } else {
-                String size = values[1];
-                product.getSize().computeIfPresent(size, (k, v) -> v - quantity);
-                item = new OrderItem(productId, quantity, size, product.getName(), product.getPrice(), order,
-                        product.getSection());
-            }
+                final String colorValue = values.length > 1 ? values[1] : "";
 
-            items.add(item);
+                ProductColor productColor = product.getColors().stream()
+                        .filter(c -> c.getColorName().equalsIgnoreCase(colorValue))
+                        .findFirst()
+                        .orElseThrow(() -> new RuntimeException(
+                                "Color " + colorValue + " no encontrado para el producto " + product.getName()));
+
+                int available = productColor.getAvailableUnits() != null ? productColor.getAvailableUnits() : 0;
+                productColor.setAvailableUnits(available - quantity);
+
+                OrderItem item = new OrderItem(productId, quantity, "", product.getName(), product.getPrice(),
+                        order, product.getSection(), colorValue);
+                items.add(item);
+            } else {
+                size = values.length > 1 ? values[1] : "";
+                final String colorValue = values.length > 2 ? values[2] : "";
+
+                ProductColor productColor = product.getColors().stream()
+                        .filter(c -> c.getColorName().equalsIgnoreCase(colorValue))
+                        .findFirst()
+                        .orElseThrow(() -> new RuntimeException(
+                                "Color " + colorValue + " no encontrado para el producto " + product.getName()));
+
+                productColor.getSizes().computeIfPresent(size, (k, v) -> v - quantity);
+
+                OrderItem item = new OrderItem(productId, quantity, size, product.getName(), product.getPrice(),
+                        order, product.getSection(), colorValue);
+                items.add(item);
+            }
         }
     }
 
@@ -660,18 +678,24 @@ public class PaymentGatewayService {
     public boolean checkProductAvailable(List<CartItemDTO> items) {
         for (CartItemDTO i : items) {
             Product product = productService.findById(i.getProduct().getId());
+            String colorValue = i.getColor();
+
+            ProductColor productColor = product.getColors().stream()
+                    .filter(c -> c.getColorName().equalsIgnoreCase(colorValue))
+                    .findFirst()
+                    .orElseThrow(() -> new RuntimeException(
+                            "Color " + colorValue + " no encontrado para el producto " + product.getName()));
 
             if (Section.ACCESSORIES.equals(product.getSection())) {
-                if (product.getAvailableUnits() < i.getQuantity()) {
+                if (productColor.getAvailableUnits() < i.getQuantity()) {
                     return false;
                 }
             } else {
-                if (product.getSize().get(i.getSize()) < i.getQuantity()) {
+                if (productColor.getSizes().get(i.getSize()) < i.getQuantity()) {
                     return false;
                 }
             }
         }
         return true;
     }
-
 }

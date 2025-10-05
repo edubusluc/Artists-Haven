@@ -19,7 +19,6 @@ const Header = () => {
   const [isSearchPanelOpen, setSearchPanelOpen] = useState(false);
   const { t, i18n } = useTranslation();
   const language = i18n.language;
-  const [isHeaderVisible, setHeaderVisible] = useState(true);
 
   const [expandedSearchSection, setExpandedSearchSection] = useState(null);
   const [searchPedidoValue, setSearchPedidoValue] = useState("");
@@ -27,7 +26,15 @@ const Header = () => {
 
   const [promotedCollections, setPromotedCollections] = useState([]);
   const [activeRewardCard, setActiveRewardCard] = useState(null);
-  const [prevItemsCount, setPrevItemsCount] = useState(0);
+
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+  const isMobile = windowWidth <=502;
+
+
+  // states nuevos para controlar transiciones y primer scroll
+  const [headerLevel, setHeaderLevel] = useState("full");
+  const [lastScrollY, setLastScrollY] = useState(0);
+  const [initialScrollDone, setInitialScrollDone] = useState(false);
 
   const navigate = useNavigate();
 
@@ -35,6 +42,15 @@ const Header = () => {
     shoppingCart.items?.reduce((total, item) => total + item.quantity, 0) || 0,
     [shoppingCart.items]
   );
+
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+
+    window.addEventListener("resize", handleResize);
+
+    // Cleanup
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   // Fetch colecciones solo una vez
   useEffect(() => {
@@ -59,33 +75,43 @@ const Header = () => {
     }
   }, [authToken, setShoppingCart]);
 
-  // Manejo de scroll optimizado con requestAnimationFrame
-  useEffect(() => {
-    let lastKnownScrollY = window.scrollY;
-    let ticking = false;
-
-    const updateScroll = () => {
-      setHeaderVisible(window.scrollY < lastKnownScrollY || window.scrollY === 0);
-      lastKnownScrollY = window.scrollY;
-      ticking = false;
-    };
-
-    const onScroll = () => {
-      if (!ticking) {
-        window.requestAnimationFrame(updateScroll);
-        ticking = true;
-      }
-    };
-
-    window.addEventListener("scroll", onScroll);
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
 
   useEffect(() => {
     const openCartHandler = () => setCartPanelOpen(true);
     window.addEventListener("openCartPanel", openCartHandler);
     return () => window.removeEventListener("openCartPanel", openCartHandler);
   }, []);
+
+  // Nuevo handleScroll con lógica para el primer scroll
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+
+      // Si todavía no hemos hecho el primer desplazamiento significativo, lo tratamos como 'primer scroll'
+      if (!initialScrollDone && currentScrollY > 0) {
+        // primer scroll: forzamos el cambio inmediato a 'middle' SIN transiciones
+        setInitialScrollDone(true);
+        setHeaderLevel("middle");
+        setLastScrollY(currentScrollY);
+        return;
+      }
+
+      if (currentScrollY === 0) {
+        setHeaderLevel("full");
+      } else if (currentScrollY > lastScrollY) {
+        // Scroll hacia abajo
+        setHeaderLevel((prev) => (prev === "full" ? "middle" : "hidden"));
+      } else {
+        // Scroll hacia arriba
+        setHeaderLevel("middle");
+      }
+
+      setLastScrollY(currentScrollY);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [lastScrollY, initialScrollDone]);
 
   //Obtener tarjeta
   useEffect(() => {
@@ -109,8 +135,6 @@ const Header = () => {
     }
   }, [authToken]);
 
-  console.log(activeRewardCard)
-
   const changeLanguage = useCallback((lng) => i18n.changeLanguage(lng), [i18n]);
 
   const toggleLeftPanel = useCallback(() => setLeftPanelOpen(prev => !prev), []);
@@ -130,7 +154,7 @@ const Header = () => {
     { to: "shop/accesorios", label: t('accessories') },
     { to: "forFan", label: t('header.forFan') },
     { to: "/#upcoming-events", label: t('upCommingEvents') }
-  ], [t, i18n.language]);
+  ], [t]);
 
 
 
@@ -204,38 +228,37 @@ const Header = () => {
     return totalPrice - discount;
   }, [totalPrice, activeRewardCard]);
 
+
   return (
     <>
-      {/* Barra de envío gratis */}
-      <div
-        className="envio-gratis-bar"
-        style={{
-          position: "fixed",
-          top: !isLeftPanelOpen && !isCartPanelOpen && !isSearchPanelOpen ? "0" : "-80px",
-          left: 0,
-          right: 0,
-          backgroundColor: "#002547",
-          color: "white",
-          height: "35px",
-          display: "flex",
-          alignItems: "center",
-          overflow: "hidden",
-          transition: "top 0.3s",
-          zIndex: 1100,
-        }}
-      >
-        <div className="envio-gratis-text custom-font-footer text-sm">
-          <span style={{ marginRight: "1rem" }}>{t('header.customText')}</span>
-          <span style={{ marginRight: "1rem" }}>•</span>
-          <span style={{ marginRight: "1rem" }}>{t('header.customText')}</span>
-          <span style={{ marginRight: "1rem" }}>•</span>
-          <span style={{ marginRight: "1rem" }}>{t('header.customText')}</span>
-          <span style={{ marginRight: "1rem" }}>•</span>
-          <span>{t('header.customText')}</span>
+      {headerLevel === "full" && (
+        <div
+          className="envio-gratis-bar"
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            backgroundColor: "#002547",
+            color: "white",
+            height: "35px",
+            display: "flex",
+            alignItems: "center",
+            overflow: "hidden",
+            zIndex: 1100,
+          }}
+        >
+          <div className="envio-gratis-text custom-font-footer text-sm">
+            <span style={{ marginRight: "1rem" }}>{t("header.customText")}</span>
+            <span style={{ marginRight: "1rem" }}>•</span>
+            <span style={{ marginRight: "1rem" }}>{t("header.customText")}</span>
+            <span style={{ marginRight: "1rem" }}>•</span>
+            <span style={{ marginRight: "1rem" }}>{t("header.customText")}</span>
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Header principal */}
+      {/* Barra central */}
       <div
         style={{
           display: "flex",
@@ -245,12 +268,15 @@ const Header = () => {
           boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
           justifyContent: "space-around",
           position: "fixed",
-          marginTop: 35,
+          top:
+            headerLevel === "hidden"
+              ? "-80px"
+              : headerLevel === "middle"
+                ? "0"
+                : "35px",
           left: 0,
           right: 0,
           zIndex: 1000,
-          transition: "top 0.3s",
-          top: (isHeaderVisible || window.scrollY === 0) && !isLeftPanelOpen && !isCartPanelOpen && !isSearchPanelOpen ? "0" : "-80px",
         }}
       >
         {/* HeaderBar */}
@@ -315,6 +341,35 @@ const Header = () => {
         </div>
       </div>
 
+      {headerLevel === "full" && (
+        <div
+          className={`
+    fixed left-0 right-0 h-[45px] bg-white border-b border-gray-300 z-[900]
+    flex justify-center items-center transition-all
+  `}
+          style={{
+            top: isMobile
+              ? "100px" // en móviles siempre 100px
+              : headerLevel === "hidden"
+                ? "-80px" // oculto junto a la barra central
+                : headerLevel === "middle"
+                  ? "35px" // justo debajo de la barra central
+                  : "70px", // cuando está full, debajo de barra superior + central
+          }}
+        >
+          {/* Aquí pondrías tu navegación */}
+          <nav className="flex gap-6 text-blue-950 text-sm font-bold overflow-x-auto scrollbar-hide mt-2">
+            <Link to="/shop">{t("all")}</Link>
+            <Link to="/shop/camisetas">{t("t-shirts")}</Link>
+            <Link to="/shop/pantalones">{t("pants")}</Link>
+            <Link to="/shop/sudaderas">{t("hoodies")}</Link>
+            <Link to="/shop/accesorios">{t("accessories")}</Link>
+            <Link to="/forFan">FORFAN</Link>
+            <Link to="/artists">ARTISTS</Link>
+          </nav>
+        </div>
+      )}
+
       {/* Paneles con Suspense */}
       <Suspense fallback={<div>Cargando...</div>}>
         {/* Menú lateral */}
@@ -369,7 +424,7 @@ const Header = () => {
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <div style={{ display: 'flex' }}>
                     <img
-                      src={`/api/product${item.product.imageUrl}`}
+                      src={`/api/product${item.imageUrl}`}
                       alt={item.product.name}
                       style={{
                         height: '90px',
@@ -382,7 +437,7 @@ const Header = () => {
                     <div>
                       <p className="custom-font-shop-regular custom-font-shop-black">{item.product.name}</p>
                       <p className="custom-font-shop-regular custom-font-shop-black">{item.product.price}€</p>
-                      {item.product.section == "ACCESSORIES" ? (
+                      {item.product.section === "ACCESSORIES" ? (
                         <p className="custom-font-shop-regular custom-font-shop-black">{item.product.section}</p>
                       ) : (
                         <p className="custom-font-shop-regular custom-font-shop-black">{t('header.size')}: {item.size}</p>

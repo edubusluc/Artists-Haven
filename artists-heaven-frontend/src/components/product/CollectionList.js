@@ -6,8 +6,10 @@ const CollectionList = () => {
 
   return (
     <ProductSchema
-          endpoint={`/api/product/collection/${collectionName}`}
-          title={collectionName} />
+      endpoint={`/api/product/collection/${collectionName}`}
+      title={collectionName}
+      hideCollectionFilter={true}
+    />
   );
 };
 

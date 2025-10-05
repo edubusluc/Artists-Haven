@@ -1,23 +1,28 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faThumbsUp } from "@fortawesome/free-solid-svg-icons";
 import { checkTokenExpiration } from "../utils/authUtils";
 import SessionExpired from "./SessionExpired";
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import SlidingPanel from "../utils/SlidingPanel";
-import { Plus } from "lucide-react";
+import userProduct from '../util-image/userproduct1.png';
+import Footer from "./Footer";
 
 const ProductCard = ({ product, onVote }) => {
-    const { t } = useTranslation();
+    const [loaded, setLoaded] = useState(false);
 
     return (
         <div className="w-full group">
             <div className="relative w-full aspect-[700/986] flex items-center justify-center bg-gray-100 overflow-hidden">
                 <img
                     src={`/api/user-products${product.images[0]}`}
+                    alt={product.name}
                     loading="lazy"
-                    className="h-auto absolute object-contain transition-all duration-500 ease-in-out group-hover:opacity-0 group-hover:scale-110"
+                    onLoad={() => setLoaded(true)}
+                    className={`h-auto absolute object-contain transition-all duration-700 ease-in-out
+                        ${loaded ? "opacity-100 scale-100" : "opacity-0 scale-95"}
+                        group-hover:opacity-0 group-hover:scale-110`}
                     style={{ transformOrigin: 'center center' }}
                 />
                 {product.images[1] && (
@@ -25,7 +30,9 @@ const ProductCard = ({ product, onVote }) => {
                         src={`/api/user-products${product.images[1]}`}
                         alt={`${product.name} hover`}
                         loading="lazy"
-                        className="h-auto absolute object-cover opacity-0 transition-all duration-500 ease-in-out group-hover:opacity-100 group-hover:scale-110"
+                        className={`h-auto absolute object-cover transition-all duration-700 ease-in-out
+                            ${loaded ? "opacity-0 scale-95" : "opacity-0 scale-95"}
+                            group-hover:opacity-100 group-hover:scale-110`}
                         style={{ transformOrigin: 'center center' }}
                     />
                 )}
@@ -50,10 +57,10 @@ const ProductCard = ({ product, onVote }) => {
     );
 };
 
+
 export default function UserProductsPage() {
     const [products, setProducts] = useState([]);
     const [filteredProducts, setFilteredProducts] = useState([]);
-    const navigate = useNavigate();
     const [showForm, setShowForm] = useState(false);
     const [authToken] = useState(localStorage.getItem("authToken"));
     const [unauthorized, setUnauthorized] = useState(false);
@@ -75,9 +82,7 @@ export default function UserProductsPage() {
 
     const [maxVotes, setMaxVotes] = useState(1000);
 
-    useEffect(() => {
-        fetchProducts();
-    }, []);
+    const [mainImageLoaded, setMainImageLoaded] = useState(false);
 
     useEffect(() => {
         if (unauthorized) {
@@ -85,7 +90,7 @@ export default function UserProductsPage() {
         }
     }, [unauthorized]);
 
-    const fetchProducts = async () => {
+    const fetchProducts = useCallback(async () => {
         try {
             const res = await fetch("/api/user-products/all", {
                 headers: {
@@ -103,7 +108,11 @@ export default function UserProductsPage() {
         } catch (err) {
             console.error("Error fetching products:", err);
         }
-    };
+    }, [authToken]);
+
+    useEffect(() => {
+        fetchProducts();
+    }, [fetchProducts]);
 
     // -------- FILTRADO ----------
     const filtered = useMemo(() => {
@@ -157,8 +166,6 @@ export default function UserProductsPage() {
         setTempVoteRange({ min: 0, max: maxVotes });
         setIsFilterOpen(false);
     };
-
-    console.log(products);
 
     // -------- VOTACIÓN ----------
     const handleVote = async (productId) => {
@@ -244,6 +251,10 @@ export default function UserProductsPage() {
 
 
     const handleButtonClick = () => {
+        if (!authToken) {
+            alert("Debes iniciar sesión para registrar un producto");
+            return;
+        }
         if (!checkTokenExpiration()) {
             setUnauthorized(true);
         }
@@ -258,15 +269,32 @@ export default function UserProductsPage() {
 
 
     return (
-        <div className="p-6 mt-10 relative">
+        <><div className="p-2 mt-5 relative">
+            <div className="relative w-full h-[600px] lg:h-[700px] mt-5 overflow-hidden">
+                <img
+                    src={userProduct}
+                    alt="Producto"
+                    onLoad={() => setMainImageLoaded(true)}
+                    className={`w-full h-full object-cover transition-opacity duration-700 ease-in-out 
+        ${mainImageLoaded ? "opacity-100" : "opacity-0"}`}
+                />
+                {/* Botón de orden */}
+                <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-10">
+                    <Link to="/forFan">
+                        <button className="button-yellow-border" onClick={handleButtonClick}>
+                            UPLOAD YOUR ART
+                        </button>
+
+                    </Link>
+                </div>
+            </div>
             {unauthorized ? (
                 <SessionExpired />
             ) : (
                 <>
                     {/* Header con título y filtros */}
-                    <div className="flex justify-between items-center mb-6 w-full">
-                        <h1 className="text-2xl font-bold">{t("forfan.userProducts")}</h1>
-                        <div className="flex items-center gap-4">
+                    <div className="flex justify-end items-center mb-6 w-full">
+                        <div className="flex items-center gap-4 mt-2">
                             {/* Botón Filtros */}
                             <p
                                 className="custom-font-shop-regular mb-0 cursor-pointer"
@@ -279,24 +307,13 @@ export default function UserProductsPage() {
                     </div>
 
                     {/* Grid de productos */}
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 w-full">
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 w-ful">
                         {filteredProducts.map((product) => (
                             <div key={product.id} className="flex justify-center">
                                 <ProductCard product={product} onVote={handleVote} />
                             </div>
                         ))}
                     </div>
-
-                    {/* Botón flotante para agregar producto */}
-                    {authToken && !showForm && (
-                        <button
-                            onClick={handleButtonClick}
-                            className="fixed bottom-20 right-6 flex items-center justify-center w-14 h-14 rounded-full bg-blue-600 hover:bg-blue-700 text-white transition-all duration-300 mb-2"
-                            style={{boxShadow: "0 4px 12px rgba(74,144,226,0.7)"}}
-                        >
-                            <Plus size={22} />
-                        </button>
-                    )}
 
                     {/* Modal para formulario creación de producto */}
                     {showForm && (
@@ -321,11 +338,8 @@ export default function UserProductsPage() {
                                         <input
                                             type="text"
                                             value={newProduct.name}
-                                            onChange={(e) =>
-                                                setNewProduct({ ...newProduct, name: e.target.value })
-                                            }
-                                            className="w-full border rounded-xl px-4 py-3 shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                                        />
+                                            onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
+                                            className="w-full border rounded-xl px-4 py-3 shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" />
                                         {validationErrors.name && (
                                             <p className="text-red-600 text-sm mt-1">
                                                 {validationErrors.name}
@@ -346,8 +360,7 @@ export default function UserProductsPage() {
                                             multiple
                                             accept="image/*"
                                             onChange={handleFileChange}
-                                            className="w-full"
-                                        />
+                                            className="w-full" />
                                         {validationErrors.images && (
                                             <p className="text-red-600 text-sm mt-1">
                                                 {validationErrors.images}
@@ -360,14 +373,11 @@ export default function UserProductsPage() {
                                         <input
                                             type="checkbox"
                                             checked={newProduct.acceptTerms || false}
-                                            onChange={(e) =>
-                                                setNewProduct({
-                                                    ...newProduct,
-                                                    acceptTerms: e.target.checked,
-                                                })
-                                            }
-                                            className="mt-1 h-5 w-5 text-blue-600 rounded focus:ring-blue-500"
-                                        />
+                                            onChange={(e) => setNewProduct({
+                                                ...newProduct,
+                                                acceptTerms: e.target.checked,
+                                            })}
+                                            className="mt-1 h-5 w-5 text-blue-600 rounded focus:ring-blue-500" />
                                         <span className="text-sm">
                                             {t("forFan.acceptTerms") + " "}
                                             <a
@@ -447,15 +457,12 @@ export default function UserProductsPage() {
                                 min={0}
                                 max={maxVotes}
                                 value={tempVoteRange.max}
-                                onChange={(e) =>
-                                    setTempVoteRange({
-                                        ...tempVoteRange,
-                                        max: Number(e.target.value),
-                                    })
-                                }
+                                onChange={(e) => setTempVoteRange({
+                                    ...tempVoteRange,
+                                    max: Number(e.target.value),
+                                })}
                                 className="w-full"
-                                style={{ accentColor: "black", cursor: "pointer" }}
-                            />
+                                style={{ accentColor: "black", cursor: "pointer" }} />
                             <p className="mt-2">
                                 {t("Votos")}: {tempVoteRange.min} - {tempVoteRange.max}
                             </p>
@@ -468,7 +475,7 @@ export default function UserProductsPage() {
                                 className="slide-on-hover border border-black cursor-pointer px-8 py-6 flex-1 transition-transform duration-300 ease-in-out hover:translate-x-2"
                             >
                                 <span className="custom-font-shop custom-font-shop-black">
-                                {t("productSchema.deleteFilter")}
+                                    {t("productSchema.deleteFilter")}
                                 </span>
                             </button>
                             <button
@@ -477,14 +484,14 @@ export default function UserProductsPage() {
                                 style={{ backgroundColor: "black", color: "white" }}
                             >
                                 <span className="custom-font-shop">
-                                {t("productSchema.applyFilter")}
+                                    {t("productSchema.applyFilter")}
                                 </span>
                             </button>
                         </div>
                     </SlidingPanel>
                 </>
             )}
-        </div>
+        </div><Footer /></>
     );
 
 

@@ -16,6 +16,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
@@ -31,10 +32,14 @@ import com.artists_heaven.exception.AppExceptions.BadRequestException;
 import com.artists_heaven.exception.AppExceptions.InvalidInputException;
 import com.artists_heaven.exception.AppExceptions.ResourceNotFoundException;
 import com.artists_heaven.order.Order;
+import com.artists_heaven.order.OrderDetailsDTO;
 import com.artists_heaven.order.OrderItem;
 import com.artists_heaven.page.PageResponse;
 
+import jakarta.validation.Valid;
+
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.context.MessageSource;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -42,6 +47,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class ProductService {
@@ -77,7 +83,8 @@ public class ProductService {
      */
     // Uso intencional de PRNG no criptográfico: referencia visible, no sensible
     // (java:S2245)
-    public Product registerProduct(ProductDTO productDTO) {
+    public Product registerProduct(@Valid ProductDTO productDTO) {
+
         if (productDTO.getName() == null || productDTO.getName().trim().isEmpty()) {
             throw new AppExceptions.InvalidInputException("Product name is required.");
         }
@@ -90,32 +97,74 @@ public class ProductService {
         product.setDescription(productDTO.getDescription());
         product.setName(productDTO.getName());
         product.setPrice(productDTO.getPrice());
-        product.setImages(productDTO.getImages());
         product.setSection(productDTO.getSection());
         product.setComposition(productDTO.getComposition());
         product.setShippingDetails(productDTO.getShippingDetails());
-        product.setCollection(productDTO.getCollectionId() != null
-                ? collectionRepository.findById(productDTO.getCollectionId())
-                        .orElseThrow(() -> new AppExceptions.ResourceNotFoundException(
-                                "Collection not found with id: " + productDTO.getCollectionId()))
-                : null);
-        product.setModelReference(productDTO.getModelReference());
+        product.setCollection(
+                productDTO.getCollectionId() != null
+                        ? collectionRepository.findById(productDTO.getCollectionId())
+                                .orElseThrow(() -> new AppExceptions.ResourceNotFoundException(
+                                        "Collection not found with id: " + productDTO.getCollectionId()))
+                        : null);
 
-        if (productDTO.getAvailableUnits() != 0) {
-            product.setAvailableUnits(productDTO.getAvailableUnits());
-        } else {
-            product.setSize(productDTO.getSizes());
+        if (productDTO.getColors() == null || productDTO.getColors().isEmpty()) {
+            throw new AppExceptions.InvalidInputException("Debe haber al menos un color con inventario e imágenes.");
         }
 
-        for (int i = 0; i < 5; i++) { // reintenta algunas veces
-            product.setReference(generarReferencia());
+        List<ProductColor> colors = productDTO.getColors().stream().map(dto -> {
+            ProductColor color = new ProductColor();
+            color.setColorName(dto.getColorName());
+            color.setHexCode(dto.getHexCode());
+            color.setImages(dto.getImages());
+            color.setProduct(product);
+            color.setModelReference(dto.getModelReference());
+
+            if (productDTO.getSection() == Section.ACCESSORIES) {
+                if (dto.getAvailableUnits() == null || dto.getAvailableUnits() < 0) {
+                    throw new AppExceptions.InvalidInputException(
+                            "Cada color de un accesorio debe tener availableUnits >= 0.");
+                }
+                color.setAvailableUnits(dto.getAvailableUnits());
+                color.setSizes(null);
+            } else {
+                if (dto.getSizes() == null || dto.getSizes().isEmpty()) {
+                    throw new AppExceptions.InvalidInputException(
+                            "Cada color de un producto no accesorio debe tener un mapa de tallas.");
+                }
+                dto.getSizes().forEach((size, qty) -> {
+                    if (qty == null || qty < 0) {
+                        throw new AppExceptions.InvalidInputException(
+                                "Las cantidades por talla no pueden ser negativas.");
+                    }
+                });
+                color.setSizes(dto.getSizes());
+                color.setAvailableUnits(null);
+            }
+            return color;
+        }).collect(Collectors.toList());
+        product.setColors(colors);
+
+        boolean hasStock = colors.stream().anyMatch(c -> {
+            if (productDTO.getSection() == Section.ACCESSORIES) {
+                return c.getAvailableUnits() != null && c.getAvailableUnits() > 0;
+            } else {
+                return c.getSizes() != null &&
+                        c.getSizes().values().stream().mapToInt(Integer::intValue).sum() > 0;
+            }
+        });
+        product.setAvailable(hasStock);
+
+        for (int i = 0; i < 10; i++) {
+            Long generatedReference = generarReferencia();
+            product.setReference(generatedReference);
             try {
                 return productRepository.save(product);
             } catch (DataIntegrityViolationException e) {
-                // colisión de referencia: reintenta
+
             }
         }
-        throw new IllegalStateException("A unique reference could not be generated after several attempts.");
+
+        throw new IllegalStateException("No se pudo generar una referencia única después de varios intentos.");
     }
 
     private long generarReferencia() {
@@ -243,16 +292,32 @@ public class ProductService {
         return imagesToDelete;
     }
 
+    /**
+     * Retrieves detailed information about a specific order by its ID.
+     * 
+     * Access is restricted based on the currently authenticated user:
+     * 
+     * Administrators can access any order.
+     * Regular users can only access their own orders.
+     * If the order is unassigned (no user), only administrators can access it.
+     * 
+     *
+     * @param id the ID of the order to retrieve
+     * @return an {@link OrderDetailsDTO} containing detailed information about the
+     *         order
+     * @throws AppExceptions.ResourceNotFoundException if no order exists with the
+     *                                                 given ID
+     * @throws AppExceptions.ForbiddenActionException  if the authenticated user
+     *                                                 does not have permission to
+     *                                                 access the order
+     */
     public void deleteImagesString(List<String> imageUrls) {
         for (String imageUrl : imageUrls) {
             try {
-                // Extraer solo el nombre del archivo
                 String fileName = Paths.get(imageUrl).getFileName().toString();
 
-                // Construir la ruta absoluta
                 Path filePath = Paths.get(UPLOAD_DIR).resolve(fileName).normalize();
 
-                // Eliminar físicamente el archivo
                 Files.deleteIfExists(filePath);
 
             } catch (IOException e) {
@@ -304,12 +369,11 @@ public class ProductService {
      * @param newImages     A list of new images to be added to the product.
      * @param productDTO    The DTO containing the updated product information.
      */
-    public void updateProduct(Long id,
-            List<MultipartFile> removedImages,
-            List<MultipartFile> newImages,
+    public void updateProduct(
+            Long id,
             ProductDTO productDTO,
-            List<String> reorderedImages,
-            MultipartFile model3d) {
+            Map<Integer, List<MultipartFile>> colorImages,
+            Map<Integer, MultipartFile> colorModels) {
 
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new AppExceptions.ResourceNotFoundException("Product not found with id: " + id));
@@ -321,48 +385,9 @@ public class ProductService {
             throw new AppExceptions.InvalidInputException("Product price must be greater than 0");
         }
 
-        if (model3d != null && !model3d.isEmpty()) {
-            String modelUrl = saveModel(model3d);
-            productDTO.setModelReference(modelUrl);
-        }
-
-        // --- Manejo de imágenes ---
-        List<String> existingImages = new ArrayList<>(product.getImages());
-
-        if (removedImages != null && !removedImages.isEmpty()) {
-            List<String> removedImagesCast = deleteImages(removedImages);
-            existingImages.removeIf(removedImagesCast::contains);
-        }
-
-        if (newImages != null && !newImages.isEmpty()) {
-            List<String> newImageUrls = saveImages(newImages);
-            existingImages.addAll(newImageUrls);
-        }
-
-        List<String> finalOrderedImages;
-        if (reorderedImages != null && !reorderedImages.isEmpty()) {
-            finalOrderedImages = new ArrayList<>(reorderedImages.stream()
-                    .filter(existingImages::contains)
-                    .distinct()
-                    .toList());
-
-            existingImages.stream()
-                    .filter(img -> !finalOrderedImages.contains(img))
-                    .forEach(finalOrderedImages::add);
-        } else {
-            finalOrderedImages = existingImages;
-        }
-
-        product.setImages(finalOrderedImages);
-        productDTO.setImages(finalOrderedImages);
-
-        // --- Actualización de datos ---
         product.setName(productDTO.getName());
         product.setDescription(productDTO.getDescription());
         product.setPrice(productDTO.getPrice());
-        product.getSize().clear();
-        product.getSize().putAll(productDTO.getSizes());
-        product.setSize(productDTO.getSizes());
         product.getCategories().clear();
         product.getCategories().addAll(productDTO.getCategories());
         product.setComposition(productDTO.getComposition());
@@ -372,12 +397,68 @@ public class ProductService {
                         .orElseThrow(() -> new AppExceptions.ResourceNotFoundException(
                                 "Collection not found with id: " + productDTO.getCollectionId()))
                 : null);
-        product.setModelReference(productDTO.getModelReference());
+        product.setAvailable(productDTO.getAvailable());
+
+        Map<Long, ProductColor> existingColorsById = product.getColors().stream()
+                .filter(c -> c.getId() != null)
+                .collect(Collectors.toMap(ProductColor::getId, c -> c));
+
+        Set<Long> incomingIds = productDTO.getColors().stream()
+                .map(ProductColorDTO::getColorId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        product.getColors().removeIf(c -> c.getId() != null && !incomingIds.contains(c.getId()));
+
+        for (int i = 0; i < productDTO.getColors().size(); i++) {
+            ProductColorDTO colorDTO = productDTO.getColors().get(i);
+            ProductColor color;
+
+            if (colorDTO.getColorId() != null && existingColorsById.containsKey(colorDTO.getColorId())) {
+                color = existingColorsById.get(colorDTO.getColorId());
+            } else {
+                color = new ProductColor();
+                color.setProduct(product);
+                product.getColors().add(color);
+            }
+
+            color.setColorName(colorDTO.getColorName());
+            color.setHexCode(colorDTO.getHexCode());
+            color.setAvailableUnits(colorDTO.getAvailableUnits());
+            color.setSizes(colorDTO.getSizes());
+
+            List<String> finalImages = new ArrayList<>(
+                    colorDTO.getImages() != null ? colorDTO.getImages() : new ArrayList<>());
+            if (colorImages != null && colorImages.containsKey(i)) {
+                List<MultipartFile> newImgs = colorImages.get(i);
+                List<String> newUrls = saveImages(newImgs);
+                finalImages.addAll(newUrls);
+            }
+            color.setImages(finalImages);
+
+            if (colorModels != null && colorModels.containsKey(i)) {
+                MultipartFile modelFile = colorModels.get(i);
+                if (modelFile != null && !modelFile.isEmpty()) {
+                    String modelUrl = saveModel(modelFile);
+                    color.setModelReference(modelUrl);
+                }
+            } else {
+                color.setModelReference(colorDTO.getModelReference());
+            }
+        }
 
         save(product);
-
     }
 
+    /**
+     * Promotes a product by applying a discount.
+     * 
+     * @param productId the ID of the product to promote
+     * @param discount  the discount percentage (0-100)
+     * @throws InvalidInputException     if discount is null, out of range, or the
+     *                                   product is not available
+     * @throws ResourceNotFoundException if the product does not exist
+     */
     public void promoteProduct(Long productId, Integer discount) {
         if (discount == null || discount < 0 || discount > 100) {
             throw new InvalidInputException("Discount must be between 0 and 100");
@@ -402,6 +483,13 @@ public class ProductService {
         save(product);
     }
 
+    /**
+     * Removes the promotion from a product and recalculates its price.
+     * 
+     * @param productId the ID of the product to demote
+     * @throws InvalidInputException if the product is not available or not on
+     *                               promotion
+     */
     public void demoteProduct(Long productId) {
         Product product = findById(productId);
         if (!product.getAvailable()) {
@@ -425,26 +513,61 @@ public class ProductService {
 
     }
 
+    /**
+     * Retrieves all products that are currently on promotion.
+     * 
+     * @return a list of promoted products
+     */
     public List<Product> getAllPromotedProducts() {
         return productRepository.findAllByOn_Promotion();
     }
 
+    /**
+     * Searches products by name or description with pagination support.
+     * 
+     * @param searchTerm the term to search for
+     * @param pageable   pagination information
+     * @return a page of products matching the search
+     */
     public Page<Product> searchProducts(String searchTerm, Pageable pageable) {
         return productRepository.findByName(searchTerm, pageable);
     }
 
+    /**
+     * Retrieves the first 12 products sorted alphabetically by name.
+     * 
+     * @return a list of products
+     */
     public List<Product> get12ProductsSortedByName() {
         return productRepository.find12ProductsSortedByName();
     }
 
+    /**
+     * Finds all products by a set of IDs.
+     * 
+     * @param productIds the set of product IDs
+     * @return a list of products
+     */
     public List<Product> findAllByIds(Set<Long> productIds) {
         return productRepository.findAllById(productIds);
     }
 
+    /**
+     * Disables a product.
+     * 
+     * @param productId the ID of the product to disable
+     * @throws BadRequestException if the product is already disabled
+     */
     public void disableProduct(Long productId) {
         setProductAvailability(productId, false, "Product is already disabled");
     }
 
+    /**
+     * Enables a product.
+     * 
+     * @param productId the ID of the product to enable
+     * @throws BadRequestException if the product is already enabled
+     */
     public void enableProduct(Long productId) {
         setProductAvailability(productId, true, "Product is already enabled");
     }
@@ -458,41 +581,71 @@ public class ProductService {
         productRepository.save(product);
     }
 
+    /**
+     * Retrieves all categories.
+     * 
+     * @return a list of categories
+     */
     public List<Category> findAllCategories() {
         return categoryRepository.findAll();
     }
 
+    /**
+     * Retrieves all collections.
+     * 
+     * @return a list of collections
+     */
     public List<Collection> findAllCollections() {
         return collectionRepository.findAll();
     }
 
+    /**
+     * Saves a new category.
+     * 
+     * @param name the name of the category
+     * @throws ResponseStatusException if the category already exists
+     */
     public void saveCategory(String name) {
-        // Verificar si la categoría ya existe
         if (categoryRepository.existsByName(name)) {
-            // Lanzar una excepción si la categoría ya existe
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+            throw new AppExceptions.BadRequestException(
                     "Category with the name '" + name + "' already exists.");
         }
 
-        // Si no existe, proceder a crear la nueva categoría
         Category newCategory = new Category();
         newCategory.setName(name);
 
-        // Guardar la nueva categoría en la base de datos
         categoryRepository.save(newCategory);
     }
 
+    /**
+     * Edits an existing category.
+     * 
+     * @param categoryDTO the category data transfer object containing new data
+     * @throws ResponseStatusException if the category does not exist
+     */
     public void editCategory(CategoryDTO categoryDTO) {
         Optional<Category> optionalCategory = categoryRepository.findById(categoryDTO.getId());
         if (!optionalCategory.isPresent()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Category with the id '" + categoryDTO.getId() + "' not exists.");
         }
+        String newName = categoryDTO.getName().replaceAll("\\s+", "");
+        if (categoryRepository.existsByName(newName) &&
+                !optionalCategory.get().getName().equalsIgnoreCase(newName)) {
+            throw new AppExceptions.BadRequestException(
+                    "Category with the name '" + newName + "' already exists.");
+        }
         Category category = optionalCategory.get();
         category.setName(categoryDTO.getName().replaceAll("\s+", ""));
         categoryRepository.save(category);
     }
 
+    /**
+     * Finds products by an artist name.
+     * 
+     * @param artistName the name of the artist
+     * @return a list of products, empty if artistName is null or empty
+     */
     public List<Product> findProductsByArtist(String artistName) {
         if (artistName == null || artistName.isEmpty()) {
             return Collections.emptyList();
@@ -504,22 +657,59 @@ public class ProductService {
         return productRepository.findAll();
     }
 
+    /**
+     * Finds products by section TSHIRT.
+     * 
+     * @return a list of products in the given section
+     */
     public List<Product> findTshirtsProduct() {
         return productRepository.findBySection(Section.TSHIRT);
     }
 
+    /**
+     * Finds products by section HOODIES
+     * 
+     * @return a list of products in the given section
+     */
     public List<Product> findHoodiesProduct() {
         return productRepository.findBySection(Section.HOODIES);
     }
 
+    /**
+     * Finds products by section PANTS
+     * 
+     * @return a list of products in the given section
+     */
     public List<Product> findPantsProduct() {
         return productRepository.findBySection(Section.PANTS);
     }
 
+    /**
+     * Finds products by section ACCESSORIES
+     * 
+     * @return a list of products in the given section
+     */
     public List<Product> findAccessoriesProduct() {
         return productRepository.findBySection(Section.ACCESSORIES);
     }
 
+    /**
+     * Retrieves the top-selling product based on the number of times it has been
+     * ordered.
+     * 
+     * This method iterates through all available orders, counts the number of times
+     * each product has been sold, and identifies the product with the highest
+     * sales.
+     * It then returns basic information about this top-selling product.
+     *
+     * @return a map containing:
+     *         - "nombre": the name of the top-selling product (sanitized)
+     *         - "descripcion": the description of the product (sanitized)
+     *         - "precio": the product price formatted as a string with two decimal
+     *         places
+     * @throws NullPointerException if there are no orders or the top product cannot
+     *                              be found in the database
+     */
     public Map<String, String> getTopSellingProduct() {
         List<Order> orders = productRepository.getOrders();
 
@@ -548,7 +738,6 @@ public class ProductService {
                 "precio", price);
     }
 
-    // ✅ Método para formatear precio de forma segura
     private String formatPrice(Float price) {
         if (price == null) {
             return "0.00";
@@ -557,15 +746,25 @@ public class ProductService {
         return df.format(price);
     }
 
-    // ✅ Método para sanitizar strings (por si se usan en vistas o logs)
     private String sanitize(String input) {
         return input == null ? "" : input.replaceAll("%", "%%");
     }
 
+    /**
+     * Retrieves the top 3 recommended products based on their rating.
+     *
+     * This method fetches products with the highest ratings from the repository,
+     * limits the results to a maximum of 3 products, and constructs a map where
+     * the key is the product name and the value is a string with the description
+     * and price.
+     *
+     * @return a LinkedHashMap where:
+     *         - key: product name
+     *         - value: "Description: <description>, Price: $<price>"
+     */
     public Map<String, String> getRecommendedProduct() {
         List<Product> products = productRepository.findTopRatingProduct();
 
-        // Asegurarse de que la lista tiene al menos 3 productos
         int limit = Math.min(3, products.size());
         List<Product> top3Products = products.subList(0, limit);
 
@@ -576,7 +775,6 @@ public class ProductService {
             String description = product.getDescription();
             double price = product.getPrice();
 
-            // Puedes personalizar el formato del valor como desees
             String value = "Descripción: " + description + ", Precio: $" + price;
 
             recommendedMap.put(name, value);
@@ -585,6 +783,20 @@ public class ProductService {
         return recommendedMap;
     }
 
+    /**
+     * Retrieves related products from the same section, excluding the product with
+     * the specified ID.
+     *
+     * The products are filtered to only include available items, sorted by creation
+     * date in descending order,
+     * and limited to 4 results.
+     *
+     * @param sectionName the name of the section to filter products by
+     * @param id          the ID of the product to exclude
+     * @return a list of related products
+     * @throws InvalidInputException if the sectionName does not match a valid
+     *                               Section enum
+     */
     public List<Product> getRelatedProducts(String sectionName, Long id) {
         Section section;
         try {
@@ -601,6 +813,15 @@ public class ProductService {
                 .toList();
     }
 
+    /**
+     * Finds a product by its reference identifier.
+     *
+     * @param reference the reference ID of the product
+     * @param lang      the language code for localized error messages
+     * @return the product corresponding to the reference
+     * @throws AppExceptions.ResourceNotFoundException if no product is found with
+     *                                                 the given reference
+     */
     public Product findByReference(Long reference, String lang) {
         Locale locale = new Locale(lang);
 
@@ -613,26 +834,47 @@ public class ProductService {
         }
     }
 
+    /**
+     * Saves a new collection with the specified name.
+     *
+     * @param name the name of the new collection
+     * @throws ResponseStatusException if a collection with the same name already
+     *                                 exists
+     */
     public void saveCollection(String name) {
         if (collectionRepository.existsByName(name)) {
-            // Lanzar una excepción si la categoría ya existe
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Category with the name '" + name + "' already exists.");
         }
 
-        // Si no existe, proceder a crear la nueva categoría
         Collection newCollection = new Collection();
         newCollection.setName(name.toUpperCase());
 
-        // Guardar la nueva categoría en la base de datos
         collectionRepository.save(newCollection);
     }
 
+    /**
+     * Edits an existing collection based on the provided DTO.
+     *
+     * Updates the collection name and promotion status.
+     *
+     * @param collectionDTO the DTO containing the collection's ID, new name, and
+     *                      promotion status
+     * @throws ResponseStatusException if the collection with the specified ID does
+     *                                 not exist
+     */
     public void editCollection(CollectionDTO collectionDTO) {
         Optional<Collection> optionalCollection = collectionRepository.findById(collectionDTO.getId());
         if (!optionalCollection.isPresent()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Collection with the id '" + collectionDTO.getId() + "' not exists.");
+        }
+
+        String newName = collectionDTO.getName().replaceAll("\\s+", "");
+        if (categoryRepository.existsByName(newName) &&
+                !optionalCollection.get().getName().equalsIgnoreCase(newName)) {
+            throw new AppExceptions.BadRequestException(
+                    "Collection with the name '" + newName + "' already exists.");
         }
         Collection collection = optionalCollection.get();
         collection.setName(collectionDTO.getName().replaceAll("\s+", ""));
@@ -640,11 +882,18 @@ public class ProductService {
         collectionRepository.save(collection);
     }
 
+    /**
+     * Finds products by collection name.
+     * 
+     * @param collectionName the name of the collection
+     * @return a list of products in the collection
+     */
     public List<Product> findByCollection(String collectionName) {
         return productRepository.findByCollectionName(collectionName);
     }
 
-    public PageResponse<ProductDTO> getProducts(int page, int size, String search) {
+    public PageResponse<ProductDTO> getProducts(int page, int size, String search, Boolean available,
+            Boolean promoted) {
         if (size == -1) {
             List<Product> products = findAllProducts();
 
@@ -661,19 +910,27 @@ public class ProductService {
                     1,
                     true);
         }
-
         PageRequest pageRequest = PageRequest.of(page, size);
-        Page<Product> result;
+
+        Specification<Product> spec = Specification.where(null);
 
         if (search != null && !search.isEmpty()) {
-            result = searchProducts(search, pageRequest);
-        } else {
-            result = productRepository.findAll(pageRequest);
+            spec = spec.and((root, query, cb) -> cb.or(
+                    cb.like(cb.lower(root.get("name")), "%" + search.toLowerCase() + "%"),
+                    cb.like(cb.lower(root.get("description")), "%" + search.toLowerCase() + "%")));
         }
 
-        // Convertimos el contenido del Page<Product> a Page<ProductDTO>
-        Page<ProductDTO> dtoPage = result.map(ProductDTO::new);
+        if (available != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("available"), available));
+        }
 
+        if (promoted != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("on_Promotion"), promoted));
+        }
+
+        Page<Product> result = productRepository.findAll(spec, pageRequest);
+
+        Page<ProductDTO> dtoPage = result.map(ProductDTO::new);
         return new PageResponse<>(dtoPage);
     }
 

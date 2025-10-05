@@ -24,7 +24,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -48,10 +47,8 @@ public class AuthController {
     }
 
     @Operation(summary = "User login", description = "Authenticates a user using email and password, returning an Access Token and Refresh Token along with the user's role.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "User authenticated successfully", content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"accessToken\": \"...\", \"refreshToken\": \"...\", \"role\": \"ADMIN\"}"))),
-            @ApiResponse(responseCode = "401", description = "Invalid credentials or unauthorized access", content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Invalid credentials or server error\"}")))
-    })
+    @ApiResponse(responseCode = "200", description = "User authenticated successfully", content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"accessToken\": \"...\", \"refreshToken\": \"...\", \"role\": \"ADMIN\"}")))
+    @ApiResponse(responseCode = "401", description = "Invalid credentials or unauthorized access", content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Invalid credentials or server error\"}")))
     @PostMapping("/login")
     public ResponseEntity<Map<String, Object>> login(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Login request payload containing user email and password", required = true, content = @Content(mediaType = "application/json", schema = @Schema(implementation = LoginRequest.class))) @RequestBody LoginRequest loginRequest) {
@@ -90,11 +87,9 @@ public class AuthController {
     }
 
     @Operation(summary = "Google login", description = "Handles user login via Google authentication by validating the Google ID token and returning an Access Token, Refresh Token, and user info.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "User authenticated successfully with Google", content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"accessToken\": \"...\", \"refreshToken\": \"...\", \"email\": \"user@example.com\", \"role\": \"USER\"}"))),
-            @ApiResponse(responseCode = "401", description = "Invalid Google ID token", content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Invalid ID token\"}"))),
-            @ApiResponse(responseCode = "500", description = "Error verifying token", content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Error verifying token\"}")))
-    })
+    @ApiResponse(responseCode = "200", description = "User authenticated successfully with Google", content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"accessToken\": \"...\", \"refreshToken\": \"...\", \"email\": \"user@example.com\", \"role\": \"USER\"}")))
+    @ApiResponse(responseCode = "401", description = "Invalid Google ID token", content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Invalid ID token\"}")))
+    @ApiResponse(responseCode = "500", description = "Error verifying token", content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Error verifying token\"}")))
     @PostMapping("/google-login")
     public ResponseEntity<Map<String, Object>> googleLogin(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Payload containing the Google ID token string", required = true, content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"idTokenString\": \"...\"}"))) @RequestBody Map<String, String> request) {
@@ -150,13 +145,10 @@ public class AuthController {
 
             refreshTokenService.verifyExpiration(oldToken);
 
-            // Eliminar el token usado (rotación)
             refreshTokenService.deleteByUser(oldToken.getUser());
 
-            // Crear nuevo refresh token
             RefreshToken newRefreshToken = refreshTokenService.createOrUpdateRefreshToken(oldToken.getUser());
 
-            // Generar nuevo access token
             String newAccessToken = authService.generateToken(oldToken.getUser());
 
             return ResponseEntity.ok(Map.of(
@@ -185,7 +177,7 @@ public class AuthController {
     @PostMapping("/forgot-password")
     public ResponseEntity<String> forgotPassword(@RequestBody ForgotPasswordRequest request) {
         String token = passwordService.createPasswordResetToken(request.getEmail());
-        // Aquí envías el email:
+        
         String resetLink = "http://localhost:3000/reset-password?token=" + token;
 
         emailSenderService.sendPasswordResetEmail(request.getEmail(), resetLink);

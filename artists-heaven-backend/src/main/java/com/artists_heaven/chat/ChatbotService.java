@@ -30,7 +30,7 @@ public class ChatbotService {
     private final QARepository qaRepository;
     private final Dotenv dotenv = Dotenv.load();
 
-    private final String geminiApiKey  = dotenv.get("GEMINI_KEY");
+    private final String geminiApiKey = dotenv.get("GEMINI_KEY");
     private final static String geminiApiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
 
     private final double similarityThreshold;
@@ -59,6 +59,13 @@ public class ChatbotService {
         this.similarityThreshold = similarityThreshold;
     }
 
+    /**
+     * Searches for an answer in the predefined Q&A repository using token
+     * similarity.
+     *
+     * @param text user input
+     * @return predefined answer if found, otherwise {@code null}
+     */
     public String searchNLPAnswer(String text) {
         if (text == null || text.isBlank())
             return null;
@@ -69,7 +76,6 @@ public class ChatbotService {
 
         Map<String, ChatMessageContext> predefinedQAContexts = qaRepository.getAllQAContexts();
 
-        // Calculamos las similitudes
         List<Map.Entry<String, Double>> matches = predefinedQAContexts.entrySet().stream()
                 .map(entry -> {
                     Set<String> questionTokens = entry.getValue().getTokens();
@@ -83,20 +89,16 @@ public class ChatbotService {
             return null;
         }
 
-        // Obtenemos la máxima similitud
         double maxSim = matches.stream()
                 .mapToDouble(Map.Entry::getValue)
                 .max()
                 .orElse(0.0);
 
-        // Filtramos solo los que tienen esa máxima similitud
         List<String> bestMatches = matches.stream()
                 .filter(e -> e.getValue() == maxSim)
                 .map(Map.Entry::getKey)
                 .toList();
 
-        // Desempate: seleccionamos la que tenga longitud más parecida a la pregunta
-        // original
         String selected = bestMatches.stream()
                 .min(Comparator.comparingInt(q -> Math.abs(q.length() - originalText.length())))
                 .orElse(bestMatches.get(0));
@@ -104,6 +106,13 @@ public class ChatbotService {
         return qaRepository.getAnswer(selected);
     }
 
+    /**
+     * Searches for a dynamic answer based on detected intent (recommendation,
+     * bestseller).
+     *
+     * @param text user input
+     * @return dynamically generated answer or {@code null} if no intent is detected
+     */
     public String searchDynamicAnswer(String text) {
         if (text == null || text.isBlank())
             return null;
@@ -119,11 +128,15 @@ public class ChatbotService {
 
     }
 
+    /**
+     * Detects the intent of the given message (e.g., recommendation, bestseller).
+     *
+     * @param message normalized user input
+     * @return intent key (e.g., "recommendation", "bestseller") or {@code null}
+     */
     private String detectIntent(String message) {
-        // Normalizamos el mensaje: minúsculas y sin tildes
         String cleanedMessage = normalizeText(message);
 
-        // Definimos el mapa de intenciones con sinónimos ampliados
         Map<String, List<String>> intents = Map.of(
                 "recommendation", List.of(
                         // Español
@@ -153,7 +166,6 @@ public class ChatbotService {
                         "trending product", "people are buying", "most popular", "most requested",
                         "most wanted", "customer favorite"));
 
-        // Recorremos intenciones y verificamos coincidencias
         for (Map.Entry<String, List<String>> entry : intents.entrySet()) {
             for (String keyword : entry.getValue()) {
                 if (cleanedMessage.contains(normalizeText(keyword))) {
@@ -166,7 +178,11 @@ public class ChatbotService {
     }
 
     /**
-     * Normaliza texto: minúsculas, elimina tildes y caracteres especiales.
+     * Normalizes text by converting to lowercase, removing accents and special
+     * characters.
+     *
+     * @param text raw user input
+     * @return normalized text
      */
     private String normalizeText(String text) {
         if (text == null)
@@ -180,6 +196,13 @@ public class ChatbotService {
                 .replaceAll("[^a-z0-9 ]", ""); // elimina caracteres no alfanuméricos
     }
 
+    /**
+     * Generates a chatbot response based on the detected intent.
+     *
+     * @param intent    detected intent
+     * @param isEnglish whether the language is English (true) or Spanish (false)
+     * @return generated response text
+     */
     private String generateResponseForIntent(String intent, boolean isEnglish) {
         switch (intent) {
             case "recommendation":
@@ -191,6 +214,12 @@ public class ChatbotService {
         }
     }
 
+    /**
+     * Builds a message recommending products based on ProductService data.
+     *
+     * @param isEnglish whether the response should be in English
+     * @return formatted recommendation message
+     */
     private String getRecommendedProductMessage(boolean isEnglish) {
         Map<String, String> recommendedProducts = productService.getRecommendedProduct();
         if (recommendedProducts != null && !recommendedProducts.isEmpty()) {
@@ -222,6 +251,12 @@ public class ChatbotService {
         }
     }
 
+    /**
+     * Builds a message about the current best-selling product.
+     *
+     * @param isEnglish whether the response should be in English
+     * @return formatted bestseller message
+     */
     private String getTopSellingProductMessage(boolean isEnglish) {
         Map<String, String> topProduct = productService.getTopSellingProduct();
         if (topProduct != null && !topProduct.isEmpty()) {
@@ -240,15 +275,28 @@ public class ChatbotService {
         }
     }
 
-    // Método para sanitizar (ejemplo básico)
     private String sanitize(String input) {
         return input == null ? "" : input.replace("%", "%%");
     }
 
+    /**
+     * Checks if the Gemini API key is correctly configured.
+     *
+     * @return true if the key exists and is not blank
+     */
     public boolean isApiKeyConfigured() {
-        return geminiApiKey  != null && !geminiApiKey .isBlank();
+        return geminiApiKey != null && !geminiApiKey.isBlank();
     }
 
+    /**
+     * Calls the Gemini API with the given user message and returns the generated
+     * response.
+     *
+     * @param userMessage user input to send to Gemini
+     * @return generated response text from Gemini
+     * @throws AppExceptions.InternalServerErrorException if the API response is
+     *                                                    invalid or empty
+     */
     public String callGeminiAPI(String userMessage) {
         RestTemplate restTemplate = createRestTemplate();
 
@@ -261,7 +309,7 @@ public class ChatbotService {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set("X-goog-api-key", geminiApiKey );
+        headers.set("X-goog-api-key", geminiApiKey);
 
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 

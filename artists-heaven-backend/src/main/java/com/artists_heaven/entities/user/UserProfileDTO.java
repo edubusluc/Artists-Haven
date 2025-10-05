@@ -27,7 +27,6 @@ import lombok.Setter;
  *     <li>{@code phone}: Phone number of the user.</li>
  *     <li>{@code role}: Role of the user in the system (e.g., "ARTIST", "ADMIN").</li>
  *     <li>{@code image}: Profile picture URL of the user.</li>
- *     <li>{@code bannerImage}: Banner image URL of the user's profile.</li>
  * </ul>
  * </p>
  */
@@ -42,9 +41,6 @@ public class UserProfileDTO extends BaseUserProfileDTO {
 
     @Schema(description = "Profile image URL of the user", example = "https://example.com/images/profile.jpg")
     private String image;
-
-    @Schema(description = "Banner image URL displayed in the user's profile", example = "https://example.com/images/banner.jpg")
-    private String bannerImage;
 
     /**
      * Constructs a {@code UserProfileDTO} from a {@link User} entity.

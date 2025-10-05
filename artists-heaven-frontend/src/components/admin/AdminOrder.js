@@ -25,14 +25,17 @@ const AdminOrder = () => {
     const [totalPages, setTotalPages] = useState(1);
     const pageSize = 6;
 
-    const returnRequestOrders = orders.filter(order => order.status === 'RETURN_REQUEST');
+    const [returnOrders, setReturnOrders] = useState([]);
     const filteredOrders = orders.filter(order => order.status !== 'RETURN_REQUEST');
 
     const [sortBy, setSortBy] = useState(null);
     const [sortOrder, setSortOrder] = useState('asc');
 
+    const [statusFilter, setStatusFilter] = useState("");
+    const [searchTerm, setSearchTerm] = useState("");
+
     const navigate = useNavigate();
-    const {t} = useTranslation();
+    const { t } = useTranslation();
 
     const handleSort = (column) => {
         if (sortBy === column) {
@@ -61,6 +64,18 @@ const AdminOrder = () => {
         return sortOrder === 'asc' ? ' ▲' : ' ▼';
     };
 
+    const fetchOrders = async () => {
+        try {
+            const ordersData = await getOrders(authToken, page, pageSize, statusFilter, searchTerm);
+            setOrders(ordersData.content || []);
+            setTotalPages(ordersData.totalPages || 1);
+        } catch (error) {
+            if (error.name !== 'AbortError') {
+                console.error('Error al obtener órdenes:', error);
+            }
+        }
+    };
+
     useEffect(() => {
         if (!checkTokenExpiration || role !== 'ADMIN') return;
 
@@ -68,39 +83,33 @@ const AdminOrder = () => {
 
         const fetchData = async () => {
             try {
+                // Estadísticas
                 const staticsData = await getStatisticsPerYear(authToken, year);
-                console.log(staticsData)
                 setData(prev => ({
                     ...prev,
                     ...staticsData.data,
                     incomePerYear: staticsData.data.incomePerYear ?? 0,
                 }));
-            } catch (error) {
-                if (error.name !== 'AbortError') {
-                    console.error('Error al obtener datos de staticsPerYear:', error);
-                }
-            }
-        };
 
-        const fetchOrders = async () => {
-            try {
-                const ordersData = await getOrders(authToken, page, pageSize)
+                // Pedidos normales
+                const ordersData = await getOrders(authToken, page, pageSize, statusFilter, searchTerm);
                 setOrders(ordersData.content || []);
                 setTotalPages(ordersData.totalPages || 1);
+
+                // Pedidos con RETURN_REQUEST
+                const returnData = await getOrders(authToken, 0, 100, 'RETURN_REQUEST', '');
+                setReturnOrders(returnData.content || []);
             } catch (error) {
                 if (error.name !== 'AbortError') {
-                    console.error('Error al obtener órdenes:', error);
+                    console.error('Error al obtener datos:', error);
                 }
             }
         };
 
         fetchData();
-        fetchOrders();
 
-        return () => {
-            controller.abort();
-        };
-    }, [authToken, year, page]);
+        return () => controller.abort();
+    }, [authToken, year, page, statusFilter, searchTerm]);
 
     const nextPage = () => {
         if (page < totalPages - 1) setPage(page + 1);
@@ -118,53 +127,93 @@ const AdminOrder = () => {
 
     return (
         <div className="min-h-screen bg-gradient-to-r from-gray-300 to-white flex flex-col">
-            <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] p-4 m-4 gap-4">
+            <div className="grid grid-cols-1 2xl:grid-cols-[2fr_1fr] p-4 m-4 gap-4">
 
                 {/* Tabla principal de pedidos */}
                 <div className='col-start-1 col-span-1'>
-                    <div className="w-full rounded-lg shadow-lg bg-white backdrop-blur-md md:p-8 p-4 overflow-x-auto">
-                        <p className="text-2xl font-bold mb-6">{t('adminOrders.ordersManagement')}</p>
+                    <div className="w-full rounded-lg shadow-lg bg-white backdrop-blur-md md:p-8 p-4">
+                        <p className="text-xl md:text-2xl font-bold mb-6">{t('adminOrders.ordersManagement')}</p>
 
-                        {orders.length > 0 ? (
-                            <table className="min-w-full text-sm text-left text-gray-600 border border-gray-200 rounded-lg">
-                                <thead className="bg-gray-100 text-xs text-gray-700 uppercase">
-                                    <tr>
-                                        <th className="px-4 py-3 cursor-pointer" onClick={() => handleSort('id')}>ID{renderSortIcon('id')}</th>
-                                        <th className="px-4 py-3 cursor-pointer" onClick={() => handleSort('identifier')}>{t('adminOrders.identifier')}{renderSortIcon('identifier')}</th>
-                                        <th className="px-4 py-3 cursor-pointer" onClick={() => handleSort('phone')}>{t('adminOrders.phone')}{renderSortIcon('phone')}</th>
-                                        <th className="px-4 py-3">{t('adminOrders.address')}</th>
-                                        <th className="px-4 py-3 cursor-pointer" onClick={() => handleSort('totalPrice')}>{t('adminOrders.totalPrice')}{renderSortIcon('totalPrice')}</th>
-                                        <th className="px-4 py-3 cursor-pointer" onClick={() => handleSort('createdDate')}>{t('adminOrders.createdDate')}{renderSortIcon('createdDate')}</th>
-                                        <th className="px-4 py-3 cursor-pointer" onClick={() => handleSort('paymentIntent')}>{t('adminOrders.paymentIntent')}{renderSortIcon('paymentIntent')}</th>
-                                        <th className="px-4 py-3">{t('adminOrders.status')}</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {sortedOrders.map(order => (
-                                        <tr
-                                            key={order.id}
-                                            className="border-t hover:bg-gray-100 cursor-pointer transition"
-                                            onClick={() => navigate(`/admin/orderDetails/${order.id}`)}>
-                                            <td className="px-4 py-3 font-medium">{order.id}</td>
-                                            <td className="px-4 py-3">{order.identifier}</td>
-                                            <td className="px-4 py-3">{order.phone}</td>
-                                            <td className="px-4 py-3">{order.addressLine1}, {order.postalCode}, {order.city}, {order.country}</td>
-                                            <td className="px-4 py-3">€{order.totalPrice}</td>
-                                            <td className="px-4 py-3">{order.createdDate}</td>
-                                            <td className="px-4 py-3">{order.paymentIntent}</td>
-                                            <td className="px-4 py-3">{order.status}</td>
+                        <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 mb-4">
+                            <select
+                                value={statusFilter}
+                                onChange={(e) => {
+                                    setStatusFilter(e.target.value);
+                                    setPage(0);
+                                }}
+                                className="border p-2 rounded w-full sm:w-auto"
+                            >
+                                <option value="">{t('adminOrders.allStatuses')}</option>
+                                <option value="PAID">PAID</option>
+                                <option value="IN_PREPARATION">IN_PREPARATION</option>
+                                <option value="SENT">SENT</option>
+                                <option value="DELIVERED">DELIVERED</option>
+                                <option value="CANCELED">CANCELED</option>
+                                <option value="RETURN_REQUEST">RETURN_REQUEST</option>
+                                <option value="RETURN_ACCEPTED">RETURN_ACCEPTED</option>
+                            </select>
+
+                            <input
+                                type="text"
+                                placeholder={t('adminOrders.searchByIdOrPayment')}
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="border p-2 rounded flex-1 text-sm"
+                            />
+
+                            <button
+                                onClick={() => {
+                                    setPage(0);
+                                    fetchOrders();
+                                }}
+                                className="bg-blue-500 text-white px-3 py-2 rounded text-sm hover:bg-blue-600 transition"
+                            >
+                                {t('adminOrders.search')}
+                            </button>
+                        </div>
+
+                        <div className="overflow-x-auto scrollbar-thin">
+                            {orders.length > 0 ? (
+                                <table className="min-w-full text-xs md:text-sm text-left text-gray-600 border border-gray-200 rounded-lg">
+                                    <thead className="bg-gray-100 text-gray-700 uppercase">
+                                        <tr>
+                                            <th className="px-4 py-3 cursor-pointer" onClick={() => handleSort('id')}>ID{renderSortIcon('id')}</th>
+                                            <th className="px-4 py-3 cursor-pointer" onClick={() => handleSort('identifier')}>{t('adminOrders.identifier')}{renderSortIcon('identifier')}</th>
+                                            <th className="px-4 py-3 cursor-pointer" onClick={() => handleSort('phone')}>{t('adminOrders.phone')}{renderSortIcon('phone')}</th>
+                                            <th className="px-4 py-3">{t('adminOrders.address')}</th>
+                                            <th className="px-4 py-3 cursor-pointer" onClick={() => handleSort('totalPrice')}>{t('adminOrders.totalPrice')}{renderSortIcon('totalPrice')}</th>
+                                            <th className="px-4 py-3 cursor-pointer" onClick={() => handleSort('createdDate')}>{t('adminOrders.createdDate')}{renderSortIcon('createdDate')}</th>
+                                            <th className="px-4 py-3 cursor-pointer" onClick={() => handleSort('paymentIntent')}>{t('adminOrders.paymentIntent')}{renderSortIcon('paymentIntent')}</th>
+                                            <th className="px-4 py-3">{t('adminOrders.status')}</th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        ) : (
-                            <p className="text-gray-500 text-center">{t('adminOrders.noOrdersAvailable')}</p>
-                        )}
+                                    </thead>
+                                    <tbody>
+                                        {sortedOrders.map(order => (
+                                            <tr
+                                                key={order.id}
+                                                className="border-t hover:bg-gray-100 cursor-pointer transition"
+                                                onClick={() => navigate(`/admin/orderDetails/${order.id}`)}>
+                                                <td className="px-4 py-3 font-medium">{order.id}</td>
+                                                <td className="px-4 py-3">{order.identifier}</td>
+                                                <td className="px-4 py-3">{order.phone}</td>
+                                                <td className="px-4 py-3">{order.addressLine1}, {order.postalCode}, {order.city}, {order.country}</td>
+                                                <td className="px-4 py-3">€{order.totalPrice}</td>
+                                                <td className="px-4 py-3">{order.createdDate}</td>
+                                                <td className="px-4 py-3">{order.paymentIntent}</td>
+                                                <td className="px-4 py-3">{order.status}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            ) : (
+                                <p className="text-gray-500 text-center">{t('adminOrders.noOrdersAvailable')}</p>
+                            )}
 
-                        <div className="flex justify-center items-center mt-4 gap-4">
-                            <button onClick={prevPage} disabled={page === 0} className="px-4 py-2 bg-gray-300 rounded disabled:opacity-50">{t('adminOrders.previous')}</button>
-                            <span className="font-semibold text-gray-700">{t('adminOrders.page')} {page + 1} {t('adminOrders.of')} {totalPages}</span>
-                            <button onClick={nextPage} disabled={page >= totalPages - 1} className="px-4 py-2 bg-gray-300 rounded disabled:opacity-50">{t('adminOrders.next')}</button>
+                            <div className="flex justify-center items-center mt-4 gap-4">
+                                <button onClick={prevPage} disabled={page === 0} className="px-4 py-2 bg-gray-300 rounded disabled:opacity-50">{t('adminOrders.previous')}</button>
+                                <span className="font-semibold text-gray-700">{t('adminOrders.page')} {page + 1} {t('adminOrders.of')} {totalPages}</span>
+                                <button onClick={nextPage} disabled={page >= totalPages - 1} className="px-4 py-2 bg-gray-300 rounded disabled:opacity-50">{t('adminOrders.next')}</button>
+                            </div>
                         </div>
                     </div>
 
@@ -172,9 +221,9 @@ const AdminOrder = () => {
                     <div className="mt-4 w-full rounded-lg shadow-lg bg-white backdrop-blur-md md:p-8 p-4 overflow-x-auto">
                         <p className="text-2xl font-bold mb-6">{t('adminOrders.pendingReturns')}</p>
 
-                        {returnRequestOrders.length > 0 ? (
-                            <table className="min-w-full text-sm text-left text-gray-600 border border-gray-200 rounded-lg">
-                                <thead className="bg-gray-100 text-xs text-gray-700 uppercase">
+                        {returnOrders.length > 0 ? (
+                            <table className="min-w-full text-xs md:text-sm text-left text-gray-600 border border-gray-200 rounded-lg">
+                                <thead className="bg-gray-100 text-gray-700 uppercase">
                                     <tr>
                                         <th className="px-4 py-3">ID</th>
                                         <th className="px-4 py-3">{t('adminOrders.identifier')}</th>
@@ -187,7 +236,7 @@ const AdminOrder = () => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {returnRequestOrders.map(order => (
+                                    {returnOrders.map(order => (
                                         <tr
                                             key={order.id}
                                             className="border-t hover:bg-gray-50"
@@ -211,13 +260,17 @@ const AdminOrder = () => {
                 </div>
 
                 {/* Gráfico de resumen */}
-                <div className="flex flex-col md:flex-row gap-4">
-                    <div className="bg-white shadow-lg rounded-lg p-6 flex-1">
-                        <p className="text-lg font-semibold text-gray-600 mb-4">{t('adminOrders.ordersStatusSummary')}</p>
+                <div className="bg-white shadow-lg rounded-lg p-6 flex-1 max-h-[400px]">
+                    <p className="text-lg font-semibold text-gray-600 mb-4">
+                        {t('adminOrders.ordersStatusSummary')}
+                    </p>
+                     <div className="flex justify-center items-center h-[280px]">
                         {data.orderStatusCounts && Object.keys(data.orderStatusCounts).length > 0 ? (
                             <CountStatusPieChart orderStatusCounts={data.orderStatusCounts} />
                         ) : (
-                            <p className="text-gray-400 italic text-center">{t('adminOrders.noDataAvailable')}</p>
+                            <p className="text-gray-400 italic text-center">
+                                {t('adminOrders.noDataAvailable')}
+                            </p>
                         )}
                     </div>
                 </div>

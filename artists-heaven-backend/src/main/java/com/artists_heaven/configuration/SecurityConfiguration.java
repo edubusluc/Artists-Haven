@@ -74,7 +74,8 @@ public class SecurityConfiguration {
                         "/api/auth/forgot-password",
                         "/api/auth/reset-password",
                         "/api/user-products/all",
-                        "/api/user-products/userProduct_media/**"
+                        "/api/user-products/userProduct_media/**",
+                        "/api/product/allCollections",
         };
 
         // Endpoints accessible only by ADMIN users
@@ -96,7 +97,6 @@ public class SecurityConfiguration {
                         "/api/admin/orderDetails/{id}",
                         "/api/admin/newCategory",
                         "/api/admin/editCategory",
-                        "/api/admin/allCollections",
                         "/api/admin/newCollection",
                         "/api/admin/editCollection",
                         "/api/admin/userProduct/pending",

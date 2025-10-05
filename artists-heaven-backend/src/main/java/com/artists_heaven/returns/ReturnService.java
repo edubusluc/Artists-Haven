@@ -12,12 +12,16 @@ import com.itextpdf.layout.Document;
 import com.itextpdf.layout.element.*;
 import com.itextpdf.layout.properties.TextAlignment;
 import com.itextpdf.layout.properties.UnitValue;
+
+
 import com.itextpdf.layout.borders.SolidBorder;
 import com.itextpdf.layout.borders.Border;
 import com.itextpdf.kernel.font.PdfFont;
 
 import java.time.LocalDateTime;
+import java.util.Locale;
 
+import org.springframework.context.MessageSource;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -32,32 +36,63 @@ public class ReturnService {
 
     private final OrderService orderService;
 
-    public ReturnService(ReturnRepository returnRepository, OrderService orderService) {
+    private final MessageSource messageSource;
+
+    public ReturnService(ReturnRepository returnRepository, OrderService orderService, MessageSource messageSource) {
         this.returnRepository = returnRepository;
         this.orderService = orderService;
+        this.messageSource = messageSource;
     }
 
+    /**
+     * Saves a return request.
+     *
+     * @param returnRequest the return request to save
+     */
     public void save(Return returnRequest) {
         returnRepository.save(returnRequest);
     }
 
-    public void createReturnForOrder(Order order, String reason, String email) {
+    /**
+     * Creates a return request for a specific order.
+     *
+     * Rules:
+     * <ul>
+     * <li>User must be authenticated or provide a matching email.</li>
+     * <li>Return requests are only allowed within 30 days of order creation.</li>
+     * <li>Duplicate return requests for the same order are not allowed.</li>
+     * </ul>
+     *
+     * @param order  the order to return
+     * @param reason reason for the return
+     * @param email  user's email (used for unauthenticated users)
+     * @throws AppExceptions.ForbiddenActionException if the rules are violated
+     * @throws AppExceptions.DuplicateActionException if a return request already
+     *                                                exists for the order
+     */
+    public void createReturnForOrder(Order order, String reason, String email, String lang) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-        boolean isUnauthenticated = (authentication == null || !authentication.isAuthenticated());
+        boolean isUnauthenticated = (authentication == null
+                || authentication.getPrincipal().equals("anonymousUser"));
         boolean isEmailMismatch = !order.getEmail().equals(email);
 
+        Locale locale = new Locale(lang);
+
         if (isUnauthenticated && isEmailMismatch) {
-            throw new AppExceptions.ForbiddenActionException("Invalid email or unauthenticated user");
+            String msg = messageSource.getMessage("return.message.unauthenticated", null, locale);
+            throw new AppExceptions.ForbiddenActionException(msg);
         }
 
         if (order.getReturnRequest() != null) {
-            throw new AppExceptions.DuplicateActionException("This order already has a return request.");
+             String msg = messageSource.getMessage("return.message.duplicated", null, locale);
+            throw new AppExceptions.DuplicateActionException(msg);
         }
 
         if (order.getCreatedDate().isBefore(LocalDateTime.now().minusDays(30))) {
+            String msg = messageSource.getMessage("return.message.pasted_deadline ", null, locale);
             throw new AppExceptions.ForbiddenActionException(
-                    "Return request can only be created within 30 days of order creation.");
+                    msg);
         }
 
         Return returnRequest = new Return();
@@ -70,6 +105,13 @@ public class ReturnService {
         orderService.save(order);
     }
 
+    /**
+     * Generates a PDF return label for a specific order.
+     *
+     * @param orderId     the ID of the order
+     * @param isAnonymous true if the user's name should be hidden (email only)
+     * @return PDF as byte array
+     */
     public byte[] generateReturnLabelPdf(Long orderId, boolean isAnonymous) {
         Order order = orderService.findOrderById(orderId);
 
@@ -169,6 +211,13 @@ public class ReturnService {
         return sb.toString();
     }
 
+    /**
+     * Finds a return request by ID.
+     *
+     * @param returnId the ID of the return request
+     * @return the Return object
+     * @throws AppExceptions.ResourceNotFoundException if not found
+     */
     public Return findById(Long returnId) {
         return returnRepository.findById(returnId)
                 .orElseThrow(() -> new AppExceptions.ResourceNotFoundException("Return not found"));

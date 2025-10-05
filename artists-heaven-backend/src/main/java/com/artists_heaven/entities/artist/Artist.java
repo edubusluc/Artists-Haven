@@ -42,9 +42,4 @@ public class Artist extends User {
     @Pattern(regexp = "^#([A-Fa-f0-9]{6})$", message = "El color debe estar en formato hexadecimal, por ejemplo: #FFFFFF")
     private String mainColor;
 
-    @Column(name = "banner_photo", nullable = false, length = 255)
-    @NotBlank(message = "La imagen del banner es obligatoria")
-    @Size(max = 255, message = "La URL del banner no debe superar los 255 caracteres")
-    private String bannerPhoto;
-
 }

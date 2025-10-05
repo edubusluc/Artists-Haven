@@ -28,13 +28,33 @@ public class ShoppingCartService {
         this.cartItemRepository = cartItemRepository;
     }
 
+    /**
+     * Retrieves the shopping cart for a user by their ID.
+     *
+     * @param id the ID of the user
+     * @return the shopping cart associated with the user
+     * @throws IllegalArgumentException if the cart cannot be found
+     */
     public ShoppingCart getShoppingCart(Long id) {
         User user = userService.getUserById(id);
         return shoppingCartRepository.findShoppingCartByUserId(user.getId())
                 .orElseThrow(() -> new IllegalArgumentException("Error al encontrar el carrito"));
     }
 
-    public List<CartItem> addProducts(Long id, Product product, String size, int quantity) {
+    /**
+     * Adds a product to an authenticated user's shopping cart.
+     * If the product already exists in the cart (considering size and color where
+     * applicable),
+     * its quantity is increased; otherwise, a new CartItem is created.
+     *
+     * @param id       the ID of the user
+     * @param product  the product to add
+     * @param size     the size of the product (if applicable)
+     * @param quantity the quantity to add
+     * @param color    the color of the product
+     * @return the updated list of items in the shopping cart
+     */
+    public List<CartItem> addProducts(Long id, Product product, String size, int quantity, String color) {
         User user = userService.getUserById(id);
 
         ShoppingCart shoppingCart = getOrCreateShoppingCart(user.getId());
@@ -42,14 +62,13 @@ public class ShoppingCartService {
         Optional<CartItem> existingItem;
 
         if (Section.ACCESSORIES.equals(product.getSection())) {
-            // Para accesorios, no filtramos por talla
             existingItem = shoppingCart.getItems().stream()
-                    .filter(item -> item.getProduct().getId().equals(product.getId()))
+                    .filter(item -> item.getProduct().getId().equals(product.getId()) && item.getColor().equals(color))
                     .findFirst();
         } else {
-            // Para ropa y otros productos, filtramos por talla
             existingItem = shoppingCart.getItems().stream()
-                    .filter(item -> item.getProduct().getId().equals(product.getId()) && item.getSize().equals(size))
+                    .filter(item -> item.getProduct().getId().equals(product.getId()) && item.getSize().equals(size)
+                            && item.getColor().equals(color))
                     .findFirst();
         }
 
@@ -64,12 +83,20 @@ public class ShoppingCartService {
             newItem.setQuantity(quantity);
             newItem.setShoppingCart(shoppingCart);
             shoppingCart.getItems().add(newItem);
+            newItem.setColor(color);
             cartItemRepository.save(newItem);
         }
 
         return shoppingCart.getItems();
     }
 
+    /**
+     * Retrieves an existing shopping cart for a user or creates a new one if it
+     * doesn't exist.
+     *
+     * @param userId the ID of the user
+     * @return the existing or newly created ShoppingCart
+     */
     private ShoppingCart getOrCreateShoppingCart(Long userId) {
         User user = userService.getUserById(userId);
 
@@ -83,8 +110,20 @@ public class ShoppingCartService {
                 });
     }
 
+    /**
+     * Adds a product to a non-authenticated user's shopping cart (e.g., session
+     * cart).
+     * Handles quantity increment if the product already exists.
+     *
+     * @param shoppingCart the shopping cart to modify
+     * @param product      the product to add
+     * @param size         the size of the product (if applicable)
+     * @param quantity     the quantity to add
+     * @param color        the color of the product
+     * @return the updated list of items in the shopping cart
+     */
     public List<CartItem> addProductsNonAuthenticated(ShoppingCart shoppingCart, Product product, String size,
-            int quantity) {
+            int quantity, String color) {
         if (shoppingCart.getItems() == null) {
             shoppingCart.setItems(new ArrayList<>());
         }
@@ -92,14 +131,13 @@ public class ShoppingCartService {
         Optional<CartItem> existingItem;
 
         if (Section.ACCESSORIES.equals(product.getSection())) {
-            // Para accesorios, ignoramos talla
             existingItem = shoppingCart.getItems().stream()
-                    .filter(item -> item.getProduct().getId().equals(product.getId()))
+                    .filter(item -> item.getProduct().getId().equals(product.getId()) && item.getColor().equals(color))
                     .findFirst();
         } else {
-            // Para ropa, considerar talla
             existingItem = shoppingCart.getItems().stream()
-                    .filter(item -> item.getProduct().getId().equals(product.getId()) && item.getSize().equals(size))
+                    .filter(item -> item.getProduct().getId().equals(product.getId()) && item.getSize().equals(size)
+                            && item.getColor().equals(color))
                     .findFirst();
         }
 
@@ -112,35 +150,47 @@ public class ShoppingCartService {
             newItem.setProduct(product);
             newItem.setSize(Section.ACCESSORIES.equals(product.getSection()) ? null : size);
             newItem.setQuantity(quantity);
+            newItem.setColor(color);
             shoppingCart.getItems().add(newItem);
         }
 
         return shoppingCart.getItems();
     }
 
+    /**
+     * Removes a product or reduces its quantity by 1 in an authenticated user's
+     * shopping cart.
+     * If the quantity reaches 0, the item is completely removed from the cart.
+     *
+     * @param userId the ID of the user
+     * @param itemId the ID of the CartItem to remove
+     * @return the updated list of items in the shopping cart
+     */
     public List<CartItem> removeProduct(Long userId, Long itemId) {
-        // Obtener el carrito de compras del usuario
         ShoppingCart shoppingCart = getShoppingCart(userId);
 
-        // Buscar el CartItem a modificar o eliminar
         CartItem toModify = shoppingCart.getItems().get(itemId.intValue());
         if (toModify.getQuantity() == 1) {
-            // Si la cantidad es 1, elimina el CartItem completamente
-            shoppingCart.getItems().remove(toModify); // Eliminar de la lista
-            cartItemRepository.delete(toModify); // Eliminar de la base de datos
+            shoppingCart.getItems().remove(toModify);
+            cartItemRepository.delete(toModify);
         } else {
-            // Si hay más de una cantidad, reducir la cantidad
             toModify.setQuantity(toModify.getQuantity() - 1);
-            cartItemRepository.save(toModify); // Actualizar en la base de datos
+            cartItemRepository.save(toModify);
         }
 
-        // Guardar el carrito de compras actualizado
         shoppingCartRepository.save(shoppingCart);
 
-        // Retornar la lista actualizada de items en el carrito
         return shoppingCart.getItems();
     }
 
+    /**
+     * Removes a product or reduces its quantity by 1 in a non-authenticated user's
+     * shopping cart.
+     *
+     * @param shoppingCart the shopping cart to modify
+     * @param itemId       the ID of the CartItem to remove
+     * @return the updated list of items in the shopping cart
+     */
     public List<CartItem> removeProductNonAuthenticate(ShoppingCart shoppingCart, Long itemId) {
         List<CartItem> shoppingCartItems = shoppingCart.getItems();
 
@@ -153,6 +203,11 @@ public class ShoppingCartService {
         return shoppingCartItems;
     }
 
+    /**
+     * Deletes all items in a user's shopping cart.
+     *
+     * @param userId the ID of the user whose cart should be cleared
+     */
     @Transactional
     public void deleteShoppingCartUserItems(Long userId) {
         ShoppingCart shoppingCart = getShoppingCart(userId);

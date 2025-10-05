@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.artists_heaven.entities.user.User;
 import com.artists_heaven.product.Product;
+import com.artists_heaven.product.ProductColor;
 import com.artists_heaven.product.ProductService;
 import com.artists_heaven.standardResponse.StandardResponse;
 
@@ -63,7 +64,7 @@ public class OrderController {
                 Page<Order> orderPage = orderService.getMyOrdersPageable(user.getId(), pageable);
                 List<Order> orders = orderPage.getContent();
 
-                Map<Long, String> productImages = getProductsImages(orders);
+                Map<Long, Map<String, List<String>>> productImages = getProductsImages(orders);
                 List<OrderDetailsUserDTO> orderDetailsList = orders.stream()
                                 .map(OrderDetailsUserDTO::new)
                                 .toList();
@@ -112,7 +113,7 @@ public class OrderController {
 
                 Order order = orderService.getOrderByIdentifier(identifier, lang);
 
-                Map<Long, String> productImages = getProductsImages(List.of(order));
+                Map<Long, Map<String, List<String>>> productImages = getProductsImages(List.of(order));
                 OrderDetailsUserDTO orderDetailsUserDTO = new OrderDetailsUserDTO(order);
 
                 Map<String, Object> response = new HashMap<>();
@@ -124,22 +125,29 @@ public class OrderController {
                                                 HttpStatus.OK.value()));
         }
 
-        private Map<Long, String> getProductsImages(List<Order> orders) {
-                // Obtener IDs de productos relacionados
+        private Map<Long, Map<String, List<String>>> getProductsImages(List<Order> orders) {
                 Set<Long> productIds = orders.stream()
                                 .flatMap(order -> order.getItems().stream())
                                 .map(OrderItem::getProductId)
                                 .collect(Collectors.toSet());
 
-                // Obtener productos
                 List<Product> products = productService.findAllByIds(productIds);
 
-                // Asociar imagen principal
-                Map<Long, String> productImages = products.stream()
-                                .filter(p -> p.getImages() != null && !p.getImages().isEmpty())
-                                .collect(Collectors.toMap(
-                                                Product::getId,
-                                                p -> p.getImages().get(0)));
+                Map<Long, Map<String, List<String>>> productImages = new HashMap<>();
+
+                for (Product p : products) {
+                        Map<String, List<String>> colorImages = new HashMap<>();
+
+                        if (p.getColors() != null) {
+                                for (ProductColor pc : p.getColors()) {
+                                        if (pc.getImages() != null && !pc.getImages().isEmpty()) {
+                                                colorImages.put(pc.getColorName(), pc.getImages());
+                                        }
+                                }
+                        }
+
+                        productImages.put(p.getId(), colorImages);
+                }
 
                 return productImages;
         }

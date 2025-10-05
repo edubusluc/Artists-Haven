@@ -145,7 +145,7 @@ class EmailSenderServiceTest {
     }
 
     @Test
-    public void testSendPasswordResetEmail() {
+    void testSendPasswordResetEmail() {
         // Arrange
         String to = "user@example.com";
         String link = "http://example.com/reset-password?token=xyz123";

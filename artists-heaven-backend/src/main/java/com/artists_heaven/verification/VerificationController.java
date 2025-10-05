@@ -20,7 +20,6 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 
 @RestController
 @RequestMapping("/api/verification")
@@ -46,15 +45,14 @@ public class VerificationController {
 
     @PostMapping("/send")
     @Operation(summary = "Submit artist verification request", description = "Allows an artist to submit a verification request by uploading a validation video and providing their email.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Verification request submitted successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
-            @ApiResponse(responseCode = "403", description = "Forbidden - user is not an artist or not eligible", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
-            @ApiResponse(responseCode = "409", description = "Conflict - duplicate request already exists", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
-            @ApiResponse(responseCode = "500", description = "Internal server error while processing the verification request", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
-    })
+    @ApiResponse(responseCode = "200", description = "Verification request submitted successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+    @ApiResponse(responseCode = "403", description = "Forbidden - user is not an artist or not eligible", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+    @ApiResponse(responseCode = "409", description = "Conflict - duplicate request already exists", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+    @ApiResponse(responseCode = "500", description = "Internal server error while processing the verification request", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
     public ResponseEntity<StandardResponse<String>> sendValidation(
             @Parameter(description = "Email of the artist submitting the verification request", required = true) @RequestParam("email") String email,
-            @Parameter(description = "Validation video file uploaded by the artist", required = true, content = @Content(mediaType = "video/*")) @RequestParam("video") MultipartFile video, @RequestParam String lang) {
+            @Parameter(description = "Validation video file uploaded by the artist", required = true, content = @Content(mediaType = "video/*")) @RequestParam("video") MultipartFile video,
+            @RequestParam String lang) {
 
         Artist artist = verificationService.validateArtistForVerification(email);
 

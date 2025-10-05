@@ -6,47 +6,40 @@ import "easymde/dist/easymde.min.css";
 import { useTranslation } from 'react-i18next';
 
 const EditProduct = () => {
-    const { id } = useParams(); // Obtener el ID del producto desde la URL
+    const { id } = useParams();
     const navigate = useNavigate();
 
     const [product, setProduct] = useState({
         name: "",
         description: "",
         price: "",
-        sizes: {},
-        availableUnits: 1, // Unidades disponibles solo para accesorios
         categories: [],
         collectionId: null,
-        images: [],
         section: "",
         composition: "",
         shippingDetails: "",
-        modelReference: ""
     });
 
+    const [colors, setColors] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [modelFile, setModelFile] = useState(null);
     const [errorMessage, setErrorMessage] = useState("");
     const [successMessage, setSuccessMessage] = useState("");
     const [categoriesList, setCategoriesList] = useState([]);
     const [collectionsList, setCollectionsList] = useState([]);
-    const [newImages, setNewImages] = useState([]);
-    const [removedImages, setRemovedImages] = useState([]);
-    const [authToken, setAuthToken] = useState(localStorage.getItem("authToken"));
+    const [authToken] = useState(localStorage.getItem("authToken"));
     const rol = localStorage.getItem("role");
 
     const { t, i18n } = useTranslation();
     const language = i18n.language;
 
     useEffect(() => {
-        setValidationErrors({})
+        setValidationErrors({});
     }, [language]);
 
     const [validationErrors, setValidationErrors] = useState({});
 
     const markdownOptions = useMemo(() => ({
         spellChecker: false,
-        placeholder: "Ejemplo: - Lavar a mano\n- No usar lejía",
         status: false,
         autofocus: false,
         toolbar: [
@@ -62,267 +55,163 @@ const EditProduct = () => {
         setProduct(prev => ({ ...prev, composition: value }));
     }, []);
 
-    const handleOriginChange = useCallback((value) => {
-        setProduct(prev => ({ ...prev, origin: value }));
-    }, []);
-
     const handleCareChange = useCallback((value) => {
-        const cleaned = value.replace(/[#*_\-\n]/g, "").trim();
-        setProduct(prev => ({
-            ...prev,
-            shippingDetails: cleaned === "" ? "" : value
-        }));
+        setProduct(prev => ({ ...prev, shippingDetails: value }));
     }, []);
 
-    // Estado para controlar el orden local de las imágenes
-    const [images, setImages] = useState([]);
-
-    // Función para mover imágenes dentro del array images
-    const moveImage = (fromIndex, toIndex) => {
-        if (toIndex < 0 || toIndex >= images.length) return; // evitar índices fuera de rango
-        setImages((prevImages) => {
-            const updated = [...prevImages];
-            const [moved] = updated.splice(fromIndex, 1);
-            updated.splice(toIndex, 0, moved);
-            return updated;
-        });
-    };
-
-    // Cargar datos del producto al montar el componente
+    // 🔹 Cargar producto + colores desde backend
     useEffect(() => {
         if (rol !== "ADMIN") {
             setErrorMessage("No tienes permisos para acceder a esta página.");
             setLoading(false);
             return;
         }
-        fetch(`/api/product/details/${id}`, {
-            method: "GET",
-        })
+        fetch(`/api/product/details/${id}`, { method: "GET" })
             .then((response) => {
-                if (!response.ok) {
-                    throw new Error("Error al obtener el producto: " + response.statusText);
-                }
+                if (!response.ok) throw new Error("Error al obtener el producto");
                 return response.json();
             })
-
             .then((productData) => {
-                productData.data.categories = productData.data.categories.map(category => category.id); // Obtener solo los IDs de las categorías
-                setProduct(productData.data); // Establecer los valores iniciales del producto
-                setImages(productData.data.images || []); // Inicializar estado local de imágenes con las actuales
+                const p = productData.data;
+                p.categories = p.categories.map(c => c.id);
+                setProduct(p);
+                setColors(
+                    p.colors.map(c => ({
+                        ...c,
+                        colorId: c.colorId,
+                        images: c.images || [],
+                        sizes: c.sizes || { XS: 0, S: 0, M: 0, L: 0, XL: 0, XXL: 0 },
+                        availableUnits: c.availableUnits || 0,
+                        modelFile: null,
+                    }))
+                );
                 setLoading(false);
             })
-            .catch((error) => {
+            .catch(() => {
                 setErrorMessage("Error cargando los datos del producto.");
-                console.error(error);
                 setLoading(false);
             });
     }, [id, rol]);
 
-    console.log(product);
-
-    // Cargar lista de categorías
+    // 🔹 Cargar categorías y colecciones
     useEffect(() => {
         if (!checkTokenExpiration || rol !== 'ADMIN') {
             setErrorMessage("No tienes permisos para acceder a esta página.");
-            return;  // Sale de la función si no tiene permisos
+            return;
         }
-
         const fetchCategories = async () => {
-            try {
-                const response = await fetch("/api/product/categories");
-                if (!response.ok) {
-                    throw new Error('Error al cargar las categorías');
-                }
-                const categoriesData = await response.json();
-                setCategoriesList(categoriesData.data);
-            } catch (error) {
-                console.error("Error cargando las categorías:", error);
-                setErrorMessage("Error al cargar las categorías.");
-            }
+            const response = await fetch("/api/product/categories");
+            const data = await response.json();
+            setCategoriesList(data.data);
         };
-
         const fetchCollections = async () => {
-            try {
-                const response = await fetch("/api/admin/allCollections", {
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`,
-                    }
-                });
-                if (!response.ok) {
-                    throw new Error('Error al cargar las colecciones');
-                }
-                const collectionData = await response.json();
-                setCollectionsList(collectionData.data);
-            } catch (error) {
-                console.error("Error cargando las colecciones:", error);
-                setErrorMessage("Error al cargar las colecciones.");
-            }
+            const response = await fetch("/api/product/allCollections", {
+                headers: { 'Authorization': `Bearer ${authToken}` },
+            });
+            const data = await response.json();
+            setCollectionsList(data.data);
         };
-
         fetchCategories();
         fetchCollections();
     }, [checkTokenExpiration, rol]);
 
-    // Sin cambios en handleChange y demás handlers
     const handleChange = (e) => {
         const { name, value } = e.target;
         setProduct({ ...product, [name]: value });
     };
 
-    const handleModelReferenceChange = (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        const allowedExtensions = ["glb", "gltf"];
-        const fileExtension = file.name.split(".").pop().toLowerCase();
-
-        if (!allowedExtensions.includes(fileExtension)) {
-            setValidationErrors((prev) => ({
-                ...prev,
-                modelReference: "Solo se permiten archivos .glb o .gltf",
-            }));
-            return;
-        }
-
-        setValidationErrors((prev) => ({ ...prev, modelReference: "" }));
-        setModelFile(file);
-        setProduct((prev) => ({
-            ...prev,
-            modelReference: file.name
-        }));
-    };
-
-    const handleImageChange = (e) => {
-        const files = Array.from(e.target.files);
-        setNewImages([...newImages, ...files]);
-    };
-
-    const handleRemoveImage = async (image) => {
-        // Actualizamos las imágenes locales
-        setImages((prev) => prev.filter((img) => img !== image));
-        // También actualizamos el producto
-        setProduct((prev) => ({
-            ...prev,
-            images: prev.images.filter((img) => img !== image),
-        }));
-        // Añadimos a removedImages para el backend
-        const response = await fetch(`/api/product${image}`);
-        const blob = await response.blob();
-        const file = new File([blob], image.split('/').pop(), { type: blob.type });
-        setRemovedImages((prev) => [...prev, file]);
-    };
-
-    const handleSizeChange = (e, size) => {
-        const { value } = e.target;
-        setProduct((prev) => ({
-            ...prev,
-            sizes: {
-                ...prev.sizes,
-                [size]: value ? parseInt(value, 10) : 0,
-            },
-        }));
-    };
-
     const formRef = useRef(null);
 
-    console.log("EO")
-
+    // 🔹 Enviar actualización
     const handleSubmit = async (e) => {
         e.preventDefault();
-
         setValidationErrors({});
         setErrorMessage("");
 
         let errors = {};
-
         if (!product.name) errors.name = t('productForm.error.requiredName');
         if (!product.description) errors.description = t('productForm.error.requiredDescription');
         if (product.price < 0) errors.price = t('productForm.error.invalidPrice');
         if (!product.price) errors.price = t('productForm.error.requiredPrice');
-        if (
-            product.section !== "ACCESSORIES" &&
-            (!product.sizes || Object.values(product.sizes).every(value => value === 0))
-        ) {
-            errors.sizes = t('productForm.error.requiredSizes');
-        }
         if (product.categories.length === 0) errors.categories = t('productForm.error.requiredCategories');
         if (!product.section) errors.section = t('productForm.error.requiredSection');
-        if (product.section === "ACCESSORIES" && (!product.availableUnits || product.availableUnits < 1)) {
-            errors.availableUnits = t('productForm.error.requiredAvailableUnits');
-        }
         if (!product.composition) errors.composition = t('productForm.error.requiredComposition');
         if (!product.shippingDetails) errors.shippingDetails = t('productForm.error.requiredShippingDetails');
-        if (product.images.length === 0 && newImages.length === 0) errors.images = t('productForm.error.requiredImages');
 
+        colors.forEach((c, idx) => {
+            if (!c.colorName || c.colorName.trim() === "") {
+                errors[`color_${idx}_name`] = t('productForm.error.requiredColorName');
+            }
+
+            if (!c.images || c.images.length === 0) {
+                errors[`color_${idx}_images`] = t('productForm.error.requiredImages');
+            }
+
+            if (product.section === "ACCESSORIES") {
+                if (!c.availableUnits || c.availableUnits < 1) {
+                    errors[`color_${idx}_availableUnits`] = t('productForm.error.requiredAvailableUnits');
+                }
+            } else {
+                if (!c.sizes || Object.values(c.sizes).every(v => v === 0)) {
+                    errors[`color_${idx}_sizes`] = t('productForm.error.requiredSizes');
+                }
+            }
+        });
 
         if (Object.keys(errors).length > 0) {
             setValidationErrors(errors);
-            const firstErrorField = Object.keys(errors)[0];
-            console.log(firstErrorField)
-            const element = formRef.current.querySelector(`[name="${firstErrorField}"]`);
-            console.log(element);
-            if (element) {
-                element.scrollIntoView({ behavior: "smooth", block: "center" });
-                element.focus();
-            }
-
+            const firstError = Object.keys(errors)[0];
+            const el = formRef.current.querySelector(`[name="${firstError}"]`);
+            if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
             return;
         }
 
-        // Actualizamos product.images con el orden actual de imágenes locales antes de enviar
-        const updatedProduct = { ...product, images };
+        const productToSend = {
+            ...product, colors: colors.map(c => ({
+                colorId: c.colorId || null,
+                colorName: c.colorName,
+                hexCode: c.hexCode,
+                images: c.images.filter(img => typeof img === "string"), // solo rutas
+                sizes: product.section === "ACCESSORIES" ? null : c.sizes,
+                availableUnits: product.section === "ACCESSORIES" ? c.availableUnits : null,
+                modelReference: c.modelReference || null,
+            }))
+        };
 
         const formData = new FormData();
-        formData.append("product", new Blob([JSON.stringify(updatedProduct)], { type: "application/json" }));
+        formData.append("product", new Blob([JSON.stringify(productToSend)], { type: "application/json" }));
+        colors.forEach((c, i) => {
+            c.images.forEach(img => {
+                if (img instanceof File) {
+                    formData.append(`colorImages_${i}`, img);
+                }
+            });
 
-        newImages.forEach((file) => {
-            formData.append("newImages", file);
+            if (c.modelFile) {
+                formData.append(`colorModel_${i}`, c.modelFile);
+            }
         });
-
-        removedImages.forEach((file) => {
-            formData.append("removedImages", file);
-        });
-
-        if (modelFile) {
-            formData.append("model", modelFile);
-        }
-
-        formData.append(
-            "reorderedImages",
-            new Blob([JSON.stringify(images)], { type: "application/json" })
-        );
 
         try {
             const response = await fetch(`/api/product/edit/${id}?lang=${language}`, {
                 method: "PUT",
                 body: formData,
-                headers: {
-                    'Authorization': `Bearer ${authToken}`
-                },
+                headers: { 'Authorization': `Bearer ${authToken}` },
             });
-
             const result = await response.json();
-            const errorMessage = result.message;
-            console.log(result);
-
             if (response.ok) {
                 setSuccessMessage("Producto actualizado correctamente.");
                 navigate("/admin/products/store");
             } else {
-                throw new Error(errorMessage);
+                throw new Error(result.message);
             }
-        } catch (error) {
-            setErrorMessage(error.message);;
+        } catch (err) {
+            setErrorMessage(err.message);
         }
     };
 
-    if (loading) {
-        return <div>Cargando...</div>;
-    }
-
-    if (rol !== "ADMIN") {
-        return "No tienes permisos para acceder a esta página";
-    }
+    if (loading) return <div>Cargando...</div>;
+    if (rol !== "ADMIN") return "No tienes permisos para acceder";
 
     return (
         <div className="min-h-screen bg-gray-50 py-10 px-4 sm:px-10">
@@ -395,50 +284,6 @@ const EditProduct = () => {
                             <p className="text-red-600 text-sm">{validationErrors.section}</p>
                         )}
                     </div>
-
-                    {/* Tallas o unidades */}
-                    {product.section !== "ACCESSORIES" && (
-                        <div>
-                            <label className="block font-semibold mb-2 text-sm text-gray-600">{t('editProductForm.size&stock')}</label>
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                                {["XS", "S", "M", "L", "XL", "XXL"].map((size) => (
-                                    <div key={size}>
-                                        <label className="block text-sm text-gray-500">{size}</label>
-                                        <input
-                                            type="number"
-                                            name="sizes"
-                                            min="0"
-                                            value={product.sizes[size] || ""}
-                                            onChange={(e) => handleSizeChange(e, size)}
-                                            className="w-full border rounded px-3 py-1 text-sm"
-                                        />
-                                    </div>
-                                ))}
-                            </div>
-                            {validationErrors.sizes && (
-                                <p className="text-red-600 text-sm">{validationErrors.sizes}</p>
-                            )}
-                        </div>
-                    )}
-
-                    {product.section === "ACCESSORIES" && (
-                        <div>
-                            <label className="block font-semibold mb-2 text-sm text-gray-600">{t('editProductForm.availableUnits')}</label>
-                            <input
-                                type="number"
-                                min="1"
-                                name="availableUnits"
-                                value={product.availableUnits}
-                                onChange={(e) => setProduct({ ...product, availableUnits: e.target.value })}
-                                className="w-full border rounded px-4 py-2 text-sm"
-
-                            />
-                            {validationErrors.availableUnits && (
-                                <p className="text-red-600 text-sm">{validationErrors.availableUnits}</p>
-                            )}
-                        </div>
-                    )}
-
                     {/* Categorías */}
                     <div>
                         <label className="block font-semibold mb-2 text-sm text-gray-600">{t('editProductForm.categories')}</label>
@@ -526,96 +371,224 @@ const EditProduct = () => {
                         )}
                     </div>
 
-                    {/* Imágenes actuales con botones ↑ ↓ para mover */}
                     <div>
-                        <label className="block font-semibold mb-2 text-sm text-gray-600">{t('editProductForm.actualImages')}</label>
-                        <div className="flex flex-wrap gap-4">
-                            {images.map((image, idx) => (
-                                <div key={idx} className="relative w-24 h-24 flex flex-col items-center">
-                                    <img
-                                        src={`/api/product${image}`}
-                                        alt={`Imagen ${idx}`}
-                                        className="w-full h-full object-contain rounded"
-                                    />
-                                    <div className="flex gap-1 mt-1">
-                                        <button
-                                            type="button"
-                                            onClick={() => moveImage(idx, idx - 1)}
-                                            disabled={idx === 0}
-                                            className="bg-gray-300 hover:bg-gray-400 rounded px-1 text-sm"
-                                            title="Mover arriba"
-                                        >
-                                            ↑
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => moveImage(idx, idx + 1)}
-                                            disabled={idx === images.length - 1}
-                                            className="bg-gray-300 hover:bg-gray-400 rounded px-1 text-sm"
-                                            title="Mover abajo"
-                                        >
-                                            ↓
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => handleRemoveImage(image)}
-                                            className="bg-red-500 hover:bg-red-600 text-white rounded px-1 text-sm"
-                                            title="Eliminar imagen"
-                                        >
-                                            ✕
-                                        </button>
-                                    </div>
+                        <label className="block font-semibold mb-2 text-sm text-gray-600">{t('editProductForm.colors')}</label>
+                        {colors.map((color, index) => (
+                            <div key={index} className="mb-4 border p-2 rounded">
+                                <div className="flex justify-between items-center">
+                                    <span className="font-semibold">Color #{index + 1}</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => setColors(colors.filter((_, i) => i !== index))}
+                                        className="text-red-600 text-sm font-bold hover:underline"
+                                    >
+                                        {t('editProductForm.removeColor')}
+                                    </button>
                                 </div>
-                            ))}
-                        </div>
+                                <input
+                                    type="text"
+                                    placeholder="Nombre del color"
+                                    value={color.colorName}
+                                    onChange={(e) => {
+                                        const updated = [...colors];
+                                        updated[index].colorName = e.target.value;
+                                        setColors(updated);
+                                    }}
+                                    className="border rounded px-2 py-1 mr-2"
+                                />
+                                <input
+                                    type="color"
+                                    value={color.hexCode || "#000000"}
+                                    onChange={(e) => {
+                                        const updated = [...colors];
+                                        updated[index].hexCode = e.target.value;
+                                        setColors(updated);
+                                    }}
+                                    className="mr-2"
+                                />
+                                <input
+                                    type="file"
+                                    multiple
+                                    onChange={(e) => {
+                                        const updated = [...colors];
+                                        updated[index].images = [...updated[index].images, ...Array.from(e.target.files)];
+                                        setColors(updated);
+                                    }}
+                                />
+
+                                <div className="mt-2">
+                                    <label className="block text-sm font-semibold">{t('editProductForm.3dModel')}</label>
+
+                                    {color.modelReference && !color.modelFile && (
+                                        <p className="text-sm text-gray-600">
+                                            Modelo actual: {color.modelReference.replace("/product_media/", "")}
+                                        </p>
+                                    )}
+
+                                    <input
+                                        type="file"
+                                        accept=".glb,.gltf"
+                                        onChange={(e) => {
+                                            const file = e.target.files[0];
+                                            if (!file) return;
+
+                                            const allowed = ["glb", "gltf"];
+                                            const ext = file.name.split(".").pop().toLowerCase();
+                                            if (!allowed.includes(ext)) {
+                                                setValidationErrors(prev => ({
+                                                    ...prev,
+                                                    [`color_${index}_model`]: "Solo .glb o .gltf"
+                                                }));
+                                                return;
+                                            }
+
+                                            const updated = [...colors];
+                                            updated[index].modelFile = file;
+                                            updated[index].modelReference = file.name;
+                                            setColors(updated);
+                                        }}
+                                        className="mt-1 block text-sm text-gray-500"
+                                    />
+
+                                    {validationErrors[`color_${index}_name`] && (
+                                        <p className="text-red-600 text-sm">{validationErrors[`color_${index}_name`]}</p>
+                                    )}
+                                    {validationErrors[`color_${index}_images`] && (
+                                        <p className="text-red-600 text-sm">{validationErrors[`color_${index}_images`]}</p>
+                                    )}
+                                </div>
+
+                                {/* Vista previa */}
+                                {color.images.length > 0 && (
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
+                                        {color.images.map((img, imgIndex) => (
+                                            <div key={imgIndex} className="text-center relative">
+                                                <img
+                                                    src={typeof img === "string" ? `/api/product${img}` : URL.createObjectURL(img)}
+                                                    alt={`preview-${index}-${imgIndex}`}
+                                                    className="w-full h-24 object-cover rounded shadow mb-2"
+                                                />
+
+                                                {/* Botón eliminar */}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const updated = [...colors];
+                                                        updated[index].images = updated[index].images.filter((_, i) => i !== imgIndex);
+                                                        setColors(updated);
+                                                    }}
+                                                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs shadow hover:bg-red-600"
+                                                >
+                                                    ✕
+                                                </button>
+
+                                                {/* Botones de orden */}
+                                                <div className="flex justify-center gap-1">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const updated = [...colors];
+                                                            const imgs = [...updated[index].images];
+                                                            const [moved] = imgs.splice(imgIndex, 1);
+                                                            imgs.splice(imgIndex - 1, 0, moved);
+                                                            updated[index].images = imgs;
+                                                            setColors(updated);
+                                                        }}
+                                                        disabled={imgIndex === 0}
+                                                        className="px-2 py-1 bg-gray-300 rounded text-xs disabled:opacity-50"
+                                                    >
+                                                        ↑
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const updated = [...colors];
+                                                            const imgs = [...updated[index].images];
+                                                            const [moved] = imgs.splice(imgIndex, 1);
+                                                            imgs.splice(imgIndex + 1, 0, moved);
+                                                            updated[index].images = imgs;
+                                                            setColors(updated);
+                                                        }}
+                                                        disabled={imgIndex === color.images.length - 1}
+                                                        className="px-2 py-1 bg-gray-300 rounded text-xs disabled:opacity-50"
+                                                    >
+                                                        ↓
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {/* Stock */}
+                                {product.section === "ACCESSORIES" ? (
+                                    <div className="mt-2">
+                                        <label className="block text-sm">{t('editProductForm.availableUnits')}</label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            value={color.availableUnits}
+                                            onChange={(e) => {
+                                                const updated = [...colors];
+                                                updated[index].availableUnits = parseInt(e.target.value) || 0;
+                                                setColors(updated);
+                                            }}
+                                            className="border rounded px-2 py-1"
+                                        />
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-2">
+                                        {["XS", "S", "M", "L", "XL", "XXL"].map((size) => (
+                                            <div key={size}>
+                                                <label className="block text-sm text-gray-500">{size}</label>
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    value={color.sizes[size] || 0}
+                                                    onChange={(e) => {
+                                                        const updated = [...colors];
+                                                        updated[index].sizes[size] = parseInt(e.target.value) || 0;
+                                                        setColors(updated);
+                                                    }}
+                                                    className="w-full border rounded px-3 py-1 text-sm"
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                                {validationErrors[`color_${index}_sizes`] && (
+                                    <p className="text-red-600 text-sm">{validationErrors[`color_${index}_sizes`]}</p>
+                                )}
+                                {validationErrors[`color_${index}_availableUnits`] && (
+                                    <p className="text-red-600 text-sm">{validationErrors[`color_${index}_availableUnits`]}</p>
+                                )}
+                            </div>
+
+                        ))}
+                        <button
+                            type="button"
+                            onClick={() =>
+                                setColors([...colors, {
+                                    colorName: "",
+                                    hexCode: "",
+                                    images: [],
+                                    sizes: { XS: 0, S: 0, M: 0, L: 0, XL: 0, XXL: 0 },
+                                    availableUnits: 0
+                                }])
+                            }
+                            className="bg-gray-300 px-2 py-1 rounded"
+                        >
+                            + {t('editProductForm.addColor')}
+                        </button>
                     </div>
-
-                    {/* Subir nuevas imágenes */}
-                    <div>
-                        <label className="block font-semibold mb-2 text-sm text-gray-600">{t('editProductForm.uploadNewImages')}</label>
-                        <input
-                            type="file"
-                            name="images"
-                            multiple
-                            onChange={handleImageChange}
-                            className="block w-full text-sm text-gray-500"
-                        />
-                        {validationErrors.images && (
-                            <p className="text-red-600 text-sm">{validationErrors.images}</p>
-                        )}
-                    </div>
-
-                    {product.modelReference && !modelFile && (
-                        <p className="text-sm text-gray-600">
-                            Modelo actual:
-                            {product.modelReference.replace("/product_media/", "")}
-                        </p>
-                    )}
-
-                    <div>
-                        <label className="block font-semibold mb-2 text-sm text-gray-600">{t('editProductForm.upload3dModel')}</label>
-                        <input
-                            type="file"
-                            onChange={handleModelReferenceChange}
-                            className="block w-full text-sm text-gray-500"
-                        />
-                        {validationErrors.modelReference && (
-                            <p className="text-red-600 text-sm">{validationErrors.modelReference}</p>
-                        )}
-                    </div>
-
 
                     {successMessage && <div className="text-green-600 text-sm mt-3">{successMessage}</div>}
                     {errorMessage && <div className="text-red-600 text-sm mt-3">{errorMessage}</div>}
 
-                    <button
-                        type="submit"
-                        className="w-full py-2 bg-yellow-400 text-black font-semibold rounded-md shadow-md transition duration-300 ease-in-out hover:bg-yellow-500 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-yellow-300"
-                    >
-                        Guardar Cambios
+                    <button type="submit" className="w-full py-2 bg-yellow-400 text-black font-semibold rounded-md shadow-md transition duration-300 ease-in-out hover:bg-yellow-500 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-yellow-300">
+                        {t('editProductForm.saveChanges')}
                     </button>
                 </form>
-
             </div>
         </div>
     );

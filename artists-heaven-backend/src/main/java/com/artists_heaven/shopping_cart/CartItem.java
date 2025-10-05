@@ -30,4 +30,6 @@ public class CartItem {
     @JsonIgnore
     private ShoppingCart shoppingCart;
 
+    private String color;
+
 }

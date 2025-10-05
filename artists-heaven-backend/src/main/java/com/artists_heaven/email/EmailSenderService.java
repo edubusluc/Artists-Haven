@@ -79,6 +79,14 @@ public class EmailSenderService {
         }
     }
 
+    /**
+     * Sends a purchase confirmation email to the user with an attached invoice PDF.
+     *
+     * @param userEmail the email address of the recipient user
+     * @param order     the {@link Order} object containing order details
+     * @param discount  the discount applied to the order (can be null)
+     * @throws MessagingException if there is an error creating or sending the email
+     */
     public void sendPurchaseConfirmationEmail(String userEmail, Order order, Long discount) throws MessagingException {
         MimeMessage message = mailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(message, true);
@@ -122,6 +130,13 @@ public class EmailSenderService {
         mailSender.send(message);
     }
 
+    /**
+     * Retrieves the count of emails sent, grouped by {@link EmailType} for a given
+     * year.
+     *
+     * @param year the year to filter emails
+     * @return a map of {@link EmailType} to the number of emails sent
+     */
     public Map<EmailType, Integer> getEmailCounts(int year) {
         List<Object[]> result = emailSenderRepository.countEmailsByType(year);
         Map<EmailType, Integer> emailCountMap = new EnumMap<>(EmailType.class);
@@ -134,6 +149,12 @@ public class EmailSenderService {
         return emailCountMap;
     }
 
+    /**
+     * Sends a password reset email to a user with a reset link.
+     *
+     * @param to   the recipient email address
+     * @param link the password reset link to include in the email
+     */
     public void sendPasswordResetEmail(String to, String link) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(to);

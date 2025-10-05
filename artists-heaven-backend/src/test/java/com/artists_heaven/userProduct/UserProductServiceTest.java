@@ -3,9 +3,9 @@ package com.artists_heaven.userProduct;
 import com.artists_heaven.entities.user.User;
 import com.artists_heaven.entities.user.UserRepository;
 import com.artists_heaven.exception.AppExceptions;
+import com.artists_heaven.images.ImageServingUtil;
 import com.artists_heaven.productVote.ProductVoteRepository;
 
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -17,10 +17,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.nio.file.DirectoryStream;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.*;
@@ -29,6 +26,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 class UserProductServiceTest {
@@ -45,6 +44,9 @@ class UserProductServiceTest {
     @Mock
     private MessageSource messageSource;
 
+    @Mock
+    private ImageServingUtil imageServingUtil;
+
     @InjectMocks
     private UserProductService userProductService;
 
@@ -60,23 +62,6 @@ class UserProductServiceTest {
         user = new User();
         user.setId(1L);
         user.setPoints(50);
-
-        Files.createDirectories(Paths.get("artists-heaven-backend/src/main/resources/userProduct_media/"));
-
-    }
-
-    @AfterEach
-    void cleanUp() throws Exception {
-        Path uploadDir = Paths.get("artists-heaven-backend/src/main/resources/userProduct_media/");
-
-        if (Files.exists(uploadDir)) {
-            // Borrar todos los archivos dentro de la carpeta
-            try (DirectoryStream<Path> stream = Files.newDirectoryStream(uploadDir)) {
-                for (Path filePath : stream) {
-                    Files.deleteIfExists(filePath);
-                }
-            }
-        }
     }
 
     // 🔹 createUserProduct tests
@@ -148,21 +133,33 @@ class UserProductServiceTest {
     // 🔹 saveImages
     @Test
     void saveImages_success() throws IOException {
+        // Mock del archivo
         MultipartFile file = mock(MultipartFile.class);
         when(file.isEmpty()).thenReturn(false);
         when(file.getOriginalFilename()).thenReturn("test.png");
         when(file.getInputStream()).thenReturn(new ByteArrayInputStream("fake".getBytes()));
 
+        // Mock del ImageServingUtil
+        when(imageServingUtil.saveImages(eq(file), anyString(), eq("/userProduct_media/"), eq(false)))
+                .thenReturn("/userProduct_media/fake-file.png");
+
+        // Ejecutar el método
         List<String> urls = userProductService.saveImages(List.of(file));
 
+        // Validaciones
         assertEquals(1, urls.size());
-        assertTrue(urls.get(0).contains("/userProduct_media/"));
+        assertEquals("/userProduct_media/fake-file.png", urls.get(0));
     }
 
     @Test
     void saveImages_fails_emptyFile() {
         MultipartFile file = mock(MultipartFile.class);
-        when(file.isEmpty()).thenReturn(true);
+        when(file.isEmpty()).thenReturn(false);
+        when(file.getOriginalFilename()).thenReturn("test.png");
+
+        // Mockear ImageServingUtil para simular que el archivo está vacío
+        when(imageServingUtil.saveImages(eq(file), anyString(), eq("/userProduct_media/"), eq(false)))
+                .thenThrow(new IllegalArgumentException("The file is not a valid image or video."));
 
         assertThrows(IllegalArgumentException.class,
                 () -> userProductService.saveImages(List.of(file)));
@@ -173,7 +170,10 @@ class UserProductServiceTest {
         MultipartFile file = mock(MultipartFile.class);
         when(file.isEmpty()).thenReturn(false);
         when(file.getOriginalFilename()).thenReturn("test.png");
-        when(file.getInputStream()).thenThrow(new IOException());
+
+        // Mockear ImageServingUtil para simular IOException al guardar
+        when(imageServingUtil.saveImages(eq(file), anyString(), eq("/userProduct_media/"), eq(false)))
+                .thenThrow(new IllegalArgumentException("Error while saving the file.", new IOException()));
 
         assertThrows(IllegalArgumentException.class,
                 () -> userProductService.saveImages(List.of(file)));

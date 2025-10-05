@@ -9,8 +9,10 @@ import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
+import org.springframework.context.MessageSource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
@@ -35,12 +37,15 @@ public class EventService {
 
     private final EventRepository eventRepository;
     private final ArtistRepository artistRepository;
+    private final MessageSource messageSource;
 
     private final OkHttpClient httpClient = new OkHttpClient();
 
-    public EventService(EventRepository eventRepository, ArtistRepository artistRepository) {
+    public EventService(EventRepository eventRepository, ArtistRepository artistRepository,
+            MessageSource messageSource) {
         this.eventRepository = eventRepository;
         this.artistRepository = artistRepository;
+        this.messageSource = messageSource;
     }
 
     /**
@@ -122,7 +127,7 @@ public class EventService {
      * @throws IllegalArgumentException if the artist is not found, the event date
      *                                  is invalid, or any other error occurs.
      */
-    public Event newEvent(EventDTO eventDTO) {
+    public Event newEvent(EventDTO eventDTO, String lang) {
         // 1. Validar que el artista existe
         Artist artist = artistRepository.findById(eventDTO.getArtistId())
                 .orElseThrow(() -> new AppExceptions.ResourceNotFoundException("Artist not found"));
@@ -146,18 +151,20 @@ public class EventService {
         event.setArtist(artist);
 
         // 5. Obtener coordenadas
-        getCoordinatesFromEvent(event);
+        getCoordinatesFromEvent(event, lang);
 
         // 6. Guardar el evento
         return eventRepository.save(event);
     }
 
-    private void getCoordinatesFromEvent(Event event) {
+    private void getCoordinatesFromEvent(Event event, String lang) {
         String location = URLEncoder.encode(event.getLocation(), StandardCharsets.UTF_8);
         Request request = new Request.Builder()
                 .url("https://nominatim.openstreetmap.org/search?format=json&q=" + location)
                 .header("User-Agent", "ArtistsHeaven/1.0 (contacto@tuemail.com)") // Identificación válida
                 .build();
+
+        Locale locale = new Locale(lang);
 
         try (Response response = httpClient.newCall(request).execute()) {
             if (!response.isSuccessful()) {
@@ -183,7 +190,8 @@ public class EventService {
             }
 
         } catch (Exception e) {
-            throw new InvalidInputException("Error al obtener coordenadas");
+            String msg = messageSource.getMessage("coordinate.notFound", null, locale);
+            throw new InvalidInputException(msg);
         }
     }
 
@@ -227,7 +235,7 @@ public class EventService {
      * @param eventDTO the DTO containing the new event details.
      * @throws IllegalArgumentException if the event date is in the past.
      */
-    public void updateEvent(Event event, EventDTO eventDTO) {
+    public void updateEvent(Event event, EventDTO eventDTO, String lang) {
         // Get the current date to validate the event date
         LocalDate actualDate = LocalDate.now();
 
@@ -244,12 +252,19 @@ public class EventService {
         event.setMoreInfo(eventDTO.getMoreInfo());
         event.setImage(eventDTO.getImage());
 
-        getCoordinatesFromEvent(event);
+        getCoordinatesFromEvent(event, lang);
 
         // Save the updated event to the repository
         eventRepository.save(event);
     }
 
+    /**
+     * Finds all events for a given artist occurring in the current year.
+     *
+     * @param artistId the ID of the artist
+     * @return a list of {@link Event} objects for the current year;
+     *         returns an empty list if the artistId is null
+     */
     public List<Event> findEventThisYearByArtist(Long artistId) {
         if (artistId == null) {
             return Collections.emptyList();
@@ -258,10 +273,21 @@ public class EventService {
         return eventRepository.findArtistEventThisYear(artistId, year);
     }
 
+    /**
+     * Finds all future events for a given artist, including today and later.
+     *
+     * @param artistId the ID of the artist
+     * @return a list of {@link Event} objects that are scheduled in the future
+     */
     public List<Event> findFutureEventsByArtist(Long artistId) {
         return eventRepository.findFutureEventsByArtist(artistId, LocalDate.now());
     }
 
+    /**
+     * Finds all future events in the system, including today and later.
+     *
+     * @return a list of {@link Event} objects that are scheduled in the future
+     */
     public List<Event> findFutureEvents() {
         return eventRepository.findFutureEvents(LocalDate.now());
     }

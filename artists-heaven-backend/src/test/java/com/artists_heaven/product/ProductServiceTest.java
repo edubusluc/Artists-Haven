@@ -24,6 +24,7 @@ import java.nio.file.Path;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentMatchers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
@@ -43,20 +44,22 @@ import com.artists_heaven.order.Order;
 import com.artists_heaven.order.OrderItem;
 import com.artists_heaven.page.PageResponse;
 
-import static org.junit.Assert.assertNull;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -64,10 +67,12 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 
 import org.springframework.context.MessageSource;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 
 class ProductServiceTest {
@@ -83,6 +88,9 @@ class ProductServiceTest {
 
     @Mock
     private CollectionRepository collectionRepository;
+
+    @Mock
+    private MultipartFile mockFile;
 
     @InjectMocks
     private ProductService productService;
@@ -106,52 +114,91 @@ class ProductServiceTest {
         }
     }
 
+    private Product createProduct(String name, String desc, boolean available, boolean onPromotion) {
+        Product p = new Product();
+        p.setName(name);
+        p.setDescription(desc);
+        p.setAvailable(available);
+        p.setOn_Promotion(onPromotion);
+        return p;
+    }
+
     @Test
     void registerProductTest() throws Exception {
+        // Arrange: crear DTO válido
+        ProductColorDTO productColorDTO = new ProductColorDTO();
+        productColorDTO.setColorName("colorTest");
+        productColorDTO.setHexCode("#ffffff");
+        productColorDTO.setImages(List.of("newImages"));
+        Map<String, Integer> sizes = Map.of("M", 1);
+        productColorDTO.setSizes(sizes);
+
         ProductDTO productDTO = new ProductDTO();
-        productDTO.setCategories(new HashSet<>());
-        productDTO.setDescription("Description");
         productDTO.setName("Name");
+        productDTO.setDescription("Description");
         productDTO.setPrice(100.0f);
-        productDTO.setSizes(new HashMap<>());
-        productDTO.setImages(new ArrayList<>());
         productDTO.setSection(Section.TSHIRT);
-        productDTO.setAvailableUnits(0);
+        productDTO.setComposition("Cotton 100%");
+        productDTO.setShippingDetails("Ships in 3-5 days");
+        productDTO.setAvailable(true);
+        productDTO.setReference(12345L);
+        productDTO.setColors(List.of(productColorDTO));
 
         Product product = new Product();
-        product.setCategories(productDTO.getCategories());
-        product.setDescription(productDTO.getDescription());
+        product.setId(1L);
         product.setName(productDTO.getName());
+        product.setDescription(productDTO.getDescription());
         product.setPrice(productDTO.getPrice());
-        product.setSize(productDTO.getSizes());
-        product.setImages(productDTO.getImages());
-        product.setAvailable(false);
+        product.setSection(productDTO.getSection());
+        product.setComposition(productDTO.getComposition());
+        product.setShippingDetails(productDTO.getShippingDetails());
+        product.setAvailable(productDTO.getAvailable());
+        product.setReference(productDTO.getReference());
 
         when(productRepository.save(any(Product.class))).thenReturn(product);
 
+        // Act
         Product result = productService.registerProduct(productDTO);
 
-        assertEquals(product, result);
+        // Assert
+        assertNotNull(result);
+        assertEquals(productDTO.getName(), result.getName());
+        assertEquals(productDTO.getDescription(), result.getDescription());
+        assertEquals(productDTO.getPrice(), result.getPrice(), 0.001f);
+        assertEquals(productDTO.getSection(), result.getSection());
+        assertEquals(productDTO.getComposition(), result.getComposition());
+        assertEquals(productDTO.getShippingDetails(), result.getShippingDetails());
+        assertEquals(productDTO.getReference(), result.getReference());
+        verify(productRepository, times(1)).save(any(Product.class));
     }
 
     @Test
     void testRegisterProductThrowsException() {
+        // Arrange: crear un DTO válido mínimo
+        ProductColorDTO productColorDTO = new ProductColorDTO();
+        productColorDTO.setColorName("colorTest");
+        productColorDTO.setHexCode("#ffffff");
+        productColorDTO.setImages(List.of("newImages"));
+        Map<String, Integer> sizes = Map.of("M", 1);
+        productColorDTO.setSizes(sizes);
+
         ProductDTO productDTO = new ProductDTO();
-        productDTO.setCategories(new HashSet<>());
-        productDTO.setDescription("Test Description");
         productDTO.setName("Test Name");
+        productDTO.setDescription("Test Description");
         productDTO.setPrice(100.0f);
-        productDTO.setSizes(new HashMap<>());
-        productDTO.setImages(new ArrayList<>());
         productDTO.setSection(Section.TSHIRT);
-        productDTO.setAvailableUnits(0);
+        productDTO.setComposition("Cotton 100%");
+        productDTO.setShippingDetails("Ships in 3-5 days");
+        productDTO.setAvailable(true);
+        productDTO.setReference(12345L);
+        productDTO.setColors(List.of(productColorDTO));
 
         when(productRepository.save(any(Product.class)))
                 .thenThrow(new RuntimeException("Unable to create the product"));
 
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
-            productService.registerProduct(productDTO);
-        });
+        // Act & Assert
+        RuntimeException exception = assertThrows(RuntimeException.class,
+                () -> productService.registerProduct(productDTO));
 
         assertEquals("Unable to create the product", exception.getMessage());
         verify(productRepository, times(1)).save(any(Product.class));
@@ -159,31 +206,56 @@ class ProductServiceTest {
 
     @Test
     void registerProductWithAvailableUnitsTest() {
-        ProductDTO productDTO = new ProductDTO();
-        productDTO.setCategories(new HashSet<>());
-        productDTO.setDescription("Product with units");
-        productDTO.setName("Product Name");
-        productDTO.setPrice(150.0f);
-        productDTO.setSizes(new HashMap<>());
-        productDTO.setImages(new ArrayList<>());
-        productDTO.setSection(Section.TSHIRT);
-        productDTO.setAvailableUnits(10);
+        ProductColorDTO colorDTO = new ProductColorDTO();
+        colorDTO.setColorName("Red");
+        colorDTO.setHexCode("#FF0000");
+        colorDTO.setAvailableUnits(10);
+        colorDTO.setImages(List.of("red_front.jpg", "red_back.jpg"));
+        colorDTO.setSizes(Map.of("M", 5, "L", 5));
 
+        ProductDTO productDTO = new ProductDTO();
+        productDTO.setName("Product Name");
+        productDTO.setDescription("Product with units");
+        productDTO.setPrice(150.0f);
+        productDTO.setSection(Section.TSHIRT);
+        productDTO.setComposition("100% Cotton");
+        productDTO.setShippingDetails("Ships in 3-5 days");
+        productDTO.setAvailable(true);
+        productDTO.setReference(123456L);
+        productDTO.setColors(List.of(colorDTO));
+
+        // Entidad esperada
         Product product = new Product();
-        product.setCategories(productDTO.getCategories());
-        product.setDescription(productDTO.getDescription());
+        product.setId(1L);
         product.setName(productDTO.getName());
+        product.setDescription(productDTO.getDescription());
         product.setPrice(productDTO.getPrice());
-        product.setAvailableUnits(productDTO.getAvailableUnits());
-        product.setImages(productDTO.getImages());
         product.setSection(productDTO.getSection());
+        product.setComposition(productDTO.getComposition());
+        product.setShippingDetails(productDTO.getShippingDetails());
+        product.setAvailable(productDTO.getAvailable());
+        product.setReference(productDTO.getReference());
+
+        ProductColor color = new ProductColor();
+        color.setColorName("Red");
+        color.setHexCode("#FF0000");
+        color.setAvailableUnits(10);
+        color.setImages(List.of("red_front.jpg", "red_back.jpg"));
+        color.setSizes(Map.of("M", 5, "L", 5));
+        color.setProduct(product);
+
+        product.setColors(List.of(color));
 
         when(productRepository.save(any(Product.class))).thenReturn(product);
 
+        // Act
         Product result = productService.registerProduct(productDTO);
 
-        assertEquals(product, result);
-        assertEquals(10, result.getAvailableUnits());
+        // Assert
+        assertNotNull(result);
+        assertEquals("Product Name", result.getName());
+        assertEquals(1, result.getColors().size());
+        assertEquals(10, result.getColors().get(0).getAvailableUnits());
         verify(productRepository, times(1)).save(any(Product.class));
     }
 
@@ -258,123 +330,120 @@ class ProductServiceTest {
 
     @Test
     void testUpdateProduct() {
+        // Arrange: producto existente en BD
         Product product = new Product();
-        product.setImages(new ArrayList<>());
         product.setId(1L);
-        product.setSize(new HashMap<>());
-        product.setCategories(new HashSet<Category>());
+        product.setName("Old Name");
+        product.setDescription("Old Description");
+        product.setPrice(100.0f);
+        product.setCategories(new HashSet<>());
+        product.setComposition("Old Composition");
+        product.setShippingDetails("Old Shipping Details");
+        product.setAvailable(true);
+        product.setReference(111L);
+        product.setColors(new ArrayList<>());
 
-
+        // DTO con los nuevos valores
         ProductDTO productDTO = new ProductDTO();
-        productDTO.setCategories(new HashSet<>());
-        productDTO.setDescription("Updated Description");
         productDTO.setName("Updated Name");
-        productDTO.setPrice((float) 200.0);
-        productDTO.setSizes(new HashMap<>());
-        productDTO.setImages(new ArrayList<>());
+        productDTO.setDescription("Updated Description");
+        productDTO.setPrice(200.0f);
+        productDTO.setCategories(new HashSet<>());
+        productDTO.setComposition("New Composition");
+        productDTO.setShippingDetails("New Shipping Details");
+        productDTO.setAvailable(false);
+        productDTO.setReference(222L);
+        productDTO.setColors(new ArrayList<>());
 
+        // Mock del archivo 3D
         MultipartFile model3d = new MockMultipartFile(
-                "file",                             
-                "test.glb",                        
-                "test/glb",                       
-                "contenido-de-la-imagen".getBytes(StandardCharsets.UTF_8)  
-        );
+                "file",
+                "test.glb",
+                "model/gltf-binary",
+                "contenido-del-modelo".getBytes(StandardCharsets.UTF_8));
 
-        List<MultipartFile> newImages = new ArrayList<>();
-        List<MultipartFile> removedImages = new ArrayList<>();
+        // Map vacío de imágenes por color
+        Map<Integer, List<MultipartFile>> colorImages = new HashMap<>();
+
+        // Map con un solo modelo 3D en la posición 0
+        Map<Integer, MultipartFile> colorModels = new HashMap<>();
+        colorModels.put(0, model3d);
+
         when(productRepository.findById(anyLong())).thenReturn(Optional.of(product));
-        productService.updateProduct(product.getId(), removedImages, newImages, productDTO, null,model3d);
+        when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        assertEquals(productDTO.getName(), product.getName());
-        assertEquals(productDTO.getDescription(), product.getDescription());
-        assertEquals(productDTO.getPrice(), product.getPrice());
-        assertEquals(productDTO.getSizes(), product.getSize());
-        assertEquals(productDTO.getCategories(), product.getCategories());
+        // Act
+        productService.updateProduct(product.getId(), productDTO, colorImages, colorModels);
+
+        // Assert
+        assertEquals("Updated Name", product.getName());
+        assertEquals("Updated Description", product.getDescription());
+        assertEquals(200.0f, product.getPrice());
+        assertEquals("New Composition", product.getComposition());
+        assertEquals("New Shipping Details", product.getShippingDetails());
+        assertFalse(product.getAvailable());
         verify(productRepository, times(1)).save(product);
     }
 
     @Test
     void testUpdateProductWithNewImages() throws IOException {
+        // Arrange: producto existente
         Product product = new Product();
-        product.setImages(new ArrayList<>());
         product.setId(1L);
-        product.setSize(new HashMap<>());
-        product.setCategories(new HashSet<Category>());
+        product.setName("Old Name");
+        product.setDescription("Old Description");
+        product.setPrice(100.0f);
+        product.setCategories(new HashSet<>());
+        product.setComposition("Old Composition");
+        product.setShippingDetails("Old Shipping");
+        product.setAvailable(true);
+        product.setReference(111L);
+        product.setColors(new ArrayList<>());
 
+        // DTO con valores nuevos
         ProductDTO productDTO = new ProductDTO();
-        productDTO.setCategories(new HashSet<>());
-        productDTO.setDescription("Updated Description");
         productDTO.setName("Updated Name");
-        productDTO.setPrice((float) 200.0);
-        productDTO.setSizes(new HashMap<>());
-        productDTO.setImages(new ArrayList<>());
-
-        MultipartFile newImage = mock(MultipartFile.class);
-        when(productRepository.findById(anyLong())).thenReturn(Optional.of(product));
-        when(newImage.getOriginalFilename()).thenReturn("newImage.jpg");
-        when(newImage.getInputStream()).thenReturn(new ByteArrayInputStream("image data".getBytes()));
-        List<MultipartFile> newImages = List.of(newImage);
-
-        MultipartFile model3d = mock(MultipartFile.class);
-        when(model3d.getOriginalFilename()).thenReturn("newModel.glb");
-        when(model3d.getInputStream()).thenReturn(new ByteArrayInputStream("model data".getBytes()));
-
-
-        try (MockedStatic<Files> mockedFiles = Mockito.mockStatic(Files.class)) {
-            mockedFiles.when(() -> Files.copy(any(InputStream.class), any(Path.class))).thenAnswer(invocation -> null);
-
-            productService.updateProduct(product.getId(), null, newImages, productDTO, null, model3d);
-
-            assertEquals(productDTO.getName(), product.getName());
-            assertEquals(productDTO.getDescription(), product.getDescription());
-            assertEquals(productDTO.getPrice(), product.getPrice());
-            assertEquals(productDTO.getSizes(), product.getSize());
-            assertEquals(productDTO.getCategories(), product.getCategories());
-            verify(productRepository, times(1)).save(product);
-        }
-    }
-
-    @Test
-    void testUpdateProductWithRemovedAndNewImages() throws IOException {
-        Product product = new Product();
-        product.setImages(new ArrayList<>(List.of("/product_media/image1.jpg", "/product_media/image2.jpg")));
-        product.setId(1L);
-        product.setSize(new HashMap<>());
-        product.setCategories(new HashSet<Category>());
-
-        ProductDTO productDTO = new ProductDTO();
-        productDTO.setCategories(new HashSet<>());
         productDTO.setDescription("Updated Description");
-        productDTO.setName("Updated Name");
-        productDTO.setPrice((float) 200.0);
-        productDTO.setSizes(new HashMap<>());
-        productDTO.setImages(new ArrayList<>());
+        productDTO.setPrice(200.0f);
+        productDTO.setCategories(new HashSet<>());
+        productDTO.setComposition("New Composition");
+        productDTO.setShippingDetails("New Shipping");
+        productDTO.setAvailable(true);
+        productDTO.setReference(222L);
+        productDTO.setColors(new ArrayList<>());
 
-        MultipartFile removedImage = mock(MultipartFile.class);
-        when(removedImage.getOriginalFilename()).thenReturn("image1.jpg");
-        when(productRepository.findById(anyLong())).thenReturn(Optional.of(product));
-        List<MultipartFile> removedImages = List.of(removedImage);
-
+        // Mock de nueva imagen y modelo 3D
         MultipartFile newImage = mock(MultipartFile.class);
         when(newImage.getOriginalFilename()).thenReturn("newImage.jpg");
         when(newImage.getInputStream()).thenReturn(new ByteArrayInputStream("image data".getBytes()));
-        List<MultipartFile> newImages = List.of(newImage);
 
-        MultipartFile model3d = mock(MultipartFile.class);
-        when(model3d.getOriginalFilename()).thenReturn("newModel.glb");
-        when(model3d.getInputStream()).thenReturn(new ByteArrayInputStream("model data".getBytes()));
+        Map<Integer, List<MultipartFile>> colorImages = new HashMap<>();
 
+        // Map con un solo modelo 3D en la posición 0
+        MultipartFile model3d = new MockMultipartFile(
+                "file",
+                "test.glb",
+                "model/gltf-binary",
+                "contenido-del-modelo".getBytes(StandardCharsets.UTF_8));
+        Map<Integer, MultipartFile> colorModels = new HashMap<>();
+        colorModels.put(0, model3d);
+
+        when(productRepository.findById(anyLong())).thenReturn(Optional.of(product));
+        when(productRepository.save(any(Product.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Mock estático de Files.copy
         try (MockedStatic<Files> mockedFiles = Mockito.mockStatic(Files.class)) {
-            mockedFiles.when(() -> Files.delete(any(Path.class))).thenAnswer(invocation -> null);
             mockedFiles.when(() -> Files.copy(any(InputStream.class), any(Path.class))).thenAnswer(invocation -> null);
 
-            productService.updateProduct(product.getId(), removedImages, newImages, productDTO, null, model3d);
+            // Act
+            productService.updateProduct(product.getId(), productDTO, colorImages, colorModels);
 
-            assertEquals(productDTO.getName(), product.getName());
-            assertEquals(productDTO.getDescription(), product.getDescription());
-            assertEquals(productDTO.getPrice(), product.getPrice());
-            assertEquals(productDTO.getSizes(), product.getSize());
-            assertEquals(productDTO.getCategories(), product.getCategories());
+            // Assert
+            assertEquals("Updated Name", product.getName());
+            assertEquals("Updated Description", product.getDescription());
+            assertEquals(200.0f, product.getPrice());
+            assertEquals("New Composition", product.getComposition());
+            assertEquals("New Shipping", product.getShippingDetails());
             verify(productRepository, times(1)).save(product);
         }
     }
@@ -390,7 +459,7 @@ class ProductServiceTest {
         MultipartFile model3d = mock(MultipartFile.class);
 
         assertThrows(AppExceptions.ResourceNotFoundException.class,
-                () -> productService.updateProduct(1L, null, null, productDTO, null, model3d));
+                () -> productService.updateProduct(1L, productDTO, null, Map.of(0, model3d)));
     }
 
     @Test
@@ -404,7 +473,7 @@ class ProductServiceTest {
         productDTO.setPrice(100f);
 
         assertThrows(AppExceptions.InvalidInputException.class,
-                () -> productService.updateProduct(1L, null, null, productDTO, null, null));
+                () -> productService.updateProduct(1L, productDTO, null, null));
     }
 
     @Test
@@ -418,67 +487,299 @@ class ProductServiceTest {
         productDTO.setPrice(0f);
 
         assertThrows(AppExceptions.InvalidInputException.class,
-                () -> productService.updateProduct(1L, null, null, productDTO, null, null));
-    }
-
-    @Test
-    void testUpdateProduct_withReorderedImages() {
-        Product product = new Product();
-        product.setId(1L);
-        product.setImages(new ArrayList<>(List.of("img1.jpg", "img2.jpg", "img3.jpg")));
-        product.setSize(new HashMap<>());
-        product.setCategories(new HashSet<Category>());
-        when(productRepository.findById(anyLong())).thenReturn(Optional.of(product));
-
-        ProductDTO productDTO = new ProductDTO();
-        productDTO.setName("Updated Name");
-        productDTO.setPrice(100f);
-        productDTO.setCategories(new HashSet<>());
-        productDTO.setSizes(new HashMap<>());
-
-        List<String> reorderedImages = List.of("img3.jpg", "img1.jpg"); // img2 se moverá al final
-
-        productService.updateProduct(1L, null, null, productDTO, reorderedImages, null);
-
-        List<String> expectedOrder = List.of("img3.jpg", "img1.jpg", "img2.jpg");
-        assertEquals(expectedOrder, product.getImages());
-        verify(productRepository, times(1)).save(product);
+                () -> productService.updateProduct(1L, productDTO, null, null));
     }
 
     @Test
     void testUpdateProduct_collectionNotFound() {
+        // Arrange: producto existente
         Product product = new Product();
         product.setId(1L);
-        product.setImages(List.of("Images"));
-        product.setSize(new HashMap<>());
-        product.setCategories(new HashSet<Category>());
+        product.setName("Valid Name");
+        product.setPrice(100f);
+        product.setCategories(new HashSet<>());
+        product.setComposition("Some Composition");
+        product.setShippingDetails("Some Shipping");
+        product.setAvailable(true);
+        product.setReference(123L);
 
+        // DTO con collectionId que no existe
         ProductDTO productDTO = new ProductDTO();
         productDTO.setName("Valid Name");
         productDTO.setPrice(100f);
-        productDTO.setCollectionId(99L); // ID que no existe
-        productDTO.setSizes(new HashMap<>());
-        productDTO.setCategories(new HashSet<Category>());
+        productDTO.setCollectionId(99L); // ID inexistente
+        productDTO.setCategories(new HashSet<>());
 
-        // Mockear collectionRepository
-        when(productRepository.findById(1l)).thenReturn(Optional.of(product));
+        // Mocks
+        when(productRepository.findById(1L)).thenReturn(Optional.of(product));
         when(collectionRepository.findById(99L)).thenReturn(Optional.empty());
 
-        // Llamar al método y verificar que lance la excepción correcta
+        // Act & Assert
         assertThrows(AppExceptions.ResourceNotFoundException.class,
-                () -> productService.updateProduct(1L, null, null, productDTO, null, null));
+                () -> productService.updateProduct(1L, productDTO, null, null));
+    }
+
+    @Test
+    void testUpdateProduct_keepExistingImages() {
+        // Arrange
+        Product product = new Product();
+        product.setId(1L);
+        product.setName("Old");
+        product.setPrice(100f);
+        product.setColors(new ArrayList<>());
+        Category category = new Category();
+        Set<Category> categorySet = new HashSet<>();
+        categorySet.add(category);
+        product.setCategories(categorySet);
+
+        // DTO con un color con imágenes ya existentes
+        ProductColorDTO colorDTO = new ProductColorDTO();
+        colorDTO.setColorName("Red");
+        colorDTO.setHexCode("#FF0000");
+        colorDTO.setAvailableUnits(10);
+        colorDTO.setSizes(Map.of("S", 1));
+        colorDTO.setImages(List.of("oldImage1.jpg", "oldImage2.jpg"));
+
+        ProductDTO productDTO = new ProductDTO();
+        productDTO.setName("Updated");
+        productDTO.setPrice(200f);
+        productDTO.setColors(List.of(colorDTO));
+        productDTO.setCategories(new HashSet<>());
+
+        when(productRepository.findById(1L)).thenReturn(Optional.of(product));
+        when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // Act
+        productService.updateProduct(1L, productDTO, null, null);
+
+        // Assert
+        assertEquals(1, product.getColors().size());
+        ProductColor updatedColor = product.getColors().get(0);
+        assertEquals("Red", updatedColor.getColorName());
+        assertEquals(List.of("oldImage1.jpg", "oldImage2.jpg"), updatedColor.getImages());
+        verify(productRepository, times(1)).save(product);
+    }
+
+    @Test
+    void testUpdateProduct_addNewColor() {
+        Category category = new Category();
+        category.setId(1L);
+
+        Set<Category> categories = new HashSet<>();
+        categories.add(category);
+
+        Product product = new Product();
+        product.setId(1L);
+        product.setColors(new ArrayList<>());
+        product.setCategories(categories);
+
+        ProductColorDTO newColorDTO = new ProductColorDTO();
+        newColorDTO.setColorName("Blue");
+        newColorDTO.setHexCode("#0000FF");
+        newColorDTO.setAvailableUnits(5);
+        newColorDTO.setSizes(Map.of("M", 2));
+        newColorDTO.setImages(new ArrayList<>());
+        newColorDTO.setModelReference("existingModel.glb");
+
+        ProductDTO productDTO = new ProductDTO();
+        productDTO.setName("Product with new color");
+        productDTO.setPrice(150f);
+        productDTO.setColors(List.of(newColorDTO));
+        productDTO.setCategories(new HashSet<>());
+
+        when(productRepository.findById(1L)).thenReturn(Optional.of(product));
+        when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        productService.updateProduct(1L, productDTO, null, null);
+
+        assertEquals(1, product.getColors().size());
+        ProductColor addedColor = product.getColors().get(0);
+        assertEquals("Blue", addedColor.getColorName());
+        assertEquals("#0000FF", addedColor.getHexCode());
+        assertEquals(5, addedColor.getAvailableUnits());
+        assertEquals("existingModel.glb", addedColor.getModelReference());
+    }
+
+    @Test
+    void testUpdateProduct_updateExistingColorAndRemoveOld() {
+        Category category = new Category();
+        category.setId(1L);
+
+        Set<Category> categories = new HashSet<>();
+        categories.add(category);
+
+        ProductColor existingColor = new ProductColor();
+        existingColor.setId(1L);
+        existingColor.setColorName("OldRed");
+        existingColor.setImages(List.of("oldRed.jpg"));
+
+        Product product = new Product();
+        product.setId(1L);
+        product.setColors(new ArrayList<>(List.of(existingColor)));
+        product.setCategories(categories);
+
+        ProductColorDTO colorDTO = new ProductColorDTO();
+        colorDTO.setColorId(1L); // actualizar color existente
+        colorDTO.setColorName("UpdatedRed");
+        colorDTO.setHexCode("#FF1111");
+        colorDTO.setAvailableUnits(20);
+        colorDTO.setSizes(Map.of("L", 3));
+        colorDTO.setImages(List.of("updatedRed.jpg"));
+
+        ProductColorDTO newColorDTO = new ProductColorDTO();
+        newColorDTO.setColorName("Green"); // nuevo color
+        newColorDTO.setHexCode("#00FF00");
+        newColorDTO.setAvailableUnits(10);
+        newColorDTO.setSizes(Map.of("S", 1));
+        newColorDTO.setImages(List.of("green.jpg"));
+
+        ProductDTO productDTO = new ProductDTO();
+        productDTO.setName("Updated Product");
+        productDTO.setPrice(200f);
+        productDTO.setColors(List.of(colorDTO, newColorDTO));
+        productDTO.setCategories(new HashSet<>());
+
+        when(productRepository.findById(1L)).thenReturn(Optional.of(product));
+        when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        productService.updateProduct(1L, productDTO, null, null);
+
+        assertEquals(2, product.getColors().size());
+        ProductColor updatedColor = product.getColors().stream()
+                .filter(c -> c.getId() != null && c.getId().equals(1L))
+                .findFirst().get();
+        assertEquals("UpdatedRed", updatedColor.getColorName());
+        assertEquals(List.of("updatedRed.jpg"), updatedColor.getImages());
+
+        ProductColor addedColor = product.getColors().stream()
+                .filter(c -> c.getId() == null)
+                .findFirst().get();
+        assertEquals("Green", addedColor.getColorName());
+        assertEquals(List.of("green.jpg"), addedColor.getImages());
+    }
+
+    @Test
+    void testUpdateProduct_keepExistingModelIfNoNewFile() {
+        Category category = new Category();
+        category.setId(1L);
+
+        Set<Category> categories = new HashSet<>();
+        categories.add(category);
+
+        ProductColor existingColor = new ProductColor();
+        existingColor.setId(1L);
+        existingColor.setModelReference("oldModel.glb");
+
+        Product product = new Product();
+        product.setId(1L);
+        product.setColors(new ArrayList<>(List.of(existingColor)));
+        product.setCategories(categories);
+
+        ProductColorDTO colorDTO = new ProductColorDTO();
+        colorDTO.setColorId(1L);
+        colorDTO.setColorName("Red");
+        colorDTO.setModelReference("oldModel.glb");
+
+        ProductDTO productDTO = new ProductDTO();
+        productDTO.setName("Product");
+        productDTO.setPrice(100f);
+        productDTO.setColors(List.of(colorDTO));
+        productDTO.setCategories(new HashSet<>());
+
+        when(productRepository.findById(1L)).thenReturn(Optional.of(product));
+        when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        productService.updateProduct(1L, productDTO, null, null);
+
+        assertEquals("oldModel.glb", product.getColors().get(0).getModelReference());
+    }
+
+    @Test
+    void testUpdateProduct_addColorImagesAndModel() throws IOException {
+        Category category = new Category();
+        category.setId(1L);
+
+        Set<Category> categories = new HashSet<>();
+        categories.add(category);
+
+        Product product = new Product();
+        product.setId(1L);
+        product.setColors(new ArrayList<>());
+        product.setCategories(categories);
+
+        ProductColorDTO colorDTO = new ProductColorDTO();
+        colorDTO.setColorName("Yellow");
+        colorDTO.setHexCode("#FFFF00");
+        colorDTO.setAvailableUnits(5);
+        colorDTO.setSizes(Map.of("M", 2));
+        colorDTO.setImages(List.of("oldImage.jpg"));
+
+        ProductDTO productDTO = new ProductDTO();
+        productDTO.setName("Product with images and model");
+        productDTO.setPrice(100f);
+        productDTO.setColors(List.of(colorDTO));
+        productDTO.setCategories(new HashSet<>());
+
+        // Mock de nuevas imágenes
+        MultipartFile newImage1 = mock(MultipartFile.class);
+        when(newImage1.getOriginalFilename()).thenReturn("new1.jpg");
+        when(newImage1.getInputStream()).thenReturn(new ByteArrayInputStream("data1".getBytes()));
+
+        MultipartFile newImage2 = mock(MultipartFile.class);
+        when(newImage2.getOriginalFilename()).thenReturn("new2.jpg");
+        when(newImage2.getInputStream()).thenReturn(new ByteArrayInputStream("data2".getBytes()));
+
+        Map<Integer, List<MultipartFile>> colorImages = Map.of(0, List.of(newImage1, newImage2));
+
+        // Mock del modelo 3D
+        MultipartFile model3d = new MockMultipartFile(
+                "file", "model.glb", "model/gltf-binary", "3d content".getBytes());
+
+        Map<Integer, MultipartFile> colorModels = Map.of(0, model3d);
+
+        when(productRepository.findById(1L)).thenReturn(Optional.of(product));
+        when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // Mock de métodos internos saveImages y saveModel
+        ProductService spyService = spy(productService);
+        doReturn(List.of("saved1.jpg", "saved2.jpg")).when(spyService).saveImages(anyList());
+        doReturn("savedModel.glb").when(spyService).saveModel(any(MultipartFile.class));
+
+        spyService.updateProduct(1L, productDTO, colorImages, colorModels);
+
+        assertEquals(1, product.getColors().size());
+        ProductColor updatedColor = product.getColors().get(0);
+
+        // Verificar que se agregaron las imágenes nuevas
+        assertEquals(List.of("oldImage.jpg", "saved1.jpg", "saved2.jpg"), updatedColor.getImages());
+
+        // Verificar que se guardó el modelo 3D
+        assertEquals("savedModel.glb", updatedColor.getModelReference());
     }
 
     @Test
     void registerProduct_nameNull_throwsException() {
+        ProductColorDTO productColorDTO = new ProductColorDTO();
+        productColorDTO.setColorName("colorTest");
+        productColorDTO.setHexCode("#ffffff");
+        productColorDTO.setImages(List.of("newImages"));
+        Map<String, Integer> sizes = Map.of("M", 1);
+        productColorDTO.setSizes(sizes);
+
         ProductDTO dto = new ProductDTO();
-        dto.setName(null);
+        dto.setName(null); // nombre nulo
         dto.setPrice(10f);
+        dto.setSection(Section.TSHIRT);
+        dto.setComposition("Cotton");
+        dto.setShippingDetails("Ships in 3 days");
+        dto.setColors(List.of(productColorDTO));
 
         AppExceptions.InvalidInputException ex = assertThrows(
                 AppExceptions.InvalidInputException.class,
                 () -> productService.registerProduct(dto));
-        assertEquals("Product name is required.", ex.getMessage());
+
+        System.out.println(ex.getMessage());
+        assertTrue(ex.getMessage().contains("product.name.required") || ex.getMessage().toLowerCase().contains("name"));
     }
 
     @Test
@@ -534,62 +835,205 @@ class ProductServiceTest {
 
     @Test
     void registerProduct_withAvailableUnits_setsUnits() {
+        // Arrange
         ProductDTO dto = new ProductDTO();
-        dto.setName("Test");
+        dto.setName("Test Product");
         dto.setPrice(10f);
-        dto.setAvailableUnits(5);
+        dto.setComposition("Canvas and paint");
+        dto.setShippingDetails("Ships in 2 days");
+        dto.setSection(Section.ACCESSORIES);
+
+        ProductColorDTO color = new ProductColorDTO();
+        color.setColorName("Red");
+        color.setHexCode("#FF0000");
+        color.setAvailableUnits(5);
+
+        dto.setColors(List.of(color));
 
         when(productRepository.existsByReference(anyLong())).thenReturn(false);
         when(productRepository.save(any())).thenAnswer(i -> i.getArguments()[0]);
 
+        // Act
         Product saved = productService.registerProduct(dto);
-        assertEquals(5, saved.getAvailableUnits());
-        assertNull(saved.getSize());
+
+        // Assert
+        assertNotNull(saved.getColors());
+        assertEquals(1, saved.getColors().size());
+        assertEquals(5, saved.getColors().get(0).getAvailableUnits());
     }
 
     @Test
     void registerProduct_withSizes_setsSize() {
+        // Arrange: crear un ProductColorDTO con tallas
+        ProductColorDTO colorDTO = new ProductColorDTO();
+        colorDTO.setColorName("Red");
+        colorDTO.setHexCode("#FF0000");
+        Map<String, Integer> sizes = new HashMap<>();
+        sizes.put("M", 2);
+        colorDTO.setSizes(sizes);
+        colorDTO.setAvailableUnits(0);
+        colorDTO.setImages(List.of("image1.jpg"));
+
+        // Crear DTO del producto
         ProductDTO dto = new ProductDTO();
         dto.setName("Test");
         dto.setPrice(10f);
-        dto.setAvailableUnits(0);
-        Map<String, Integer> sizes = new HashMap<>();
-        sizes.put("M", 2);
-        dto.setSizes(sizes);
+        dto.setSection(Section.TSHIRT);
+        dto.setComposition("Cotton 100%");
+        dto.setShippingDetails("Ships in 3-5 days");
+        dto.setAvailable(true);
+        dto.setReference(123L);
+        dto.setColors(List.of(colorDTO));
 
+        // Mocks
         when(productRepository.existsByReference(anyLong())).thenReturn(false);
         when(productRepository.save(any())).thenAnswer(i -> i.getArguments()[0]);
 
+        // Act
         Product saved = productService.registerProduct(dto);
-        assertEquals(sizes, saved.getSize());
+
+        // Assert
+        assertEquals(1, saved.getColors().size());
+        ProductColor savedColor = saved.getColors().get(0);
+        assertEquals(sizes, savedColor.getSizes());
     }
 
     @Test
-    void testDeleteImages() throws IOException {
-        // Mock del archivo
-        MultipartFile file = mock(MultipartFile.class);
-        when(file.getOriginalFilename()).thenReturn("test.jpg");
+    void registerProduct_colorsNull_throwsException() {
+        ProductDTO dto = new ProductDTO();
+        dto.setName("Valid Name");
+        dto.setPrice(10f);
+        dto.setSection(Section.TSHIRT);
+        dto.setColors(null); // <- nulo
 
-        // Lista de archivos a eliminar
-        List<MultipartFile> files = Collections.singletonList(file);
+        AppExceptions.InvalidInputException ex = assertThrows(
+                AppExceptions.InvalidInputException.class,
+                () -> productService.registerProduct(dto));
 
-        // Mock del comportamiento de Files.delete
-        Path mockPath = Paths.get("artists-heaven-backend/src/main/resources/product_media", "test.jpg");
-        Files.createDirectories(mockPath.getParent()); // Asegura que el directorio existe en los tests
-        try (MockedStatic<Files> mockedFiles = Mockito.mockStatic(Files.class)) {
-            mockedFiles.when(() -> Files.delete(mockPath)).thenAnswer(invocation -> null);
+        assertEquals("Debe haber al menos un color con inventario e imágenes.", ex.getMessage());
+    }
 
-            // Llamada al método a probar
-            List<String> result = productService.deleteImages(files);
+    @Test
+    void registerProduct_colorsEmpty_throwsException() {
+        ProductDTO dto = new ProductDTO();
+        dto.setName("Valid Name");
+        dto.setPrice(10f);
+        dto.setSection(Section.TSHIRT);
+        dto.setColors(List.of()); // <- vacío
 
-            // Verificaciones
-            assertNotNull(result);
-            assertFalse(result.isEmpty());
-            assertTrue(result.get(0).contains("test.jpg"));
+        AppExceptions.InvalidInputException ex = assertThrows(
+                AppExceptions.InvalidInputException.class,
+                () -> productService.registerProduct(dto));
 
-            // Verifica que Files.delete fue llamado correctamente
-            mockedFiles.verify(() -> Files.delete(mockPath), times(1));
-        }
+        assertEquals("Debe haber al menos un color con inventario e imágenes.", ex.getMessage());
+    }
+
+    @Test
+    void registerProduct_accessoryWithNullUnits_throwsException() {
+        ProductColorDTO color = new ProductColorDTO();
+        color.setColorName("Blue");
+        color.setHexCode("#0000FF");
+        color.setAvailableUnits(null); // <- nulo
+        color.setImages(List.of("img.jpg"));
+
+        ProductDTO dto = new ProductDTO();
+        dto.setName("Accessory");
+        dto.setPrice(10f);
+        dto.setSection(Section.ACCESSORIES);
+        dto.setColors(List.of(color));
+
+        AppExceptions.InvalidInputException ex = assertThrows(
+                AppExceptions.InvalidInputException.class,
+                () -> productService.registerProduct(dto));
+
+        assertTrue(ex.getMessage().contains("availableUnits"));
+    }
+
+    @Test
+    void registerProduct_accessoryWithNegativeUnits_throwsException() {
+        ProductColorDTO color = new ProductColorDTO();
+        color.setColorName("Blue");
+        color.setHexCode("#0000FF");
+        color.setAvailableUnits(-1); // <- negativo
+        color.setImages(List.of("img.jpg"));
+
+        ProductDTO dto = new ProductDTO();
+        dto.setName("Accessory");
+        dto.setPrice(10f);
+        dto.setSection(Section.ACCESSORIES);
+        dto.setColors(List.of(color));
+
+        AppExceptions.InvalidInputException ex = assertThrows(
+                AppExceptions.InvalidInputException.class,
+                () -> productService.registerProduct(dto));
+
+        assertTrue(ex.getMessage().contains("availableUnits"));
+    }
+
+    @Test
+    void registerProduct_nonAccessoryWithoutSizes_throwsException() {
+        ProductColorDTO color = new ProductColorDTO();
+        color.setColorName("Red");
+        color.setHexCode("#FF0000");
+        color.setSizes(null); // <- faltan tallas
+        color.setImages(List.of("img.jpg"));
+
+        ProductDTO dto = new ProductDTO();
+        dto.setName("T-Shirt");
+        dto.setPrice(10f);
+        dto.setSection(Section.TSHIRT);
+        dto.setColors(List.of(color));
+
+        AppExceptions.InvalidInputException ex = assertThrows(
+                AppExceptions.InvalidInputException.class,
+                () -> productService.registerProduct(dto));
+
+        assertTrue(ex.getMessage().contains("mapa de tallas"));
+    }
+
+    @Test
+    void registerProduct_nonAccessoryWithNegativeSizeQty_throwsException() {
+        ProductColorDTO color = new ProductColorDTO();
+        color.setColorName("Red");
+        color.setHexCode("#FF0000");
+        color.setSizes(Map.of("M", -5)); // <- cantidad negativa
+        color.setImages(List.of("img.jpg"));
+
+        ProductDTO dto = new ProductDTO();
+        dto.setName("T-Shirt");
+        dto.setPrice(10f);
+        dto.setSection(Section.TSHIRT);
+        dto.setColors(List.of(color));
+
+        AppExceptions.InvalidInputException ex = assertThrows(
+                AppExceptions.InvalidInputException.class,
+                () -> productService.registerProduct(dto));
+
+        assertTrue(ex.getMessage().contains("no pueden ser negativas"));
+    }
+
+    @Test
+    void registerProduct_referenceCollisionAfterRetries_throwsException() {
+        ProductColorDTO color = new ProductColorDTO();
+        color.setColorName("Red");
+        color.setHexCode("#FF0000");
+        color.setSizes(Map.of("M", 1));
+        color.setImages(List.of("img.jpg"));
+
+        ProductDTO dto = new ProductDTO();
+        dto.setName("T-Shirt");
+        dto.setPrice(10f);
+        dto.setSection(Section.TSHIRT);
+        dto.setColors(List.of(color));
+
+        // Forzar que siempre falle el save
+        when(productRepository.save(any())).thenThrow(new DataIntegrityViolationException("duplicate"));
+
+        IllegalStateException ex = assertThrows(
+                IllegalStateException.class,
+                () -> productService.registerProduct(dto));
+
+        assertTrue(ex.getMessage().contains("No se pudo generar una referencia única"));
     }
 
     @Test
@@ -887,9 +1331,11 @@ class ProductServiceTest {
 
     @Test
     void testMapProductToProductDTO() {
+        // Arrange: colección del producto
         Collection collection = new Collection();
         collection.setId(1L);
 
+        // Producto
         Product product = new Product();
         product.setId(1L);
         product.setName("Test Product");
@@ -898,14 +1344,25 @@ class ProductServiceTest {
         product.setAvailable(true);
         product.setOn_Promotion(false);
         product.setDiscount(0);
-        product.setSize(new HashMap<>());
         product.setCategories(new HashSet<>());
-        product.setImages(new ArrayList<>());
         product.setCollection(collection);
+        product.setComposition("Cotton 100%");
+        product.setShippingDetails("Ships in 3-5 days");
+        product.setSection(Section.TSHIRT);
+        product.setColors(new ArrayList<>());
 
+        // Act: mapear a DTO
         ProductDTO productDTO = new ProductDTO(product);
-        assertNotNull(productDTO);
 
+        // Assert
+        assertNotNull(productDTO);
+        assertEquals(product.getName(), productDTO.getName());
+        assertEquals(product.getDescription(), productDTO.getDescription());
+        assertEquals(product.getPrice(), productDTO.getPrice());
+        assertEquals(product.getAvailable(), productDTO.getAvailable());
+        assertEquals(product.getOn_Promotion(), productDTO.getOnPromotion());
+        assertEquals(product.getDiscount(), productDTO.getDiscount());
+        assertEquals(product.getCollection().getId(), productDTO.getCollectionId());
     }
 
     @Test
@@ -987,11 +1444,11 @@ class ProductServiceTest {
         when(categoryRepository.existsByName(categoryName)).thenReturn(true);
 
         // Ejecutar y verificar que lanza ResponseStatusException
-        ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+        AppExceptions.BadRequestException exception = assertThrows(AppExceptions.BadRequestException.class,
                 () -> productService.saveCategory(categoryName));
 
         // Comprobar el mensaje de la excepción
-        assertEquals("Category with the name 'NewCategory' already exists.", exception.getReason());
+        assertEquals("Category with the name 'NewCategory' already exists.", exception.getMessage());
 
         // Verificar que no se haya llamado a save
         verify(categoryRepository, never()).save(any());
@@ -1115,79 +1572,6 @@ class ProductServiceTest {
 
         assertEquals(1, result.size());
         verify(productRepository, times(1)).findBySection(Section.ACCESSORIES);
-    }
-
-    @Test
-    void testAccessoryWithSize_ThrowsException() {
-        Product product = new Product();
-        product.setSection(Section.ACCESSORIES);
-
-        Map<String, Integer> sizes = new HashMap<>();
-        sizes.put("M", 1);
-        product.setSize(sizes);
-
-        product.setAvailableUnits(10);
-
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, product::validateProduct);
-        assertEquals("Los accesorios no pueden tener tallas asignadas.", exception.getMessage());
-    }
-
-    @Test
-    void testAccessoryWithNullUnits_ThrowsException() {
-        Product product = new Product();
-        product.setSection(Section.ACCESSORIES);
-        product.setSize(null);
-
-        product.setAvailableUnits(null);
-
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, product::validateProduct);
-        assertEquals("La cantidad de unidades disponibles debe ser mayor o igual a 0 para los accesorios.",
-                exception.getMessage());
-    }
-
-    @Test
-    void validateProduct_accessoryValid_noException() {
-        Product product = new Product();
-        product.setSection(Section.ACCESSORIES);
-        product.setSize(null);
-        product.setAvailableUnits(1);
-
-        assertDoesNotThrow(product::validateProduct);
-    }
-
-    @Test
-    void validateProduct_nonAccessory_anyValues_noException() {
-        Map<String, Integer> sizes = Map.of("L", 10);
-
-        Product product = new Product();
-        product.setSection(Section.HOODIES);
-        product.setSize(sizes);
-        product.setAvailableUnits(10);
-
-        assertDoesNotThrow(product::validateProduct);
-    }
-
-    @Test
-    void testAccessoryWithEmptySize_noException() {
-        Product product = new Product();
-        product.setSection(Section.ACCESSORIES);
-        product.setSize(new HashMap<>()); // tamaño vacío
-        product.setAvailableUnits(10);
-
-        assertDoesNotThrow(product::validateProduct); // No debería lanzar excepción
-    }
-
-    @Test
-    void testAccessoryWithNegativeUnits_ThrowsException() {
-        Product product = new Product();
-        product.setSection(Section.ACCESSORIES);
-        product.setSize(null);
-        product.setAvailableUnits(-5); // unidades negativas
-
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-                product::validateProduct);
-        assertEquals("La cantidad de unidades disponibles debe ser mayor o igual a 0 para los accesorios.",
-                exception.getMessage());
     }
 
     @Test
@@ -1532,56 +1916,87 @@ class ProductServiceTest {
     }
 
     @Test
-    void getProducts_SizeIsMinusOne_ReturnsAllProducts() {
-        // Arrange
-        Product product = new Product();
-        Product product2 = new Product();
+    void testGetProducts_sizeMinusOne_returnsAllProducts_withoutSpy() {
+        // Arrange: lista de productos de ejemplo
+        Product product1 = createProduct("A", "desc A", true, false);
+        Product product2 = createProduct("B", "desc B", false, true);
+        List<Product> allProducts = List.of(product1, product2);
 
-        List<Product> products = List.of(product, product2);
-        when(productService.findAllProducts()).thenReturn(products);
+        // Mock del repository para que devuelva todos los productos
+        when(productRepository.findAll()).thenReturn(allProducts);
 
         // Act
-        PageResponse<ProductDTO> response = productService.getProducts(0, -1, null);
+        PageResponse<ProductDTO> response = productService.getProducts(0, -1, null, null, null);
 
         // Assert
         assertNotNull(response);
         assertEquals(2, response.getContent().size());
+
+        // Verificar propiedades de paginación simuladas
+        assertEquals(0, response.getPageNumber());
+        assertEquals(2, response.getPageSize());
         assertEquals(2, response.getTotalElements());
+        assertEquals(1, response.getTotalPages());
         assertTrue(response.isLast());
     }
 
     @Test
-    void getProducts_WithSearch_UsesSearchProducts() {
-        // Arrange
-        Product product = new Product();
-        String search = "camisa";
-        PageRequest pageRequest = PageRequest.of(0, 5);
-        Page<Product> pageResult = new PageImpl<>(List.of(product));
+    void testGetProducts_AllNullParameters() {
+        Page<Product> pageMock = new PageImpl<>(List.of(createProduct("A", "desc", true, false)));
+        when(productRepository.findAll(ArgumentMatchers.<Specification<Product>>any(), any(Pageable.class)))
+                .thenReturn(pageMock);
+        PageResponse<ProductDTO> response = productService.getProducts(0, 10, null, null, null);
 
-        when(productService.searchProducts(search, pageRequest)).thenReturn(pageResult);
-
-        // Act
-        PageResponse<ProductDTO> response = productService.getProducts(0, 5, search);
-
-        // Assert
+        assertNotNull(response);
         assertEquals(1, response.getContent().size());
     }
 
     @Test
-    void getProducts_WithoutSearch_UsesFindAll() {
-        // Arrange
-        Product product = new Product();
-        Product product2 = new Product();
-        PageRequest pageRequest = PageRequest.of(0, 5);
-        Page<Product> pageResult = new PageImpl<>(List.of(product, product2));
-        when(productRepository.findAll(pageRequest)).thenReturn(pageResult);
+    void testGetProducts_WithSearch() {
+        Page<Product> pageMock = new PageImpl<>(List.of(createProduct("Test", "desc", true, false)));
+        when(productRepository.findAll(ArgumentMatchers.<Specification<Product>>any(), any(Pageable.class)))
+                .thenReturn(pageMock);
 
-        // Act
-        PageResponse<ProductDTO> response = productService.getProducts(0, 5, "");
+        PageResponse<ProductDTO> response = productService.getProducts(0, 10, "Test", null, null);
 
-        // Assert
-        assertEquals(2, response.getContent().size());
-        verify(productRepository, times(1)).findAll(pageRequest);
+        assertNotNull(response);
+        assertEquals(1, response.getContent().size());
+    }
+
+    @Test
+    void testGetProducts_WithAvailable() {
+        Page<Product> pageMock = new PageImpl<>(List.of(createProduct("A", "desc", true, false)));
+        when(productRepository.findAll(ArgumentMatchers.<Specification<Product>>any(), any(Pageable.class)))
+                .thenReturn(pageMock);
+
+        PageResponse<ProductDTO> response = productService.getProducts(0, 10, null, true, null);
+
+        assertNotNull(response);
+        assertEquals(1, response.getContent().size());
+    }
+
+    @Test
+    void testGetProducts_WithPromoted() {
+        Page<Product> pageMock = new PageImpl<>(List.of(createProduct("A", "desc", true, true)));
+        when(productRepository.findAll(ArgumentMatchers.<Specification<Product>>any(), any(Pageable.class)))
+                .thenReturn(pageMock);
+
+        PageResponse<ProductDTO> response = productService.getProducts(0, 10, null, null, true);
+
+        assertNotNull(response);
+        assertEquals(1, response.getContent().size());
+    }
+
+    @Test
+    void testGetProducts_AllFilters() {
+        Page<Product> pageMock = new PageImpl<>(List.of(createProduct("Test", "desc", true, true)));
+        when(productRepository.findAll(ArgumentMatchers.<Specification<Product>>any(), any(Pageable.class)))
+                .thenReturn(pageMock);
+
+        PageResponse<ProductDTO> response = productService.getProducts(0, 10, "Test", true, true);
+
+        assertNotNull(response);
+        assertEquals(1, response.getContent().size());
     }
 
     @Test
@@ -1630,4 +2045,64 @@ class ProductServiceTest {
         }
     }
 
+    @Test
+    void saveModel_nullFile_throwsException() {
+        assertThrows(IllegalArgumentException.class,
+                () -> productService.saveModel(null));
+    }
+
+    @Test
+    void saveModel_emptyFile_throwsException() {
+        when(mockFile.isEmpty()).thenReturn(true);
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> productService.saveModel(mockFile));
+
+        assertTrue(ex.getMessage().contains("empty"));
+    }
+
+    @Test
+    void saveModel_invalidExtension_throwsException() {
+        when(mockFile.isEmpty()).thenReturn(false);
+        when(mockFile.getOriginalFilename()).thenReturn("badfile.txt");
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> productService.saveModel(mockFile));
+
+        assertTrue(ex.getMessage().contains("Invalid file type"));
+    }
+
+    @Test
+    void saveModel_validExtension_returnsUrl() throws IOException {
+        when(mockFile.isEmpty()).thenReturn(false);
+        when(mockFile.getOriginalFilename()).thenReturn("model.glb");
+        when(mockFile.getInputStream()).thenReturn(new ByteArrayInputStream("fake".getBytes()));
+
+        try (MockedStatic<Files> mockedFiles = Mockito.mockStatic(Files.class)) {
+            mockedFiles.when(() -> Files.copy(any(InputStream.class), any(Path.class)))
+                    .thenReturn(1L);
+
+            String result = productService.saveModel(mockFile);
+
+            assertTrue(result.startsWith("/product_media/"));
+            assertTrue(result.endsWith(".glb"));
+        }
+    }
+
+    @Test
+    void saveModel_ioException_throwsException() throws IOException {
+        when(mockFile.isEmpty()).thenReturn(false);
+        when(mockFile.getOriginalFilename()).thenReturn("model.glb");
+        when(mockFile.getInputStream()).thenReturn(new ByteArrayInputStream("fake".getBytes()));
+
+        try (MockedStatic<Files> mockedFiles = Mockito.mockStatic(Files.class)) {
+            mockedFiles.when(() -> Files.copy(any(InputStream.class), any(Path.class)))
+                    .thenThrow(new IOException("Disk full"));
+
+            IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                    () -> productService.saveModel(mockFile));
+
+            assertTrue(ex.getMessage().contains("Error while saving"));
+        }
+    }
 }

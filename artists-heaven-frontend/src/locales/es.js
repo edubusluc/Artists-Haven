@@ -4,7 +4,6 @@ const es = {
   "Composition": "COMPOSICIÓN Y CUIDADOS",
   "Care": "Cuidado",
   "Origin": "Origen",
-  "AddReview": "Añadir reseña",
   "sizeGuide": "Guía de tallas",
   "AddToShoppingCard": "Añadir a la cesta",
   "NotAvailable": "Producto no disponible",
@@ -27,6 +26,7 @@ const es = {
   "shipping_details": "ENVÍOS, CAMBIOS Y DEVOLUCIONES",
   "related_products": "Productos relacionados",
   "shoppinCart.selectSizeFirst": "Por favor, selecciona un tamaño antes de añadir al carrito.",
+  "shoppinCart.noStock": "La talla seleccionada tiene una cantidad limitada en stock. Por favor, ajuste su selección.",
 
   "artistForm.title": "Registro de Artista",
   "artistForm.firstName": "Nombre",
@@ -46,9 +46,7 @@ const es = {
   "artistForm.error.registrationFailed": "Error al registrar el artista",
   "artistForm.error.requiredArtistName": "El nombre artístico es obligatorio",
   "artistForm.error.requiredUrl": "La URL del artista es obligatoria",
-  "artistForm.error.requiredImage": "Debe subir al menos una imagen",
   "artistForm.error.requiredBanner": "Debe subir una imagen de banner",
-  "artistForm.error.registrationFailed": "Error al registrar el artista",
   "artistForm.submitting": "Registrando artista",
 
   "form.error.requiredFirstName": "El nombre es obligatorio",
@@ -102,6 +100,7 @@ const es = {
   "eventForm.error.requiredLocation": "La ubicación del evento es obligatoria.",
   "eventForm.error.requiredImage": "Debe subir al menos una imagen.",
   "eventForm.error.invalidDate": "La fecha del evento debe ser posterior a la fecha actual.",
+  "eventForm.recommended": "Tamaño Recomendado",
 
   "eventEditForm.label": "Editar Evento",
   "eventEditForm.label.name": "Nombre del evento",
@@ -127,6 +126,7 @@ const es = {
   "productForm.error.requiredComposition": "La composición es obligatoria.",
   "productForm.error.requiredShippingDetails": "Los detalles de envío son obligatorios.",
   "productForm.error.requiredImages": "Debe subir al menos una imagen.",
+  "productForm.error.requiredColorName": "Debe indicar un nombre para el color.",
 
   "promoted.error.discount": "Debes ingresar un valor de descuento entre 0 y 100.",
 
@@ -143,6 +143,8 @@ const es = {
   "review.form.comment": "Comentario",
   "review.form.placeholder": "¡Deja aquí tu reseña!",
   "review.form.submit": "Enviar Reseña",
+  "review.add.select_score": "Por favor, selecciona una puntuación",
+  "review.add.enter_comment": "Por favor, ingresa un comentario",
 
   "attachVideoAlert": "Por favor, adjunte un archivo de vídeo.",
 
@@ -187,6 +189,11 @@ const es = {
   "adminclient.loadVideo": "Cargando vídeo...",
   "adminclient.noPendingVerification": "No hay verificaciones pendientes.",
   "adminclient.userProducts": "Productos de usuario",
+  "adminclient.name": "Nombre",
+  "adminclient.username": "Usuario",
+  "adminclient.image": "Imágenes",
+  "adminclient.noProducts": "No hay productos de usuario disponible",
+
 
   "adminDashboard.year": "Año",
   "adminDashboard.totalSales": "Ventas Totales",
@@ -198,7 +205,6 @@ const es = {
   "adminDashboard.noDataAvailable": "No hay datos de ventas disponibles",
   "adminDashboard.reportSummary": "Resumen de informes",
   "adminDashboard.yearlyReportSummary": "Resumen de informes anual",
-  "adminDashboard.noDataAvailable": "No hay datos disponibles",
   "adminDashboard.orderStatusSummary": "Resumen de Estados de Pedidos",
   "adminDashboard.summaryVerifications": "Resumen Verificaciones",
   "adminDashboard.bestSellingProducts": "Productos Más Vendidos",
@@ -233,6 +239,9 @@ const es = {
   "adminOrders.noReturnsAvailabkle": "No hay devoluciones pendientes.",
   "adminOrders.ordersStatusSummary": "Resumen de Estados de Pedidos",
   "adminOrders.noDataAvailable": "No hay datos disponibles.",
+  "adminOrders.allStatuses": "Todos los estados",
+  "adminOrders.searchByIdOrPayment": "Buscar por identificador de pedido o de pago",
+  "adminOrders.search": "Buscar",
 
   "adminOrderDetails.loadOrder": "Cargando detalles del pedido...",
   "adminOrderDetails.orderManagemente": "Gestión del Pedido",
@@ -251,6 +260,9 @@ const es = {
   "adminOrderDetails.size": "Talla",
   "adminOrderDetails.quantity": "Cantidad",
   "adminOrderDetails.price": "Precio Unitario",
+  "adminOrderDetails.creationDate": "Fecha de Creación de la Devolución",
+  "adminOrderDetails.details": "Detalles de la devolución",
+  "adminOrderDetails.color": "Color",
 
   "adminProductList.productManagemente": "Gestión de Productos",
   "adminProductList.createNewProduct": "Crear Nuevo Producto",
@@ -272,7 +284,6 @@ const es = {
   "adminProductList.edit": "Editar",
   "adminProductList.notCategoryAvailable": "No hay categorías disponibles.",
   "adminProductList.promoted": "Promocionada",
-  "adminProductList.actions": "Acciones",
   "adminProductList.notCollectionsAvailable": "No hay colecciones disponibles.",
   "adminProductList.promotedCollection": "Promocionado",
   "adminProductList.notPromotedCollecion": "No Promocionado",
@@ -291,6 +302,19 @@ const es = {
   "adminProductList.saveChanges": "Crear",
   "adminProductList.create": "Crear",
   "adminProductList.promoteCollection": "Promocionar colección",
+  "adminProductList.productUpdated": "Producto actualizado con éxito",
+  "adminProductList.available": "Disponible",
+  "adminProductList.unavailable": "No disponible",
+  "adminProductList.promoted": "Promocionado",
+  "adminProductList.cannotDisableWhilePromoted":"Debes despromocionar el producto antes de poder deshabilitarlo.",
+  "adminProductList.cannotEditWhilePromoted":"Debes despromocionar el producto antes de poder editarlo.",
+  "adminProductList.colors":"Colores",
+  "adminProductList.categoryExists":"Ya existe una categoría con ese nombre.",
+  "adminProductList.categoryCreated":"Categoría creada con éxito.",
+  "adminProductList.collectionExists":"Ya existe una colección con ese nombre.",
+  "adminProductList.collectionEdited": "Colección editada con éxito.",
+  "adminProductList.categoryEdited": "Categoría editada con éxito.",
+  "adminProductList.collectionCreated": "Colección creada con éxito.",
 
   "artistDashboard.verified": "Verificado",
   "artistDashboard.pending": "Pendiente",
@@ -336,7 +360,6 @@ const es = {
   "allMyEvents.previous": "Anterior",
   "allMyEvents.page": "Página",
   "allMyEvents.of": "de",
-  "allMyEvents.previous": "Anterior",
   "allMyEvents.totalEvents": "Eventos Totales",
   "allMyEvents.nextEvents": "Eventos Por Realizar",
   "allMyEvents.pastEvents": "Eventos Pasados",
@@ -349,6 +372,7 @@ const es = {
   "concertMap.centerMap": "Centrar mapa",
   "concertMap.artist": "Centrar mapa",
   "concertMap.here": "📍 Estás aquí",
+  "concertMap.noEvents": "No hay eventos disponibles",
 
   "orderAnonymous.loadingOrder": "Cargando detalles del pedido...",
   "orderAnonymous.requestReturn": "Solicitar devolución",
@@ -359,6 +383,18 @@ const es = {
   "orderAnonymous.product": "Producto",
   "orderAnonymous.size": "Talla",
   "orderAnonymous.quantity": "Cantidad",
+  "orderAnonymous.color": "Color",
+  "orderAnonymous.invalidEmailForLabel": "Este correo no está asociado con el pedido.",
+
+  orderStatus: {
+    PAID: "Pagado",
+    IN_PREPARATION: "En preparación",
+    SENT: "Enviado",
+    DELIVERED: "Entregado",
+    CANCELED: "Cancelado",
+    RETURN_REQUEST: "Devolución solicitada",
+    RETURN_ACCEPTED: "Devolución aceptada",
+  },
 
   "createProductForm.title": "Crear Nuevo Producto",
   "createProductForm.name": "Nombre del producto",
@@ -378,10 +414,11 @@ const es = {
   "createProductForm.shippingDetails": "Envíos, cambios y devoluciones",
   "createProductForm.uploadImages": "Subir imágenes",
   "createProductForm.createProduct": "Crear Producto",
-  "createProductForm.upload3dModel":"Subir modelo 3d",
+  "createProductForm.upload3dModel": "Subir modelo 3d",
+  "createProductForm.removeColor": "Eliminar color",
+  "createProductForm.addColor": "Añadir color",
+  "createProductForm.3DModel": "Modelo 3D (.glb o .gltf)",
 
-
-  "editProductForm.title": "Crear Nuevo Producto",
   "editProductForm.name": "Nombre del producto",
   "editProductForm.description": "Descripción",
   "editProductForm.price": "Precio",
@@ -402,10 +439,15 @@ const es = {
   "editProductForm.uploadNewImages": "Subir nuevas imágenes",
   "editProductForm.saveChanges": "Guardar Cambios",
   "editProductForm.upload3dModel": "Actualizar modelo 3d",
+  "editProductForm.removeColor": "Eliminar color",
+  "editProductForm.addColor": "Añadir Color",
+  "editProductForm.colors":"Colores",
+  "editProductForm.3dModel": "Modelo 3D",
 
   "productDetails.loadInfo": "Cargando información...",
   "productDetails.size": "Talla",
   "productDetails.ProductOutOfStock": "Sin stock",
+  "productDetails.model3d": "Visualizar en 3D",
 
   "productSchema.products": "Productos",
   "productSchema.filterAndSearch": "Filtrar y buscar",
@@ -421,6 +463,7 @@ const es = {
   "productSchema.price": "Precio",
   "productSchema.deleteFilter": "Eliminar Filtros",
   "productSchema.applyFilter": "Aplicar filtros",
+  "productSchema.collections": "Colecciones",
 
   "productsList.products": "Productos",
   "productsList.filterAndSearch": "Filtrar y buscar",
@@ -436,12 +479,16 @@ const es = {
   "productsList.price": "Precio",
   "productsList.deleteFilter": "Eliminar Filtros",
   "productsList.applyFilter": "Aplicar filtros",
+  "productsList.collections": "Colecciones",
+  "productsList.sections": "Tipo de producto",
+
 
   "promoteProductForm.addDiscount": "Añadir Descuento al Producto",
   "promoteProductForm.discount": "Descuento",
   "promoteProductForm.originalPrice": "Precio Original",
   "promoteProductForm.finalPrice": "Precio Final",
   "promoteProductForm.applyDiscount": "Aplicar Descuento",
+  "promoteProductForm.success": "Producto promocionado con éxito",
 
   "forgotPassword.recoverPassword": "Recuperar Contraseña",
   "forgotPassword.typeEmail": "Ingrese tu correo",
@@ -500,7 +547,7 @@ const es = {
   "returnRequestModal.reasonPlaceholder": "Escriba el motivo de la devolución",
   "returnRequestModal.cancel": "Cancelar",
   "returnRequestModal.submit": "Solicitar Devolución",
-  "returnRequestModal.submitting":"Enviando",
+  "returnRequestModal.submitting": "Enviando",
 
   "userProfile.loadProfile": "Cargando Perfil...",
   "userProfile.myProfile": "Mi Perfil",
@@ -524,7 +571,6 @@ const es = {
   "userProfile.email": "Correo electrónico",
   "userProfile.phone": "Teléfono",
   "userProfile.city": "Ciudad",
-  "userProfile.address": "Dirección",
   "userProfile.postalCode": "Código postal",
   "userProfile.country": "País",
   "userProfile.imageFormatError": "Solo se permiten archivos de imagen válidos (jpg, png, gif, bmp, webp).",
@@ -658,7 +704,7 @@ const es = {
   "footer.email": "📧 mod.artistheaven@gmail.com",
   "footer.location": "📍 España",
   "footer.copyright": "© 2025 Artists' Heaven. Todos los derechos reservados.",
-  "footer.emailReport":"¿Algún Problema?",
+  "footer.emailReport": "¿Algún Problema?",
 
   "faq.title": "Preguntas Frecuentes",
 
@@ -679,9 +725,17 @@ const es = {
   "DELIVERED": "Entregado",
 
   "myUserProducts.prodcutsNotFound": "Aún no has creado ningún diseño",
-  "myUserProducts.title":"Mis Productos",
+  "myUserProducts.title": "Mis Productos",
   "myUserProducts.previous": "Anterior",
   "myUserProducts.next": "Siguiente",
+
+  "concertMap.filters": "Filtrar eventos",
+  "concertMap.filterArtist": "Buscar artista",
+  "concertMap.anyDistance": "Filtrar por Distancia",
+
+  "artistList.artists": "Artistas",
+  "artistList.searchByName": "Buscar por nombre",
+  "artistList.sort": "Ordenar",
 
 
 

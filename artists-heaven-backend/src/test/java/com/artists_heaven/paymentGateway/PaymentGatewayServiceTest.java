@@ -8,7 +8,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -28,6 +27,7 @@ import com.artists_heaven.order.OrderItemRepository;
 import com.artists_heaven.order.OrderRepository;
 import com.artists_heaven.payment_gateway.PaymentGatewayService;
 import com.artists_heaven.product.Product;
+import com.artists_heaven.product.ProductColor;
 import com.artists_heaven.product.ProductService;
 import com.artists_heaven.product.Section;
 import com.artists_heaven.shopping_cart.CartItemDTO;
@@ -80,22 +80,27 @@ class PaymentGatewayServiceTest {
         // Creamos el producto con talla M y cantidad 0
         product = new Product();
         product.setId(1L);
-        Map<String, Integer> sizeMap = new HashMap<>();
-        sizeMap.put("M", 0); // Producto no disponible
-        product.setSize(sizeMap);
         product.setAvailable(true); // Producto disponible pero sin stock
         product.setSection(Section.TSHIRT);
 
         item.setProduct(productItem);
         item.setSize("M");
         item.setQuantity(1); // Intentamos comprar 1 producto
+        item.setColor("colorTest");
         items.add(item);
     }
 
     @Test
     void testCheckoutProducts_ProductNotAvailable() throws Exception {
         // Mock de findById para que devuelva el producto configurado
+        ProductColor productColor = new ProductColor();
+        Map<String, Integer> sizes = Map.of("M", 0);
+        productColor.setSizes(sizes);
+        productColor.setColorName("colorTest");
+        productColor.setProduct(product);
         when(productService.findById(1L)).thenReturn(product);
+
+        product.setColors(List.of(productColor));
 
         // Llamada al método que se va a probar y captura de la excepción
         Exception exception = assertThrows(Exception.class, () -> {
@@ -110,7 +115,13 @@ class PaymentGatewayServiceTest {
     @Test
     void testCheckoutProducts_Success() throws Exception {
         // Configurar el producto para que esté disponible
-        product.getSize().put("M", 10); // Producto disponible con stock
+        ProductColor productColor = new ProductColor();
+        Map<String, Integer> sizes = Map.of("M", 1);
+        productColor.setSizes(sizes);
+        productColor.setColorName("colorTest");
+        productColor.setProduct(product);
+
+        product.setColors(List.of(productColor));
 
         User user = new User();
         user.setId(1L);
@@ -140,8 +151,13 @@ class PaymentGatewayServiceTest {
     @Test
     void testCheckoutProducts_SuccessAnonymous() throws Exception {
         // Configurar el producto para que esté disponible
-        product.getSize().put("M", 10); // Producto disponible con stock
+        ProductColor productColor = new ProductColor();
+        Map<String, Integer> sizes = Map.of("M", 1);
+        productColor.setSizes(sizes);
+        productColor.setColorName("colorTest");
+        productColor.setProduct(product);
 
+        product.setColors(List.of(productColor));
         when(productService.findById(anyLong())).thenReturn(product);
 
         // Configuración del contexto de seguridad para usuario anónimo

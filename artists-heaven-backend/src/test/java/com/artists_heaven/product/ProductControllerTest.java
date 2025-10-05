@@ -4,6 +4,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -26,6 +27,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -65,9 +67,9 @@ class ProductControllerTest {
 
         @Test
         void testGetAllProducts_success() throws Exception {
-                
+
                 PageResponse<ProductDTO> pageResponse = new PageResponse<>(List.of(productDTO), 1, 0, 1, 1, true);
-                when(productService.getProducts(0, 6, null)).thenReturn(pageResponse);
+                when(productService.getProducts(0, 6, null, null, null)).thenReturn(pageResponse);
 
                 mockMvc.perform(get("/api/product/allProducts")
                                 .param("page", "0")
@@ -78,7 +80,7 @@ class ProductControllerTest {
 
         @Test
         void testGetAllProducts_error() throws Exception {
-                when(productService.getProducts(anyInt(), anyInt(), any()))
+                when(productService.getProducts(anyInt(), anyInt(), any(), any(), any()))
                                 .thenThrow(new RuntimeException("Unexpected error"));
 
                 mockMvc.perform(get("/api/product/allProducts"))
@@ -115,10 +117,13 @@ class ProductControllerTest {
                                 ("{" +
                                                 "\"name\":\"Product\"," +
                                                 "\"price\":129.99," +
-                                                "\"section\":\"TSHIRT\"," + 
+                                                "\"section\":\"TSHIRT\"," +
                                                 "\"composition\":\"Cotton\"," +
                                                 "\"shippingDetails\":\"Ships in 5 days\"," +
+                                                "\"colors\":[{" +
+                                                "\"colorName\":\"Red\"," +
                                                 "\"images\":[\"img.png\"]" +
+                                                "}]" +
                                                 "}").getBytes());
 
                 // Simulamos una imagen
@@ -139,6 +144,70 @@ class ProductControllerTest {
                                 .characterEncoding("UTF-8"))
                                 .andExpect(status().isCreated())
                                 .andExpect(jsonPath("$.message").value("Product created successfully"));
+        }
+
+        @Test
+        void testNewProduct_noColors_throwsException() throws Exception {
+                MockMultipartFile productPart = new MockMultipartFile(
+                                "product",
+                                "",
+                                "application/json",
+                                ("{" +
+                                                "\"name\":\"Product\"," +
+                                                "\"price\":129.99," +
+                                                "\"section\":\"TSHIRT\"," +
+                                                "\"composition\":\"Cotton\"," +
+                                                "\"shippingDetails\":\"Ships in 5 days\"," +
+                                                "\"colors\":[]" +
+                                                "}").getBytes());
+
+                mockMvc.perform(multipart("/api/product/new")
+                                .file(productPart)
+                                .contentType(MediaType.MULTIPART_FORM_DATA)
+                                .characterEncoding("UTF-8"))
+                                .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        void testNewProduct_withColorModel() throws Exception {
+                MockMultipartFile productPart = new MockMultipartFile(
+                                "product",
+                                "",
+                                "application/json",
+                                ("{" +
+                                                "\"name\":\"Product\"," +
+                                                "\"price\":129.99," +
+                                                "\"section\":\"TSHIRT\"," +
+                                                "\"composition\":\"Cotton\"," +
+                                                "\"shippingDetails\":\"Ships in 5 days\"," +
+                                                "\"colors\":[{" +
+                                                "\"colorName\":\"Red\"," +
+                                                "\"images\":[\"colorImages_0.png\"]" +
+                                                "}]" +
+                                                "}").getBytes());
+
+                // Simulamos una imagen
+                MockMultipartFile image = new MockMultipartFile(
+                                "colorImages_0",
+                                "colorImages_0.png",
+                                "image/png",
+                                "fake".getBytes());
+
+                MockMultipartFile model = new MockMultipartFile(
+                                "colorModels_0",
+                                "red.glb",
+                                "model/gltf-binary",
+                                "fake".getBytes());
+                when(productService.saveModel(any(MultipartFile.class))).thenReturn("red.glb");
+                when(productService.registerProduct(any(ProductDTO.class))).thenReturn(product);
+
+                mockMvc.perform(multipart("/api/product/new")
+                                .file(productPart)
+                                .file(model)
+                                .file(image)
+                                .contentType(MediaType.MULTIPART_FORM_DATA)
+                                .characterEncoding("UTF-8"))
+                                .andExpect(status().isCreated());
         }
 
         @Test
@@ -171,7 +240,11 @@ class ProductControllerTest {
                                                 "\"section\":\"TSHIRT\"," +
                                                 "\"composition\":\"Canvas\"," +
                                                 "\"shippingDetails\":\"Ships in 5 days\"," +
+                                                "\"images\":[\"image1.jpg\"]," +
+                                                "\"colors\":[{" +
+                                                "\"colorName\":\"Blue\"," +
                                                 "\"images\":[\"image1.jpg\"]" +
+                                                "}]" +
                                                 "}").getBytes());
 
                 mockMvc.perform(multipart("/api/product/edit/1")
@@ -184,7 +257,75 @@ class ProductControllerTest {
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$.message").value("Product updated successfully"));
 
-                verify(productService).updateProduct(eq(1L), any(), any(), any(), any(), any());
+                verify(productService).updateProduct(eq(1L), any(), any(), any());
+        }
+
+        @Test
+        void testUpdateProduct_nonMultipartRequest() throws Exception {
+                MockMultipartFile productPart = new MockMultipartFile(
+                                "product", "",
+                                "application/json",
+                                ("{" +
+                                                "\"name\":\"Updated\"," +
+                                                "\"price\":129.99," +
+                                                "\"section\":\"TSHIRT\"," +
+                                                "\"composition\":\"Canvas\"," +
+                                                "\"shippingDetails\":\"Ships in 5 days\"," +
+                                                "\"colors\":[{\"colorName\":\"Blue\",\"images\":[]}]" +
+                                                "}").getBytes());
+
+                mockMvc.perform(multipart("/api/product/edit/1")
+                                .file(productPart)
+                                .contentType(MediaType.MULTIPART_FORM_DATA)
+                                .with(request -> {
+                                        request.setMethod("PUT");
+                                        return request;
+                                }))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.message").value("Product updated successfully"));
+
+                // Se verifica que productService se llame con mapas vacíos
+                verify(productService).updateProduct(eq(1L), any(), eq(new HashMap<>()), eq(new HashMap<>()));
+        }
+
+        @Test
+        void testUpdateProduct_withImagesAndModels() throws Exception {
+                MockMultipartFile productPart = new MockMultipartFile(
+                                "product", "",
+                                "application/json",
+                                ("{" +
+                                                "\"name\":\"Updated\"," +
+                                                "\"price\":129.99," +
+                                                "\"section\":\"TSHIRT\"," +
+                                                "\"composition\":\"Canvas\"," +
+                                                "\"shippingDetails\":\"Ships in 5 days\"," +
+                                                "\"colors\":[{\"colorName\":\"Blue\",\"images\":[]}]" +
+                                                "}").getBytes());
+
+                MockMultipartFile image = new MockMultipartFile(
+                                "colorImages_0", "blue.jpg", "image/jpeg", "fake".getBytes());
+
+                MockMultipartFile model = new MockMultipartFile(
+                                "colorModel_0", "blue.glb", "model/gltf-binary", "fake".getBytes());
+
+                mockMvc.perform(multipart("/api/product/edit/1")
+                                .file(productPart)
+                                .file(image)
+                                .file(model)
+                                .contentType(MediaType.MULTIPART_FORM_DATA)
+                                .with(request -> {
+                                        request.setMethod("PUT");
+                                        return request;
+                                }))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.message").value("Product updated successfully"));
+
+                // Verifica que se agregaron correctamente al mapa
+                verify(productService).updateProduct(
+                                eq(1L),
+                                any(),
+                                argThat(map -> map.containsKey(0) && map.get(0).size() == 1),
+                                argThat(map -> map.containsKey(0)));
         }
 
         @Test
@@ -299,5 +440,20 @@ class ProductControllerTest {
                 mockMvc.perform(get("/api/product/collection/Summer"))
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$.data[0].id").value(1));
+        }
+
+        @Test
+        void getAllCollections_success() throws Exception {
+                Set<Product> products = new HashSet<>();
+                Collection c1 = new Collection(1L, "Coll 1", products, false, new Date());
+                Collection c2 = new Collection(2L, "Coll 2", products, false, new Date());
+
+                when(productService.findAllCollections()).thenReturn(List.of(c1, c2));
+
+                mockMvc.perform(get("/api/product/allCollections"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.message").value("Collections retrieved successfully"))
+                                .andExpect(jsonPath("$.data[0].id").value(1))
+                                .andExpect(jsonPath("$.data[0].name").value("Coll 1"));
         }
 }

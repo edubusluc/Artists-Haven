@@ -38,7 +38,6 @@ const MyUserProducts = () => {
 
     const getStatusColor = (status) => {
         const lang = currentLang.startsWith("es") ? "es" : "en";
-        console.log(lang)
         const statusText = lang === "es"
             ? {
                 accepted: "ACEPTADO",
@@ -64,7 +63,7 @@ const MyUserProducts = () => {
                 return { colorClass: "bg-gray-100 text-gray-700", text: statusText[statusLower] || "Unknown" };
         }
     };
-    console.log(products)
+
     return (
         <div className="w-full">
             <h2 className="text-3xl font-bold mb-8 text-gray-900 text-center">
@@ -78,21 +77,21 @@ const MyUserProducts = () => {
                     {currentProducts.map((prod, idx) => (
                         <div
                             key={idx}
-                            className="bg-white/80 backdrop-blur-md border border-gray-100 rounded-2xl shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 p-6 flex flex-col"
+                            className="bg-white/80 backdrop-blur-md border border-gray-100 rounded-2xl shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 p-10 flex flex-col"
                         >
                             {/* Imagen */}
-                            <div className="relative w-full aspect-[4/5] rounded-xl overflow-hidden group mb-4">
+                            <div className="relative w-full aspect-[6/7] rounded-xl overflow-hidden group mb-4">
                                 <img
                                     src={`/api/user-products${prod.images[0]}`}
                                     loading="lazy"
-                                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                    className="absolute inset-0 h-full w-full object-cover transition-all duration-500 group-hover:opacity-0 group-hover:scale-105"
                                 />
                                 {prod.images[1] && (
                                     <img
                                         src={`/api/user-products${prod.images[1]}`}
                                         alt={`${prod.name} hover`}
                                         loading="lazy"
-                                        className="absolute inset-0 h-full w-full object-cover opacity-0 group-hover:opacity-100 transition-all duration-500 group-hover:scale-105"
+                                        className="absolute inset-0 h-full w-full object-cover opacity-0 transition-all duration-500 group-hover:opacity-100 group-hover:scale-105"
                                     />
                                 )}
                             </div>
@@ -121,7 +120,7 @@ const MyUserProducts = () => {
                                     <p className="inter-400">
                                         {new Date(prod.createdAt).toLocaleDateString('es-ES', {
                                             day: 'numeric',
-                                            month: 'short',    
+                                            month: 'short',
                                             year: 'numeric'
                                         })}
                                     </p>
@@ -161,7 +160,7 @@ const MyUserProducts = () => {
                         disabled={page === totalPages}
                         className="px-4 py-2 rounded-full border bg-white text-gray-700 shadow-sm hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition"
                     >
-                        {t('myUserProducts.next')} ➡ 
+                        {t('myUserProducts.next')} ➡
                     </button>
                 </div>
             )}

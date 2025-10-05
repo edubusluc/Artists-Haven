@@ -6,6 +6,7 @@ import org.springframework.security.core.AuthenticationException;
 
 import com.artists_heaven.entities.user.User;
 import com.artists_heaven.product.Product;
+import com.artists_heaven.product.ProductColor;
 import com.artists_heaven.product.ProductService;
 import com.artists_heaven.product.Section;
 
@@ -15,8 +16,6 @@ import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
-
 import org.springframework.http.ResponseEntity;
 
 import java.util.List;
@@ -57,27 +56,37 @@ public class ShoppingCartController {
         Long productCartItem = cartItem.getProduct().getId();
         Product product = productService.findById(productCartItem);
 
-        // Mapea Product a ProductDTO
         ProductItemDTO productDTO = new ProductItemDTO();
-        productDTO.setId(cartItem.getProduct().getId());
-        productDTO.setName(cartItem.getProduct().getName());
-        productDTO.setPrice(cartItem.getProduct().getPrice());
-        productDTO.setImageUrl(product.getImages().get(0));
-        productDTO.setSection(cartItem.getProduct().getSection());
+        productDTO.setId(product.getId());
+        productDTO.setName(product.getName());
+        productDTO.setPrice(product.getPrice());
+        productDTO.setSection(product.getSection());
 
         dto.setProduct(productDTO);
         dto.setSize(cartItem.getSize());
         dto.setQuantity(cartItem.getQuantity());
+        dto.setColor(cartItem.getColor());
+
+        String imageUrl = null;
+        if (product.getColors() != null && !product.getColors().isEmpty()) {
+            ProductColor selectedColor = product.getColors().stream()
+                    .filter(c -> c.getColorName().equalsIgnoreCase(cartItem.getColor()))
+                    .findFirst()
+                    .orElse(null);
+
+            if (selectedColor != null && selectedColor.getImages() != null && !selectedColor.getImages().isEmpty()) {
+                imageUrl = selectedColor.getImages().get(0);
+            }
+        }
+        dto.setImageUrl(imageUrl);
 
         return dto;
     }
 
     @GetMapping("")
     @Operation(summary = "Get the authenticated user's shopping cart", description = "Retrieves the shopping cart of the currently authenticated user. If the user is anonymous, returns an empty shopping cart.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Shopping cart retrieved successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ShoppingCartDTO.class))),
-            @ApiResponse(responseCode = "400", description = "Bad request - unable to retrieve shopping cart", content = @Content)
-    })
+    @ApiResponse(responseCode = "200", description = "Shopping cart retrieved successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ShoppingCartDTO.class)))
+    @ApiResponse(responseCode = "400", description = "Bad request - unable to retrieve shopping cart", content = @Content)
     public ResponseEntity<ShoppingCartDTO> myShoppingCart() {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -106,12 +115,10 @@ public class ShoppingCartController {
 
     @PostMapping("/addProducts")
     @Operation(summary = "Add products to the authenticated user's shopping cart", description = "Adds a specified product in a given size and quantity (default 1) to the authenticated user's shopping cart.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Products added to shopping cart successfully", content = @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = CartItemDTO.class)))),
-            @ApiResponse(responseCode = "401", description = "Unauthorized - user must be authenticated", content = @Content),
-            @ApiResponse(responseCode = "404", description = "Product not found", content = @Content),
-            @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
-    })
+    @ApiResponse(responseCode = "200", description = "Products added to shopping cart successfully", content = @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = CartItemDTO.class))))
+    @ApiResponse(responseCode = "401", description = "Unauthorized - user must be authenticated", content = @Content)
+    @ApiResponse(responseCode = "404", description = "Product not found", content = @Content)
+    @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
     public ResponseEntity<List<CartItemDTO>> addProductsToMyShoppingCart(
             @RequestBody AddProductDTO request) {
         try {
@@ -128,7 +135,8 @@ public class ShoppingCartController {
                     user.getId(),
                     product,
                     sizeToUse,
-                    1);
+                    1,
+                    request.getColor());
 
             List<CartItemDTO> cartItemDTOs = cartItems.stream()
                     .map(this::mapToCartItemDTO)
@@ -144,11 +152,9 @@ public class ShoppingCartController {
 
     @PostMapping("/addProductsNonAuthenticate")
     @Operation(summary = "Add products to a non-authenticated user's shopping cart", description = "Adds a specified product in a given size and quantity (default 1) to the shopping cart of a non-authenticated user.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Products added to shopping cart successfully", content = @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = CartItemDTO.class)))),
-            @ApiResponse(responseCode = "404", description = "Product not found", content = @Content),
-            @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
-    })
+    @ApiResponse(responseCode = "200", description = "Products added to shopping cart successfully", content = @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = CartItemDTO.class))))
+    @ApiResponse(responseCode = "404", description = "Product not found", content = @Content)
+    @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
     public ResponseEntity<List<CartItemDTO>> addProductsToMyShoppingCartNonAuthenticated(
             @Parameter(description = "Request body containing shopping cart data, product ID, and size", required = true) @RequestBody AddProductNonAuthenticatedDTO request) {
         try {
@@ -160,7 +166,7 @@ public class ShoppingCartController {
 
             // Add the product to the shopping cart
             List<CartItem> cartItems = shoppingCartService.addProductsNonAuthenticated(
-                    request.getShoppingCart(), product, request.getSize(), 1);
+                    request.getShoppingCart(), product, request.getSize(), 1, request.getColor());
 
             // Map cart items to DTOs
             List<CartItemDTO> cartItemDTOs = cartItems.stream()
@@ -175,11 +181,9 @@ public class ShoppingCartController {
 
     @PostMapping("/deleteProducts")
     @Operation(summary = "Delete a product from the authenticated user's shopping cart", description = "Removes a product from the authenticated user's shopping cart by item ID and returns the updated cart items.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Product removed from shopping cart successfully", content = @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = CartItemDTO.class)))),
-            @ApiResponse(responseCode = "401", description = "Unauthorized - user must be authenticated", content = @Content),
-            @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
-    })
+    @ApiResponse(responseCode = "200", description = "Product removed from shopping cart successfully", content = @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = CartItemDTO.class))))
+    @ApiResponse(responseCode = "401", description = "Unauthorized - user must be authenticated", content = @Content)
+    @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
     public ResponseEntity<List<CartItemDTO>> deleteProductsFromShoppingCart(
             @Parameter(description = "Payload containing the itemId to be removed", required = true) @RequestBody Map<String, Object> payload) {
         try {
@@ -208,10 +212,8 @@ public class ShoppingCartController {
 
     @PostMapping("/deleteProductsNonAuthenticated")
     @Operation(summary = "Delete a product from a non-authenticated user's shopping cart", description = "Removes a product from the shopping cart of a non-authenticated user and returns the updated cart items.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Product removed from shopping cart successfully", content = @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = CartItemDTO.class)))),
-            @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
-    })
+    @ApiResponse(responseCode = "200", description = "Product removed from shopping cart successfully", content = @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = CartItemDTO.class))))
+    @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content)
     public ResponseEntity<List<CartItemDTO>> deleteProductsFromShoppingCartNonAuthenticated(
             @Parameter(description = "Request body containing shopping cart data and product ID", required = true) @RequestBody AddProductNonAuthenticatedDTO request) {
         try {

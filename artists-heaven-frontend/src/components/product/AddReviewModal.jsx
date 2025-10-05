@@ -26,7 +26,17 @@ const AddReviewModal = ({ isOpen, onClose, productId, authToken }) => {
             comment,
         };
 
-        if(!authToken) {
+        if (score <= 0) {
+            alert(t("review.add.select_score"));
+            return;
+        }
+
+        if (!comment.trim()) {
+            alert(t("review.add.enter_comment"));
+            return;
+        }
+
+        if (!authToken) {
             alert(t("review.add.login_required"));
             handleClose();
             return;
@@ -41,10 +51,8 @@ const AddReviewModal = ({ isOpen, onClose, productId, authToken }) => {
                 },
                 body: JSON.stringify(reviewData),
             });
-            console.log("MI RESULT")
 
             const result = await response.json();
-            console.log(result);
 
             if (response.status === 201) {
                 alert(t("review.add.success"));

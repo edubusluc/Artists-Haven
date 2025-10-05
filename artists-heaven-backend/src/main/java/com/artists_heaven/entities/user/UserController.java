@@ -84,19 +84,14 @@ public class UserController {
             @RequestParam String lang) {
 
         String mainImage = "";
-        String banner = "";
 
         MultipartFile image = userProfileDTO.getImage();
-        MultipartFile bannerImage = userProfileDTO.getBannerImage();
 
         if (image != null && !image.isEmpty()) {
             mainImage = imageServingUtil.saveImages(image, UPLOAD_DIR, "/mainArtist_media/", false);
         }
-        if (bannerImage != null && !bannerImage.isEmpty()) {
-            banner = imageServingUtil.saveImages(bannerImage, UPLOAD_DIR, "/mainArtist_media/", false);
-        }
 
-        userService.updateUserProfile(userProfileDTO, principal, mainImage, banner, lang);
+        userService.updateUserProfile(userProfileDTO, principal, mainImage, lang);
 
         return ResponseEntity.ok(new StandardResponse<>("Profile updated successfully", 200));
     }

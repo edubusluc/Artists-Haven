@@ -90,6 +90,11 @@ const OrderAnonymous = () => {
       },
     });
 
+     if (response.status === 403) {
+    alert(t('orderAnonymous.invalidEmailForLabel'));
+    return;
+  }
+
     if (!response.ok) {
       alert('Error al descargar la etiqueta de devolución');
       return;
@@ -105,11 +110,9 @@ const OrderAnonymous = () => {
     a.remove();
   };
 
-  console.log(order.items)
-
   return (
     <>
-      <div className="bg-white p-8 rounded-xl shadow flex flex-col gap-4 mt-10 m-4">
+      <div className="bg-white p-8 rounded-xl shadow flex flex-col gap-4 mt-20 m-4">
         {order.status === 'DELIVERED' && (
           <div className="text-right">
             <button
@@ -136,7 +139,9 @@ const OrderAnonymous = () => {
         <div className="flex justify-between items-center">
           <div>
             <h3 className="text-xl font-semibold">{t('orderAnonymous.order')} #{order.identifier}</h3>
-            <p className="inter-400 text-sm text-gray-500">{t('orderAnonymous.status')}: {order.status}</p>
+            <p className="inter-400 text-sm text-gray-500">
+              {t('orderAnonymous.status')}: {t(`orderStatus.${order.status}`)}
+            </p>
           </div>
           <div className="text-right">
             <p className="inter-400 text-sm text-green-600">€{order.totalPrice.toFixed(2)}</p>
@@ -149,7 +154,10 @@ const OrderAnonymous = () => {
 
         <div className="flex flex-col gap-4 text-sm text-gray-700">
           {order.items.map((item) => {
-            const imagePath = productImages[item.productId];
+            const imagesByColor = productImages[item.productId] || {};
+            const colorImages = imagesByColor[item.color] || [];
+            const imagePath = colorImages.length > 0 ? `/api/product${colorImages[0]}` : '/placeholder.jpg';
+
             return (
               <div
                 key={item.id}
@@ -157,8 +165,8 @@ const OrderAnonymous = () => {
               >
                 <div className="w-full md:w-32 flex-shrink-0">
                   <img
-                    src={imagePath ? `/api/product${imagePath}` : '/placeholder.jpg'}
-                    alt={item.name}
+                    src={imagePath}
+                    alt={`${item.name} - ${item.color}`}
                     className="w-full h-32 object-contain rounded-md"
                     onError={(e) => (e.target.src = '/placeholder.jpg')}
                     loading="lazy"
@@ -166,9 +174,10 @@ const OrderAnonymous = () => {
                 </div>
                 <div className="flex flex-col justify-center w-full">
                   <p className="inter-400 text-sm">{t('orderAnonymous.product')}: {item.name}</p>
+                  <p className="inter-400 text-sm">{t('orderAnonymous.color')}: {item.color}</p>
                   {item.section !== "ACCESSORIES" &&
-                    <p className='inter-400 text-sm'>{t('orderAnonymous.size')}: {item.size}</p>}
-                  <p className='inter-400 text-sm'>{t('orderAnonymous.quantity')}: {item.quantity}</p>
+                    <p className="inter-400 text-sm">{t('orderAnonymous.size')}: {item.size}</p>}
+                  <p className="inter-400 text-sm">{t('orderAnonymous.quantity')}: {item.quantity}</p>
                   <p className="text-green-700 inter-400 text-sm">{item.price.toFixed(2)}€</p>
                 </div>
               </div>

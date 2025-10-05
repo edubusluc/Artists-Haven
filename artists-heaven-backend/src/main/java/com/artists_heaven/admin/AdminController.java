@@ -7,11 +7,11 @@ import com.artists_heaven.email.EmailSenderService;
 import com.artists_heaven.entities.artist.ArtistService;
 import com.artists_heaven.entities.user.UserProfileDTO;
 import com.artists_heaven.exception.AppExceptions.BadRequestException;
+import com.artists_heaven.images.ImageServingUtil;
 import com.artists_heaven.order.Order;
 import com.artists_heaven.order.OrderDetailsDTO;
 import com.artists_heaven.order.OrderService;
 import com.artists_heaven.page.PageResponse;
-import com.artists_heaven.product.Collection;
 import com.artists_heaven.product.ProductService;
 import com.artists_heaven.standardResponse.StandardResponse;
 import com.artists_heaven.userProduct.UserProduct;
@@ -29,20 +29,14 @@ import com.artists_heaven.verification.Verification;
 import com.artists_heaven.verification.VerificationRepository;
 import com.artists_heaven.verification.VerificationService;
 
-import java.nio.file.Paths;
 import java.time.Year;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
-import java.nio.file.Path;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
-import org.springframework.core.io.FileSystemResource;
-import org.springframework.http.HttpHeaders;
-
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -72,11 +66,14 @@ public class AdminController {
 
         private final UserProductService userProductService;
 
+        private final ImageServingUtil imageServingUtil;
+
         public AdminController(VerificationRepository verificationRepository,
                         OrderService orderService, EmailSenderService emailSenderService, AdminService adminService,
                         VerificationService verificationService,
                         ProductService productService, ArtistService artistService,
-                        UserProductService userProductService) {
+                        UserProductService userProductService,
+                        ImageServingUtil imageServingUtil) {
                 this.orderService = orderService;
                 this.emailSenderService = emailSenderService;
                 this.artistService = artistService;
@@ -85,19 +82,17 @@ public class AdminController {
                 this.verificationService = verificationService;
                 this.productService = productService;
                 this.userProductService = userProductService;
+                this.imageServingUtil = imageServingUtil;
         }
 
-        private <T> ResponseEntity<Map<String, String>> handleRequest(
+        private <T> ResponseEntity<StandardResponse<Object>> handleRequest(
                         T dto,
                         Consumer<T> serviceAction,
                         String successMessage,
                         HttpStatus status) {
-                try {
-                        serviceAction.accept(dto);
-                        return ResponseEntity.status(status).body(Map.of("message", successMessage));
-                } catch (Exception e) {
-                        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
-                }
+
+                serviceAction.accept(dto);
+                return ResponseEntity.ok(new StandardResponse<>(successMessage, HttpStatus.OK.value()));
         }
 
         @Operation(summary = "Validate artist account", description = "Marks an artist as verified, creates a new category using the artist's name, and updates the verification request status to 'ACCEPTED'.")
@@ -154,7 +149,7 @@ public class AdminController {
         @ApiResponse(responseCode = "404", description = "Video file not found")
         @GetMapping("/verification_media/{fileName:.+}")
         public ResponseEntity<Resource> getVerificationVideo(
-                        @Parameter(description = "Name of the video file to retrieve", required = true) @PathVariable String fileName) {
+                        @PathVariable String fileName) {
 
                 if (fileName.contains("..")) {
                         throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid file name");
@@ -162,16 +157,8 @@ public class AdminController {
 
                 String basePath = System.getProperty("user.dir")
                                 + "/artists-heaven-backend/src/main/resources/verification_media/";
-                Path filePath = Paths.get(basePath, fileName);
-                Resource resource = new FileSystemResource(filePath.toFile());
 
-                if (!resource.exists()) {
-                        throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Video not found");
-                }
-
-                return ResponseEntity.ok()
-                                .header(HttpHeaders.CONTENT_TYPE, "video/mp4")
-                                .body(resource);
+                return imageServingUtil.serveVideo(basePath, fileName);
         }
 
         @Operation(summary = "Get yearly platform statistics", description = "Returns statistical data for a given year, including number of orders, total income, email counts, "
@@ -260,14 +247,13 @@ public class AdminController {
         @GetMapping("/orders")
         public PageResponse<OrderDetailsDTO> getOrders(
                         @Parameter(description = "Page number (0-based)", example = "0") @RequestParam(defaultValue = "0") int page,
-
-                        @Parameter(description = "Page size (number of orders per page)", example = "6") @RequestParam(defaultValue = "6") int size) {
+                        @Parameter(description = "Page size (number of orders per page)", example = "6") @RequestParam(defaultValue = "6") int size,
+                        @Parameter(description = "Filter by status", example = "PAID") @RequestParam(required = false) String status,
+                        @Parameter(description = "Search by identifier or paymentIntent") @RequestParam(required = false) String search) {
                 PageRequest pageRequest = PageRequest.of(page, size);
-                Page<Order> orderPage = adminService.getAllOrderSortByDate(pageRequest);
+                Page<Order> orderPage = adminService.getOrdersFiltered(status, search, pageRequest);
 
-                // Map each Order entity to OrderDetailsDTO
                 Page<OrderDetailsDTO> dtoPage = orderPage.map(OrderDetailsDTO::new);
-
                 return new PageResponse<>(dtoPage);
         }
 
@@ -312,26 +298,11 @@ public class AdminController {
                                 new StandardResponse<>("Product enabled successfully", null, HttpStatus.OK.value()));
         }
 
-        @Operation(summary = "Get all collections", description = "Retrieves a list of all product collections sorted by ID, including promotion status.")
-        @ApiResponse(responseCode = "200", description = "Collections retrieved successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
-        @GetMapping("/allCollections")
-        public ResponseEntity<StandardResponse<List<CollectionDTO>>> getAllCollections() {
-                List<Collection> collections = productService.findAllCollections();
-                List<CollectionDTO> result = collections.stream()
-                                .sorted(Comparator.comparing(Collection::getId))
-                                .map(coll -> new CollectionDTO(coll.getId(), coll.getName(), coll.getIsPromoted()))
-                                .toList();
-
-                return ResponseEntity.ok(
-                                new StandardResponse<>("Collections retrieved successfully", result,
-                                                HttpStatus.OK.value()));
-        }
-
         @Operation(summary = "Create a new category", description = "Creates a new product category with the specified name")
         @ApiResponse(responseCode = "201", description = "Category created successfully")
         @ApiResponse(responseCode = "400", description = "Invalid request")
         @PostMapping("newCategory")
-        public ResponseEntity<Map<String, String>> createCategory(@RequestBody CategoryDTO categoryDTO) {
+        public ResponseEntity<StandardResponse<Object>> createCategory(@RequestBody CategoryDTO categoryDTO) {
                 return handleRequest(
                                 categoryDTO,
                                 dto -> productService.saveCategory(dto.getName().replaceAll("\\s+", "")),
@@ -343,7 +314,7 @@ public class AdminController {
         @ApiResponse(responseCode = "200", description = "Category edited successfully")
         @ApiResponse(responseCode = "400", description = "Invalid request")
         @PostMapping("editCategory")
-        public ResponseEntity<Map<String, String>> editCategory(@RequestBody CategoryDTO categoryDTO) {
+        public ResponseEntity<StandardResponse<Object>> editCategory(@RequestBody CategoryDTO categoryDTO) {
                 return handleRequest(
                                 categoryDTO,
                                 productService::editCategory,
@@ -355,7 +326,7 @@ public class AdminController {
         @ApiResponse(responseCode = "201", description = "Collection created successfully")
         @ApiResponse(responseCode = "400", description = "Invalid request")
         @PostMapping("newCollection")
-        public ResponseEntity<Map<String, String>> createCollection(@RequestBody CollectionDTO collectionDTO) {
+        public ResponseEntity<StandardResponse<Object>> createCollection(@RequestBody CollectionDTO collectionDTO) {
                 return handleRequest(
                                 collectionDTO,
                                 dto -> productService.saveCollection(dto.getName().replaceAll("\\s+", "-")),
@@ -367,7 +338,7 @@ public class AdminController {
         @ApiResponse(responseCode = "200", description = "Collection edited successfully")
         @ApiResponse(responseCode = "400", description = "Invalid request")
         @PostMapping("editCollection")
-        public ResponseEntity<Map<String, String>> editCollection(@RequestBody CollectionDTO collectionDTO) {
+        public ResponseEntity<StandardResponse<Object>> editCollection(@RequestBody CollectionDTO collectionDTO) {
                 return handleRequest(
                                 collectionDTO,
                                 productService::editCollection,

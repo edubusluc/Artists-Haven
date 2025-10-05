@@ -2,8 +2,8 @@ package com.artists_heaven.product;
 
 import java.util.Date;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.Column;
@@ -18,32 +18,38 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 /**
- * Data Transfer Object representing the data required to create or update a product.
+ * Data Transfer Object representing the data required to create or update a
+ * product.
  * <p>
- * This DTO contains all relevant information about a product, including its name, description, price,
+ * This DTO contains all relevant information about a product, including its
+ * name, description, price,
  * available sizes and quantities, categories, images, and other metadata.
  * </p>
  * <p>
  * Fields:
  * <ul>
- *     <li>{@code id}: Unique identifier of the product.</li>
- *     <li>{@code name}: Name of the product (required, max 255 characters).</li>
- *     <li>{@code description}: Detailed description of the product (optional, max 1000 characters).</li>
- *     <li>{@code price}: Price of the product (required, positive).</li>
- *     <li>{@code sizes}: Map of available sizes to their corresponding stock quantities (required).</li>
- *     <li>{@code categories}: Set of categories associated with the product.</li>
- *     <li>{@code images}: List of image URLs or filenames (at least one required).</li>
- *     <li>{@code collectionId}: Identifier of the collection this product belongs to (optional).</li>
- *     <li>{@code createdDate}: Date when the product was created.</li>
- *     <li>{@code onPromotion}: Indicates whether the product is on promotion.</li>
- *     <li>{@code discount}: Discount percentage (0-100) if on promotion.</li>
- *     <li>{@code section}: Section of the store where the product belongs (required).</li>
- *     <li>{@code availableUnits}: Number of units available in stock (minimum 0).</li>
- *     <li>{@code available}: Whether the product is currently available for purchase.</li>
- *     <li>{@code reference}: Optional reference number for the product.</li>
- *     <li>{@code composition}: Composition details of the product (required).</li>
- *     <li>{@code shippingDetails}: Shipping instructions or details (required).</li>
- *     <li>{@code modelReference}: Optional model reference for the product.</li>
+ * <li>{@code id}: Unique identifier of the product.</li>
+ * <li>{@code name}: Name of the product (required, max 255 characters).</li>
+ * <li>{@code description}: Detailed description of the product (optional, max
+ * 1000 characters).</li>
+ * <li>{@code price}: Price of the product (required, positive).</li>
+ * <li>{@code categories}: Set of categories associated with the product.</li>
+ * <li>{@code images}: List of image URLs or filenames (at least one
+ * required).</li>
+ * <li>{@code collectionId}: Identifier of the collection this product belongs
+ * to (optional).</li>
+ * <li>{@code createdDate}: Date when the product was created.</li>
+ * <li>{@code onPromotion}: Indicates whether the product is on promotion.</li>
+ * <li>{@code discount}: Discount percentage (0-100) if on promotion.</li>
+ * <li>{@code section}: Section of the store where the product belongs
+ * (required).</li>
+ * <li>{@code available}: Whether the product is currently available for
+ * purchase.</li>
+ * <li>{@code reference}: Optional reference number for the product.</li>
+ * <li>{@code composition}: Composition details of the product (required).</li>
+ * <li>{@code shippingDetails}: Shipping instructions or details
+ * (required).</li>
+ * <li>{@code modelReference}: Optional model reference for the product.</li>
  * </ul>
  * </p>
  */
@@ -68,19 +74,11 @@ public class ProductDTO {
     @Positive(message = "{product.price.positive}")
     private Float price;
 
-    @Schema(description = "Map of sizes to available quantities", example = "{ \"S\": 5, \"M\": 10, \"L\": 3 }")
-    @Column(nullable = false)
-    private Map<String, Integer> sizes;
-
     @Schema(description = "Set of categories associated with the product", example = "[ \"PAINTING\", \"MODERN_ART\" ]")
     private Set<Category> categories;
 
     @Schema(description = "Identifier of the collection this product belongs to", example = "12")
     private Long collectionId;
-
-    @Schema(description = "List of image URLs or filenames for the product", example = "[ \"https://example.com/image1.jpg\", \"https://example.com/image2.jpg\" ]")
-    @Size(min = 1, message = "{product.images.required}")
-    private List<String> images;
 
     @Schema(description = "Date when the product was created", example = "2025-08-01T10:30:00Z")
     private Date createdDate;
@@ -100,10 +98,6 @@ public class ProductDTO {
     @NotNull(message = "{product.section.required}")
     private Section section;
 
-    @Schema(description = "Number of units available in stock", example = "50")
-    @Min(value = 0, message = "{product.availableUnits.min}")
-    private Integer availableUnits;
-
     @Schema(description = "Whether the product is currently available", example = "true")
     private Boolean available;
 
@@ -121,6 +115,9 @@ public class ProductDTO {
     @Schema(description = "Optional model 3dreference for the product", example = "tshirt.glb")
     private String modelReference;
 
+    @Schema(description = "List of color variants for the product")
+    private List<ProductColorDTO> colors;
+
     /**
      * Constructor that maps a {@link Product} entity to {@code ProductDTO}.
      * 
@@ -131,19 +128,27 @@ public class ProductDTO {
         this.name = product.getName();
         this.description = product.getDescription();
         this.price = product.getPrice();
-        this.sizes = product.getSize();
         this.categories = product.getCategories();
-        this.images = product.getImages();
         this.createdDate = product.getCreatedDate();
         this.onPromotion = product.getOn_Promotion();
         this.discount = product.getDiscount();
         this.section = product.getSection();
-        this.availableUnits = product.getAvailableUnits();
         this.available = product.getAvailable();
         this.reference = product.getReference();
         this.composition = product.getComposition();
         this.shippingDetails = product.getShippingDetails();
         this.collectionId = product.getCollection() != null ? product.getCollection().getId() : null;
-        this.modelReference = product.getModelReference();
+
+        this.colors = product.getColors().stream().map(c -> {
+            ProductColorDTO dto = new ProductColorDTO();
+            dto.setColorName(c.getColorName());
+            dto.setHexCode(c.getHexCode());
+            dto.setImages(c.getImages());
+            dto.setSizes(c.getSizes());
+            dto.setAvailableUnits(c.getAvailableUnits());
+            dto.setModelReference(c.getModelReference());
+            dto.setColorId(c.getId());
+            return dto;
+        }).collect(Collectors.toList());
     }
 }

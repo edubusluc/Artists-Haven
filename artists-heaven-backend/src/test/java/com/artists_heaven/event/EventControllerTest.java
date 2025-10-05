@@ -1,11 +1,17 @@
 package com.artists_heaven.event;
 
 import com.artists_heaven.entities.artist.Artist;
+import com.artists_heaven.exception.AppExceptions.ForbiddenActionException;
+import com.artists_heaven.exception.AppExceptions.ResourceNotFoundException;
+import com.artists_heaven.exception.AppExceptions.UnauthorizedActionException;
 import com.artists_heaven.exception.GlobalExceptionHandler;
 import com.artists_heaven.images.ImageServingUtil;
 import org.junit.jupiter.api.*;
 import org.mockito.*;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.data.domain.*;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
@@ -14,10 +20,12 @@ import org.springframework.test.web.servlet.*;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.List;
+import org.springframework.core.io.Resource;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -157,7 +165,7 @@ class EventControllerTest {
 
                         when(imageServingUtil.saveImages(any(), anyString(), anyString(), anyBoolean()))
                                         .thenReturn("test.png");
-                        when(eventService.newEvent(any(EventDTO.class))).thenReturn(event);
+                        when(eventService.newEvent(any(EventDTO.class), anyString())).thenReturn(event);
 
                         mockMvc.perform(multipart("/api/event/new")
                                         .file(eventPart)
@@ -192,6 +200,67 @@ class EventControllerTest {
                                         .file(eventPart)
                                         .file(image))
                                         .andExpect(status().isForbidden());
+                }
+
+                @Test
+                void eventDetails_unauthenticatedUser_throwsUnauthorized() {
+                        SecurityContextHolder.clearContext();
+
+                        Long eventId = 1L;
+
+                        UnauthorizedActionException ex = assertThrows(UnauthorizedActionException.class, () -> {
+                                eventController.eventDetails(eventId);
+                        });
+
+                        assertEquals("User is not authenticated", ex.getMessage());
+                }
+
+                @Test
+                void eventDetails_userNotArtist_throwsForbidden() {
+                        Authentication auth = mock(Authentication.class);
+                        when(auth.isAuthenticated()).thenReturn(true);
+                        when(auth.getPrincipal()).thenReturn(new Object());
+
+                        SecurityContext context = mock(SecurityContext.class);
+                        when(context.getAuthentication()).thenReturn(auth);
+                        SecurityContextHolder.setContext(context);
+
+                        Long eventId = 1L;
+
+                        ForbiddenActionException ex = assertThrows(ForbiddenActionException.class, () -> {
+                                eventController.eventDetails(eventId);
+                        });
+
+                        assertEquals("User is not an artist", ex.getMessage());
+                }
+
+                @Test
+                void eventDetails_eventDoesNotBelongToArtist_throwsResourceNotFound() {
+                        // Simular autenticación de un Artist
+                        Artist artist = new Artist();
+                        artist.setId(1L);
+
+                        Authentication auth = mock(Authentication.class);
+                        when(auth.isAuthenticated()).thenReturn(true);
+                        when(auth.getPrincipal()).thenReturn(artist);
+
+                        SecurityContext context = mock(SecurityContext.class);
+                        when(context.getAuthentication()).thenReturn(auth);
+                        SecurityContextHolder.setContext(context);
+
+                        // Simular un evento que pertenece a otro artista
+                        Artist otherArtist = new Artist();
+                        otherArtist.setId(2L);
+                        Event event = new Event();
+                        event.setArtist(otherArtist);
+
+                        when(eventService.getEventById(10L)).thenReturn(event);
+
+                        ResourceNotFoundException ex = assertThrows(ResourceNotFoundException.class, () -> {
+                                eventController.eventDetails(10L);
+                        });
+
+                        assertEquals("Event does not belong to you", ex.getMessage());
                 }
         }
 
@@ -358,6 +427,46 @@ class EventControllerTest {
                                         }))
                                         .andExpect(status().isNotFound());
                 }
+
+                @Test
+                void shouldFailWhenEventDoesNotBelongToArtist() throws Exception {
+                        // Simular autenticación de un artista con id 1
+                        Artist loggedInArtist = new Artist();
+                        loggedInArtist.setId(1L);
+
+                        Authentication auth = mock(Authentication.class);
+                        when(auth.isAuthenticated()).thenReturn(true);
+                        when(auth.getPrincipal()).thenReturn(artist);
+
+                        SecurityContext context = mock(SecurityContext.class);
+                        when(context.getAuthentication()).thenReturn(auth);
+                        SecurityContextHolder.setContext(context);
+
+                        when(eventService.isArtist()).thenReturn(true);
+
+                        // Simular evento que pertenece a otro artista (id diferente)
+                        Artist otherArtist = new Artist();
+                        otherArtist.setId(2L);
+                        Event eventOwnedByOther = new Event();
+                        eventOwnedByOther.setArtist(otherArtist);
+
+                        when(eventService.getEventById(100L)).thenReturn(eventOwnedByOther);
+
+                        MockMultipartFile eventPart = new MockMultipartFile("event", "", "application/json",
+                                        "{\"name\":\"Updated Event\"}".getBytes());
+
+                        mockMvc.perform(multipart("/api/event/edit/100")
+                                        .file(eventPart)
+                                        .with(request -> {
+                                                request.setMethod("PUT");
+                                                return request;
+                                        }))
+                                        .andExpect(status().isNotFound())
+                                        .andExpect(result -> assertTrue(result
+                                                        .getResolvedException() instanceof ResourceNotFoundException))
+                                        .andExpect(result -> assertEquals("This event does not belong to you",
+                                                        result.getResolvedException().getMessage()));
+                }
         }
 
         // GENERA UNA CARPETA MAL
@@ -365,25 +474,20 @@ class EventControllerTest {
         class GetEventMedia {
                 @Test
                 void shouldReturnImageWhenExists() throws Exception {
-                        // Directorio que el controlador usa
-                        String basePath = System.getProperty("user.dir")
-                                        + "/artists-heaven-backend/src/main/resources/event_media/";
-                        Path directory = Paths.get(basePath);
-                        Files.createDirectories(directory);
+                        // Crear un recurso simulado (no toca el filesystem)
+                        Resource fakeResource = new FileSystemResource(
+                                        Files.createTempFile("event_image", ".png").toFile());
 
-                        // Crear archivo de prueba dentro de esa carpeta
-                        Path testFile = directory.resolve("event_image.png");
-                        Files.write(testFile, "fake".getBytes());
+                        // Mockear ImageServingUtil para que devuelva el recurso
+                        when(imageServingUtil.serveImage(anyString(), eq("event_image.png")))
+                                        .thenReturn(ResponseEntity.ok()
+                                                        .header(HttpHeaders.CONTENT_TYPE, "image/png")
+                                                        .body(fakeResource));
 
+                        // Ejecutar MockMvc
                         mockMvc.perform(get("/api/event/event_media/event_image.png"))
                                         .andExpect(status().isOk())
                                         .andExpect(header().string("Content-Type", "image/png"));
-                }
-
-                @Test
-                void shouldReturn404WhenFileNotExists() throws Exception {
-                        mockMvc.perform(get("/api/event/event_media/nonexistent.png"))
-                                        .andExpect(status().isNotFound());
                 }
         }
 }

@@ -111,17 +111,14 @@ public class AuthService {
      *                                  or user creation process
      */
     public Map<String, String> handleGoogleLogin(String idTokenString) throws Exception {
-        // Verificar el token de Google
         GoogleIdToken idToken = tokenVerifier.verifyToken(idTokenString);
         if (idToken == null) {
             throw new IllegalArgumentException(invalidCredentialsMessage);
         }
 
-        // Extraer el payload y el email
         GoogleIdToken.Payload payload = idToken.getPayload();
         String email = payload.getEmail();
 
-        // Buscar usuario por email
         Optional<User> optionalUser = userRepository.findByEmail(email);
         User user;
 
@@ -132,16 +129,13 @@ public class AuthService {
             userRepository.save(user);
         }
 
-        // Crear Authentication con el rol del usuario
         Authentication authentication = new UsernamePasswordAuthenticationToken(
                 user,
                 null,
                 AuthorityUtils.createAuthorityList(user.getRole().toString()));
 
-        // Generar JWT
         String token = jwtTokenProvider.generateToken(authentication);
 
-        // Respuesta con token, email y rol
         Map<String, String> response = new HashMap<>();
         response.put("token", token);
         response.put("email", email);
@@ -172,6 +166,12 @@ public class AuthService {
         return user;
     }
 
+    /**
+     * Generates a JWT token for the given user.
+     *
+     * @param user the user for whom the token will be generated
+     * @return a JWT token as a {@link String}
+     */
     public String generateToken(User user) {
         return jwtTokenProvider.generateTokenUser(user);
     }

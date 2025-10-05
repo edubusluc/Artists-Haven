@@ -75,9 +75,6 @@ const ArtistDashboard = () => {
         </div>
     );
 
-    console.log(data)
-
-
     const STATUS_MAP = {
         VERIFIED: {
             label: t('artistDashboard.verified'),

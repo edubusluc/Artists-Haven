@@ -158,7 +158,7 @@ const EditMyEvent = () => {
         if (image) data.append("image", image);
 
         try {
-            const response = await fetch(`/api/event/edit/${id}`, {
+            const response = await fetch(`/api/event/edit/${id}?lang=${language}`, {
                 method: "PUT",
                 headers: {
                     Authorization: `Bearer ${authToken}`,
@@ -292,7 +292,8 @@ const EditMyEvent = () => {
                     </div>
 
                     <div>
-                        <label className="block font-semibold mb-2 text-sm text-gray-600">{t('eventEditForm.label.images')}</label>
+                        <label className="block font-semibold mb-2 text-sm text-gray-600">{t('eventEditForm.label.images')} </label>
+                        <p className="text-xs inter-400">{t('eventForm.recommended')}: 380x800</p>
                         {previewImage && (
                             <div className="mb-3">
                                 <img

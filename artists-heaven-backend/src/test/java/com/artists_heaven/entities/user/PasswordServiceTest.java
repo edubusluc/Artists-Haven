@@ -22,7 +22,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-public class PasswordServiceTest {
+class PasswordServiceTest {
 
     @Mock
     private UserRepository userRepository;
