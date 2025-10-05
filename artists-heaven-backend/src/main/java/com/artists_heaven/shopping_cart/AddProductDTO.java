@@ -31,4 +31,6 @@ public class AddProductDTO {
     @NotBlank
     @Schema(description = "Size of the product selected", example = "M", required = true)
     private String size;
+
+    private String color;
 }

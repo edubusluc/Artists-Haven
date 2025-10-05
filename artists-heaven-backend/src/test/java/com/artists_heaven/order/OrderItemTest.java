@@ -26,7 +26,7 @@ class OrderItemTest {
         Order order = new Order();
         order.setId(1L);
         Section section = Section.ACCESSORIES;
-        OrderItem orderItem = new OrderItem(productId, quantity, size, name, price, order,section);
+        OrderItem orderItem = new OrderItem(productId, quantity, size, name, price, order,section,"colorTest");
 
         assertNotNull(orderItem);
         assertEquals(productId, orderItem.getProductId());

@@ -1,19 +1,21 @@
 package com.artists_heaven.entities.artist;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import org.springframework.core.io.Resource;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.nio.file.Files;
 
@@ -25,11 +27,14 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.http.HttpHeaders;
 
 import com.artists_heaven.admin.MonthlySalesDTO;
 import com.artists_heaven.entities.user.UserRepository;
@@ -172,7 +177,6 @@ class ArtistControllerTest {
                                 .andExpect(jsonPath("$.data[1].totalOrders").value(200));
         }
 
-
         @Test
         void testGetArtistMainView_Success() throws Exception {
                 // Crear artista simulado
@@ -189,22 +193,21 @@ class ArtistControllerTest {
         }
 
         @Test
-        void testGetProductImage_Success() throws Exception {
+        void testGetArtistMainImage_Success() throws Exception {
                 String testFileName = "test-image.png";
 
-                // Crear archivo temporal simulado en la ruta real
-                String basePath = System.getProperty("user.dir")
-                                + "/artists-heaven-backend/src/main/resources/mainArtist_media/";
-                Files.createDirectories(Paths.get(basePath));
+                Resource fakeResource = new FileSystemResource(Files.createTempFile("test-image", ".png").toFile());
 
-                Path imagePath = Paths.get(basePath + testFileName);
-                Files.write(imagePath, new byte[] { (byte) 137, 80, 78, 71 });
+                // Mockear ImageServingUtil para que devuelva el recurso
+                when(imageServingUtil.serveImage(anyString(), eq(testFileName)))
+                                .thenReturn(ResponseEntity.ok()
+                                                .header(HttpHeaders.CONTENT_TYPE, "image/png")
+                                                .body(fakeResource));
 
+                // Ejecutar MockMvc
                 mockMvc.perform(get("/api/artists/mainArtist_media/" + testFileName))
-                                .andExpect(status().isOk());
-
-                // Limpieza
-                Files.deleteIfExists(imagePath);
+                                .andExpect(status().isOk())
+                                .andExpect(header().string(HttpHeaders.CONTENT_TYPE, "image/png"));
         }
 
         @Test
@@ -217,7 +220,6 @@ class ArtistControllerTest {
                 artist.setId(artistId);
                 artist.setArtistName(artistName);
                 artist.setMainColor("#FF0000");
-                artist.setBannerPhoto("banner.jpg");
 
                 Product product1 = new Product();
                 product1.setName("Camiseta Tour");
@@ -242,11 +244,9 @@ class ArtistControllerTest {
                 dto.setArtistName(artistName);
                 dto.setArtistProducts(mockProducts);
                 dto.setArtistEvents(mockEvents);
-                dto.setBannerPhoto(artist.getBannerPhoto());
                 dto.setPrimaryColor(artist.getMainColor());
 
                 when(artistService.getArtistWithDetails(artistId)).thenReturn(dto);
-
 
                 // Llamar a la API y verificar la respuesta
                 mockMvc.perform(get("/api/artists/{artistId}", artistId)
@@ -257,8 +257,7 @@ class ArtistControllerTest {
                                 .andExpect(jsonPath("$.data.artistProducts[1].name").value("Gorra"))
                                 .andExpect(jsonPath("$.data.artistEvents[0].name").value("Tour 2025"))
                                 .andExpect(jsonPath("$.data.artistEvents[1].name").value("Festival"))
-                                .andExpect(jsonPath("$.data.primaryColor").value("#FF0000"))
-                                .andExpect(jsonPath("$.data.bannerPhoto").value("banner.jpg"));
+                                .andExpect(jsonPath("$.data.primaryColor").value("#FF0000"));
         }
 
         @AfterEach

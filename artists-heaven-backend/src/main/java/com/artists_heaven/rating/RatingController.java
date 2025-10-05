@@ -20,7 +20,6 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -35,14 +34,11 @@ public class RatingController {
                 this.ratingService = ratingService;
         }
 
-        // Endpoint to retrieve all ratings for a product
         @GetMapping("/productReview/{id}")
         @Operation(summary = "Retrieve all ratings for a product", description = "Fetches and returns a list of all ratings associated with the specified product ID.")
-        @ApiResponses(value = {
-                        @ApiResponse(responseCode = "200", description = "Successfully retrieved list of product ratings", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
-                        @ApiResponse(responseCode = "404", description = "Product not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
-                        @ApiResponse(responseCode = "500", description = "Unexpected error occurred", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
-        })
+        @ApiResponse(responseCode = "200", description = "Successfully retrieved list of product ratings", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+        @ApiResponse(responseCode = "404", description = "Product not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+        @ApiResponse(responseCode = "500", description = "Unexpected error occurred", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
         public ResponseEntity<StandardResponse<List<RatingResponseDTO>>> getProductRatings(
                         @Parameter(description = "ID of the product to retrieve ratings for", required = true) @PathVariable Long id) {
 
@@ -58,13 +54,11 @@ public class RatingController {
 
         @PostMapping("/new")
         @Operation(summary = "Create a new rating for a product", description = "Allows an authenticated user to create a new rating for a specified product, including score and optional comment.")
-        @ApiResponses(value = {
-                        @ApiResponse(responseCode = "201", description = "Rating created successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
-                        @ApiResponse(responseCode = "403", description = "Forbidden - user has not purchased this item", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
-                        @ApiResponse(responseCode = "409", description = "Conflict - user has already rated this product", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
-                        @ApiResponse(responseCode = "404", description = "Product not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
-                        @ApiResponse(responseCode = "500", description = "Unexpected error occurred", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
-        })
+        @ApiResponse(responseCode = "201", description = "Rating created successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+        @ApiResponse(responseCode = "403", description = "Forbidden - user has not purchased this item", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+        @ApiResponse(responseCode = "409", description = "Conflict - user has already rated this product", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+        @ApiResponse(responseCode = "404", description = "Product not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+        @ApiResponse(responseCode = "500", description = "Unexpected error occurred", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
         public ResponseEntity<StandardResponse<RatingResponseDTO>> createNewRating(
                         @Parameter(description = "Rating data including product ID, score, and comment", required = true) @RequestBody RatingRequestDTO ratingRequestDTO,
                         @RequestParam String lang) {

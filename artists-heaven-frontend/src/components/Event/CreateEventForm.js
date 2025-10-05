@@ -29,7 +29,8 @@ const CreateEventForm = () => {
     const language = i18n.language;
 
     useEffect(() => {
-        setValidationErrors({})
+        setValidationErrors({});
+        setErrorMessage("");
     }, [language]);
 
     const [loading, setLoading] = useState(true);
@@ -52,7 +53,7 @@ const CreateEventForm = () => {
                 setIsVerified(false);
             }
             finally {
-                setLoading(false); // Terminó la carga
+                setLoading(false); 
             }
         };
         fetchVerificationStatus();
@@ -124,7 +125,7 @@ const CreateEventForm = () => {
         images.forEach((file) => formData.append("images", file));
 
         try {
-            const response = await fetch("/api/event/new", {
+            const response = await fetch(`/api/event/new?lang=${language}`, {
                 method: "POST",
                 body: formData,
                 headers: {
@@ -145,8 +146,8 @@ const CreateEventForm = () => {
                 setImages([]);
                 navigate("/event/all-my-events");
             } else {
-                const err = await response.text();
-                throw new Error(err || "Error al crear el evento.");
+                const data = await response.json();
+                throw new Error(data.message || "Error al crear el evento.");
             }
         } catch (error) {
             setErrorMessage(error.message);
@@ -258,6 +259,7 @@ const CreateEventForm = () => {
 
                     <div>
                         <label className="block font-semibold mb-2 text-sm text-gray-600">{t('eventForm.label.images')}</label>
+                        <p className="text-xs inter-400">{t('eventForm.recommended')}: 380x800</p>
                         <input
                             type="file"
                             onChange={handleImageChange}

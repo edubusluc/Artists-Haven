@@ -8,7 +8,6 @@ import { useTranslation } from 'react-i18next';
 const ProductList = () => {
     const [products, setProducts] = useState([]);
     const [page, setPage] = useState(0);
-    const [totalPages, setTotalPages] = useState(1);
     const pageSize = 6;
     const [isFilterOpen, setIsFilterOpen] = useState(false);
 
@@ -17,17 +16,22 @@ const ProductList = () => {
     const [priceRange, setPriceRange] = useState({ min: 0, max: 1000 });
     const [selectedCategories, setSelectedCategories] = useState([]);
 
+    const [selectedCollections, setSelectedCollections] = useState([]);
+    const [tempSelectedCollections, setTempSelectedCollections] = useState([]);
+
     const [tempOrderBy, setTempOrderBy] = useState(orderBy);
     const [tempSelectedSizes, setTempSelectedSizes] = useState(selectedSizes);
     const [tempPriceRange, setTempPriceRange] = useState(priceRange);
     const [tempSelectedCategories, setTempSelectedCategories] = useState(selectedCategories);
+    const [collections, setCollections] = useState([]);
 
-    const { t, i18n } = useTranslation();
+    const [selectedSections, setSelectedSections] = useState([]);
+    const [tempSelectedSections, setTempSelectedSections] = useState([]);
+
+    const { t } = useTranslation();
 
 
     const [maxAbsolutePrice, setMaxAbsolutePrice] = useState(1000);
-
-    const [imagesLoaded, setImagesLoaded] = useState(false);
 
     // Nuevo estado para controlar visibilidad y animación fadeIn
     const [isVisible, setIsVisible] = useState(false);
@@ -42,10 +46,9 @@ const ProductList = () => {
         });
 
         Promise.all(imageUrls.map(loadImage)).then(() => {
-            setImagesLoaded(true);
             setTimeout(() => {
-                setIsVisible(true); // Activamos el fadeIn
-            }, 30); // Delay suave
+                setIsVisible(true);
+            }, 30);
         });
 
     }, [products]);
@@ -58,9 +61,19 @@ const ProductList = () => {
             })
             .then((dataProduct) => {
                 setProducts(dataProduct.data.content);
-                setTotalPages(Math.ceil(dataProduct.data.content.length / pageSize));
-
-                const prices = dataProduct.data.content.map((p) => p.price);
+                const prices = dataProduct.data.content.map((p) => p.price); {
+                    collections.map((col) => (
+                        <label key={col.id} className="inline-flex items-center mr-4 mb-2 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                className="form-checkbox"
+                                checked={tempSelectedCollections.includes(col.id)}
+                                onChange={() => toggleTempCollection(col.id)}
+                            />
+                            <span className="ml-2">{col.name}</span>
+                        </label>
+                    ))
+                }
                 const maxPrice = Math.max(...prices);
                 setMaxAbsolutePrice(maxPrice);
                 setPriceRange({ min: 0, max: maxPrice });
@@ -69,16 +82,33 @@ const ProductList = () => {
             .catch((error) => console.error("Error:", error));
     }, []);
 
+    useEffect(() => {
+        fetch("/api/product/allCollections")
+            .then(res => res.json())
+            .then(data => setCollections(data.data))
+            .catch(err => console.error("Error cargando colecciones", err));
+    }, []);
+
     const categories = useMemo(() => {
-        const catsMap = new Map();  // Usar Map para evitar duplicados por id
+        const catsMap = new Map();
         products.forEach((p) => {
             if (p.categories && Array.isArray(p.categories)) {
                 p.categories.forEach((cat) => {
-                    catsMap.set(cat.id, cat); // Usamos id como clave para evitar duplicados
+                    catsMap.set(cat.id, cat);
                 });
             }
         });
-        return Array.from(catsMap.values()); // Array de objetos categoría únicos
+        return Array.from(catsMap.values());
+    }, [products]);
+
+    const sections = useMemo(() => {
+        const secSet = new Set();
+        products.forEach((p) => {
+            if (p.section) {
+                secSet.add(p.section);
+            }
+        });
+        return Array.from(secSet);
     }, [products]);
 
     const filteredProducts = useMemo(() => {
@@ -87,9 +117,13 @@ const ProductList = () => {
         // Filtro por tallas
         if (selectedSizes.length > 0) {
             result = result.filter((product) =>
-                selectedSizes.some((size) => product.size?.[size] > 0)
+                product.colors?.some((color) =>
+                    color.availableUnits == null &&
+                    selectedSizes.some((size) => (color.sizes?.[size] ?? 0) > 0)
+                )
             );
         }
+
 
         // Filtro por precio
         result = result.filter(
@@ -103,6 +137,19 @@ const ProductList = () => {
             );
         }
 
+        //Filtro por colecciones
+        if (selectedCollections.length > 0) {
+            result = result.filter((product) =>
+                selectedCollections.includes(product.collectionId)
+            );
+        }
+
+        //Filtro por secciones
+        if (selectedSections.length > 0) {
+            result = result.filter((product) =>
+                selectedSections.includes(product.section)
+            );
+        }
         // Ordenar
         switch (orderBy) {
             case "az":
@@ -120,12 +167,10 @@ const ProductList = () => {
             default:
                 break;
         }
-
-        setTotalPages(Math.ceil(result.length / pageSize));
         if (page >= Math.ceil(result.length / pageSize)) setPage(0);
 
         return result;
-    }, [products, selectedSizes, priceRange, selectedCategories, orderBy, page, pageSize]);
+    }, [products, selectedSizes, priceRange, selectedCategories, orderBy, page, pageSize, selectedCollections, selectedSections]);
 
     const toggleTempSize = (size) => {
         setTempSelectedSizes((prev) =>
@@ -139,11 +184,29 @@ const ProductList = () => {
         );
     };
 
+    const toggleTempCollection = (collectionId) => {
+        setTempSelectedCollections((prev) =>
+            prev.includes(collectionId)
+                ? prev.filter((c) => c !== collectionId)
+                : [...prev, collectionId]
+        );
+    };
+
+    const toggleTempSection = (section) => {
+        setTempSelectedSections((prev) =>
+            prev.includes(section)
+                ? prev.filter((s) => s !== section)
+                : [...prev, section]
+        );
+    };
+
     const handleApplyFilters = () => {
         setOrderBy(tempOrderBy);
         setSelectedSizes(tempSelectedSizes);
         setPriceRange(tempPriceRange);
         setSelectedCategories(tempSelectedCategories);
+        setSelectedCollections(tempSelectedCollections);
+        setSelectedSections(tempSelectedSections);
 
         setIsFilterOpen(false);
         setPage(0);
@@ -154,11 +217,14 @@ const ProductList = () => {
         setSelectedSizes([]);
         setPriceRange({ min: 0, max: maxAbsolutePrice });
         setSelectedCategories([]);
+        setSelectedCollections([]);
+        setSelectedSections([]);
 
         setTempOrderBy("default");
         setTempSelectedSizes([]);
         setTempPriceRange({ min: 0, max: maxAbsolutePrice });
         setTempSelectedCategories([]);
+        setTempSelectedSections([]);
 
         setIsFilterOpen(false);
         setPage(0);
@@ -173,9 +239,6 @@ const ProductList = () => {
         }
     }, [isFilterOpen, orderBy, selectedSizes, priceRange, selectedCategories]);
 
-    console.log("Filtered Products:", filteredProducts);
-
-
     return (
         <>
             <div
@@ -186,7 +249,7 @@ const ProductList = () => {
                     opacity: isVisible ? 1 : 0,
                     transition: "opacity 0.7s ease-in-out",
                 }}
-                className="p-4 mt-4"
+                className="p-4 mt-12"
             >
                 <div className="flex justify-between mt-5">
                     <p className="custom-font-shop-regular mb-4" style={{ color: "black" }}>
@@ -265,6 +328,38 @@ const ProductList = () => {
                                 onChange={() => toggleTempCategory(category)}
                             />
                             <span className="ml-2">{category.name}</span>
+                        </label>
+                    ))}
+                </div>
+
+                {/* Secciones */}
+                <div className="p-4 custom-font-shop-regular mb-4" style={{ color: "black" }}>
+                    <p className="font-semibold mb-2">{t('productsList.sections')}</p>
+                    {sections.map((section) => (
+                        <label key={section} className="inline-flex items-center mr-4 mb-2 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                className="form-checkbox"
+                                checked={tempSelectedSections.includes(section)}
+                                onChange={() => toggleTempSection(section)}
+                            />
+                            <span className="ml-2">{section}</span>
+                        </label>
+                    ))}
+                </div>
+
+                {/* Colecciones */}
+                <div className="p-4 custom-font-shop-regular mb-4" style={{ color: "black" }}>
+                    <p className="font-semibold mb-2">{t('productsList.collections')}</p>
+                    {collections.map((col) => (
+                        <label key={col.id} className="inline-flex items-center mr-4 mb-2 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                className="form-checkbox"
+                                checked={tempSelectedCollections.includes(col.id)}
+                                onChange={() => toggleTempCollection(col.id)}
+                            />
+                            <span className="ml-2">{col.name}</span>
                         </label>
                     ))}
                 </div>

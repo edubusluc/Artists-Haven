@@ -11,7 +11,6 @@ const ArtistProfile = () => {
     const [error, setError] = useState(null);
     const [formErrors, setFormErrors] = useState({});
     const [images, setImages] = useState([]);
-    const [bannerImage, setBannerImage] = useState([]);
     const [errorMessage, setErrorMessage] = useState("");
     const [saving, setSaving] = useState(false);
     const [saveError, setSaveError] = useState(null);
@@ -94,16 +93,12 @@ const ArtistProfile = () => {
             if (images.length === 0 && !formData.image) {
                 errors.image = t('artistForm.error.requiredImage');
             }
-            if (bannerImage.length === 0 && !formData.bannerImage) {
-                errors.bannerImage = t('artistForm.error.requiredBanner');
-            }
 
             const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/bmp", "image/webp"];
 
             const invalidMainImages = images.filter(file => !allowedTypes.includes(file.type));
-            const invalidBannerImages = bannerImage.filter(file => !allowedTypes.includes(file.type));
 
-            if (invalidMainImages.length > 0 || invalidBannerImages.length > 0) {
+            if (invalidMainImages.length > 0) {
                 setValidationErrors(t('artistForm.error.invalidImage'));
                 return;
             }
@@ -123,13 +118,12 @@ const ArtistProfile = () => {
 
         const data = new FormData();
         Object.keys(formData).forEach(key => {
-            if (key !== 'image' && key !== 'bannerImage') {
+            if (key !== 'image') {
                 data.append(key, formData[key] ?? '');
             }
         });
 
         if (images.length > 0) data.append("image", images[0]);
-        if (bannerImage.length > 0) data.append("bannerImage", bannerImage[0]);
 
         const token = localStorage.getItem("authToken");
 
@@ -157,7 +151,6 @@ const ArtistProfile = () => {
             setFormData(data);
             setIsEditing(false);
             setImages([]);
-            setBannerImage([]);
             window.location.reload();
         } catch (error) {
             setSaveError(error.message);
@@ -259,15 +252,6 @@ const ArtistProfile = () => {
                                         className="w-48 h-48 object-cover rounded-xl border shadow" />
                                 ) : (
                                     <p className="italic text-gray-400">{t('userProfile.noProfileImage')}</p>
-                                )}
-                            </div>
-                            <div>
-                                <p className="text-gray-600 font-medium mb-2">{t('userProfile.bannerImage')}</p>
-                                {formData.bannerImage ? (
-                                    <img src={`/api/artists/${formData.bannerImage}`} alt="Banner"
-                                        className="w-full h-32 object-cover rounded-xl border shadow" />
-                                ) : (
-                                    <p className="italic text-gray-400">{t('userProfile.noBannerImage')}</p>
                                 )}
                             </div>
                         </div>

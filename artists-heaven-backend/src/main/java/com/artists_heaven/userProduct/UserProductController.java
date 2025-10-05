@@ -25,7 +25,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 
 @RestController
 @RequestMapping("/api/user-products")
@@ -43,11 +43,9 @@ public class UserProductController {
 
         @PostMapping("/create")
         @Operation(summary = "Create new UserProduct", description = "Creates a new product linked to a user.")
-        @ApiResponses(value = {
-                        @ApiResponse(responseCode = "201", description = "Product created successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
-                        @ApiResponse(responseCode = "404", description = "User not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
-                        @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
-        })
+        @ApiResponse(responseCode = "201", description = "Product created successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+        @ApiResponse(responseCode = "404", description = "User not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+        @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
         public ResponseEntity<StandardResponse<UserProduct>> createUserProduct(
                         @RequestPart UserProductDTO userProductDTO,
                         @Parameter(description = "List of product images", required = true, content = @Content(mediaType = "image/*")) @RequestPart("images") List<MultipartFile> images,
@@ -66,10 +64,8 @@ public class UserProductController {
 
         @GetMapping("/all")
         @Operation(summary = "Retrieve list of user products", description = "Returns a list of user products. Supports optional search by product name or description. If size = -1, returns all matching products.")
-        @ApiResponses(value = {
-                        @ApiResponse(responseCode = "200", description = "Successfully retrieved user products list", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
-                        @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
-        })
+        @ApiResponse(responseCode = "200", description = "Successfully retrieved user products list", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+        @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
         public ResponseEntity<StandardResponse<List<UserProductDetailsDTO>>> getAllUserProducts(
                         @AuthenticationPrincipal User user) {
 
@@ -83,10 +79,8 @@ public class UserProductController {
 
         @GetMapping("/userProduct_media/{fileName:.+}")
         @Operation(summary = "Retrieve product image by file name", description = "Returns the product image file corresponding to the given file name. Supports serving PNG images stored in the product_media directory.")
-        @ApiResponses(value = {
-                        @ApiResponse(responseCode = "200", description = "Image file successfully retrieved", content = @Content(mediaType = "image/png")),
-                        @ApiResponse(responseCode = "404", description = "Image file not found", content = @Content)
-        })
+        @ApiResponse(responseCode = "200", description = "Image file successfully retrieved", content = @Content(mediaType = "image/png"))
+        @ApiResponse(responseCode = "404", description = "Image file not found", content = @Content)
 
         public ResponseEntity<Resource> getProductImage(@PathVariable String fileName) {
                 String basePath = System.getProperty("user.dir")
@@ -94,6 +88,10 @@ public class UserProductController {
                 return imageServingUtil.serveImage(basePath, fileName);
         }
 
+        @Operation(summary = "Get products created by the authenticated user", description = "Retrieves all products that have been created or uploaded by the currently authenticated user.", security = @SecurityRequirement(name = "bearerAuth"))
+        @ApiResponse(responseCode = "200", description = "User products retrieved successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+        @ApiResponse(responseCode = "401", description = "Unauthorized – user must be authenticated", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+        @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
         @GetMapping("myUserProducts")
         public ResponseEntity<StandardResponse<List<UserProductDetailsDTO>>> getMyUserProducts(
                         @AuthenticationPrincipal User user) {

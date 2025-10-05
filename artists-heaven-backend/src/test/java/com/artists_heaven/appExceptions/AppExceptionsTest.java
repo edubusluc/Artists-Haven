@@ -10,7 +10,7 @@ import java.lang.reflect.InvocationTargetException;
 
 import org.junit.jupiter.api.Test;
 
-public class AppExceptionsTest {
+class AppExceptionsTest {
 
     @Test
     void testPrivateConstructorThrowsException() throws Exception {

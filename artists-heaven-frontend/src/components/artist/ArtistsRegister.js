@@ -26,7 +26,6 @@ const ArtistForm = () => {
   const [errorMessage, setErrorMessage] = useState("");
   const navigate = useNavigate();
   const [images, setImages] = useState(null);
-  const [bannerImage, setBannerImage] = useState(null);
   const [validationErrors, setValidationErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -44,21 +43,6 @@ const ArtistForm = () => {
 
     setErrorMessage("");
     setImages(file);
-  };
-
-  const handleBannerImage = (e) => {
-    const file = e.target.files[0];
-    const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/bmp", "image/webp"];
-
-    if (file && !allowedTypes.includes(file.type)) {
-      setErrorMessage(t('artistForm.error.invalidImage'));
-      setBannerImage(null);
-      setLoading(false);
-      return;
-    }
-
-    setErrorMessage("");
-    setBannerImage(file);
   };
 
   const handleChange = (e) => {
@@ -85,15 +69,11 @@ const ArtistForm = () => {
     if (!formData.url) errors.url = t('artistForm.error.requiredUrl');
 
     if (!images) errors.images = t('artistForm.error.requiredImage');
-    if (!bannerImage) errors.bannerImage = t('artistForm.error.requiredBanner');
 
     const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/bmp", "image/webp"];
 
     if (images && !allowedTypes.includes(images.type)) {
       errors.images = t('artistForm.error.invalidImage');
-    }
-    if (bannerImage && !allowedTypes.includes(bannerImage.type)) {
-      errors.bannerImage = t('artistForm.error.invalidImage');
     }
 
     if (Object.keys(errors).length > 0) {
@@ -110,7 +90,6 @@ const ArtistForm = () => {
     });
 
     data.append("image", images);
-    data.append("bannerImage", bannerImage);
 
     try {
       const response = await fetch(`/api/artists/register?lang=${currentLang}`, {
@@ -136,7 +115,6 @@ const ArtistForm = () => {
         color: "#ffffff",
       });
       setImages([]);
-      setBannerImage([]);
       alert(t('userForm.success'));
       navigate('/auth/login');
     } catch (error) {
@@ -145,8 +123,6 @@ const ArtistForm = () => {
       setLoading(false);
     }
   };
-
-  console.log("EO")
 
   return (
     <><div className="max-w-3xl mx-auto mt-28 p-6 bg-white shadow-2xl rounded-2xl mb-10">
@@ -302,21 +278,6 @@ const ArtistForm = () => {
             accept="image/*" />
           {validationErrors.images && (
             <p className="text-red-600 text-sm">{validationErrors.images}</p>
-          )}
-        </div>
-
-        <div>
-          <div className="mb-2">
-            <label className="block font-semibold text-sm text-gray-600">{t('artistForm.banner')}</label>
-          </div>
-
-          <input
-            type="file"
-            onChange={handleBannerImage}
-            className="block w-full text-sm text-gray-500"
-            accept="image/*" />
-          {validationErrors.bannerImage && (
-            <p className="text-red-600 text-sm">{validationErrors.bannerImage}</p>
           )}
         </div>
 

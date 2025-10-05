@@ -74,7 +74,7 @@ class ReturnControllerTest {
         mockOrder.setId(1L);
 
         when(orderService.findOrderById(1L)).thenReturn(mockOrder);
-        doNothing().when(returnService).createReturnForOrder(mockOrder, dto.getReason(), dto.getEmail());
+        doNothing().when(returnService).createReturnForOrder(mockOrder, dto.getReason(), dto.getEmail(), "es");
         when(messageSource.getMessage(eq("return.message.successful"), any(), any()))
                 .thenReturn("Solicitud de devolución creada correctamente. Devolución creada para el pedido con ID: ");
 

@@ -4,7 +4,6 @@ const en = {
   "Composition": "COMPOSITION AND CARE",
   "Care": "Care",
   "Origin": "Origin",
-  "AddReview": "Add review",
   "sizeGuide": "Size guide",
   "AddToShoppingCard": "Add to cart",
   "NotAvailable": "Product not available",
@@ -20,7 +19,6 @@ const en = {
   "Cerrar": "Close",
   "GeneralRating": "Overall Rating",
   "reviews": "reviews",
-  "No reviews": "No reviews yet",
   "Reference": "Reference",
   "Cart": "Cart",
   "Search panel": "Search panel",
@@ -29,6 +27,7 @@ const en = {
   "shipping_details": "SHIPPING, EXCHANGES AND RETURNS",
   "related_products": "Related Products",
   "shoppinCart.selectSizeFirst": "Please select a size before adding to cart.",
+  "shoppinCart.noStock": "We only have a limited quantity of the selected size in stock. Please adjust your selection.",
 
   "artistForm.title": "Artist Registration",
   "artistForm.firstName": "First Name",
@@ -48,9 +47,7 @@ const en = {
   "artistForm.error.registrationFailed": "Artist registration failed",
   "artistForm.error.requiredArtistName": "Artist name is required",
   "artistForm.error.requiredUrl": "Artist URL is required",
-  "artistForm.error.requiredImage": "At least one image must be uploaded",
   "artistForm.error.requiredBanner": "Banner image must be uploaded",
-  "artistForm.error.registrationFailed": "Failed to register the artist",
   "artistForm.submitting": "Registering artist",
 
   "form.error.requiredFirstName": "First name is required",
@@ -103,6 +100,7 @@ const en = {
   "eventForm.error.requiredLocation": "Event location is required.",
   "eventForm.error.requiredImage": "You must upload at least one image.",
   "eventForm.error.invalidDate": "Event date must be later than today.",
+  "eventForm.recommended": "Size Recommended",
 
   "eventEditForm.label": "Edit Event",
   "eventEditForm.label.name": "Event Name",
@@ -128,6 +126,7 @@ const en = {
   "productForm.error.requiredComposition": "Composition is required.",
   "productForm.error.requiredShippingDetails": "Shipping details are required.",
   "productForm.error.requiredImages": "You must upload at least one image.",
+  "productForm.error.requiredColorName": "Color name is required.",
 
   "promoted.error.discount": "You must enter a discount value between 0 and 100",
 
@@ -144,6 +143,8 @@ const en = {
   "review.form.comment": "Comment",
   "review.form.placeholder": "Leave your review here!",
   "review.form.submit": "Submit Review",
+  "review.add.select_score": "Please select a rating",
+  "review.add.enter_comment": "Please enter a comment",
 
   "attachVideoAlert": "Please attach a video file.",
 
@@ -165,7 +166,6 @@ const en = {
   "login.registerUser": "User",
   "login.welcome": "ARTISTS HEAVEN",
   "login.noAccount": "Don't have an account? Sign up as:",
-  "login.forgotPassword": "Forgot your password?",
   "userLogin.error.requiredEmail": "Please enter your email address.",
   "userLogin.error.requiredPassword": "Please enter your password.",
 
@@ -188,6 +188,10 @@ const en = {
   "adminclient.loadVideo": "Loading video...",
   "adminclient.noPendingVerification": "No pending verifications.",
   "adminclient.userProducts": "User Products",
+  "adminclient.name": "Name",
+  "adminclient.username": "Username",
+  "adminclient.image": "Images",
+  "adminclient.noProducts": "No user products available",
 
   "adminDashboard.year": "Year",
   "adminDashboard.totalSales": "Total Sales",
@@ -199,7 +203,6 @@ const en = {
   "adminDashboard.noDataAvailable": "No sales data available",
   "adminDashboard.reportSummary": "Report Summary",
   "adminDashboard.yearlyReportSummary": "Yearly Report Summary",
-  "adminDashboard.noDataAvailable": "No data available",
   "adminDashboard.orderStatusSummary": "Order Status Summary",
   "adminDashboard.summaryVerifications": "Verifications Summary",
   "adminDashboard.bestSellingProducts": "Best Selling Products",
@@ -234,6 +237,9 @@ const en = {
   "adminOrders.noReturnsAvailable": "No pending returns.",
   "adminOrders.ordersStatusSummary": "Order Status Summary",
   "adminOrders.noDataAvailable": "No data available.",
+  "adminOrders.allStatuses": "All Statuses",
+  "adminOrders.searchByIdOrPayment": "Search by order identifier or payment ID",
+  "adminOrders.search": "Search",
 
   "adminOrderDetails.loadOrder": "Loading order details...",
   "adminOrderDetails.orderManagemente": "Order Management",
@@ -252,6 +258,9 @@ const en = {
   "adminOrderDetails.size": "Size",
   "adminOrderDetails.quantity": "Quantity",
   "adminOrderDetails.price": "Unit Price",
+  "adminOrderDetails.creationDate": "Return Creation Date",
+  "adminOrderDetails.details": "Return Details",
+  "adminOrderDetails.color": "Color",
 
   "adminProductList.productManagemente": "Product Management",
   "adminProductList.createNewProduct": "Create New Product",
@@ -273,7 +282,6 @@ const en = {
   "adminProductList.edit": "Edit",
   "adminProductList.notCategoryAvailable": "No categories available.",
   "adminProductList.promoted": "Promoted",
-  "adminProductList.actions": "Actions",
   "adminProductList.notCollectionsAvailable": "No collections available.",
   "adminProductList.promotedCollection": "Promoted",
   "adminProductList.notPromotedCollecion": "Not Promoted",
@@ -287,13 +295,24 @@ const en = {
   "adminProductList.of": "of",
   "adminProductList.collectionManagement": "Collection Management",
   "adminProductList.newCollection": "Create Collection",
-  "adminProductList.edit": "Edit",
-  "adminProductList.newCollection": "Create Collection",
   "adminProductList.cancel": "Cancel",
   "adminProductList.createNew": "Create New",
   "adminProductList.saveChanges": "Save Changes",
   "adminProductList.create": "Create",
   "adminProductList.promoteCollection": "Promote Collection",
+  "adminProductList.productUpdated": "Product updated successfully",
+  "adminProductList.available": "Available",
+  "adminProductList.unavailable": "Not Available",
+  "adminProductList.cannotDisableWhilePromoted": "You must demote the product before you can disable it.",
+  "adminProductList.cannotEditWhilePromoted": "You must demote the product before you can edit it.",
+  "adminProductList.colors":"Colors",
+  "adminProductList.categoryExists":"A category with that name already exists.",
+  "adminProductList.categoryCreated":"Category created successfully.",
+  "adminProductList.collectionExists":"A collection with that name already exists.",
+  "adminProductList.collectionEdited": "Collection edited successfully.",
+  "adminProductList.categoryEdited": "Category edited successfully.",
+  "adminProductList.collectionCreated": "Collection created successfully.",
+
 
   "artistDashboard.verified": "Verified",
   "artistDashboard.pending": "Pending",
@@ -352,6 +371,7 @@ const en = {
   "concertMap.centerMap": "Center map",
   "concertMap.artist": "Center map",
   "concertMap.here": "📍 You are here",
+  "concertMap.noEvents": "No events available",
 
   "orderAnonymous.loadingOrder": "Loading order details...",
   "orderAnonymous.requestReturn": "Request return",
@@ -362,6 +382,18 @@ const en = {
   "orderAnonymous.product": "Product",
   "orderAnonymous.size": "Size",
   "orderAnonymous.quantity": "Quantity",
+  "orderAnonymous.color": "Color",
+  "orderAnonymous.invalidEmailForLabel": "This email is not associated with the order.",
+
+  orderStatus: {
+    PAID: "Paid",
+    IN_PREPARATION: "In preparation",
+    SENT: "Sent",
+    DELIVERED: "Delivered",
+    CANCELED: "Canceled",
+    RETURN_REQUEST: "Return requested",
+    RETURN_ACCEPTED: "Return accepted",
+  },
 
   "createProductForm.title": "Create New Product",
   "createProductForm.name": "Product Name",
@@ -381,8 +413,11 @@ const en = {
   "createProductForm.shippingDetails": "Shipping, exchanges, and returns",
   "createProductForm.uploadImages": "Upload images",
   "createProductForm.createProduct": "Create Product",
-  "createProductForm.upload3dModel":"Upload 3d model",
-  
+  "createProductForm.upload3dModel": "Upload 3d model",
+  "createProductForm.removeColor": "Delete Color",
+  "createProductForm.addColor": "Add Color",
+  "createProductForm.3DModel": "3D Model (.glb o .gltf)",
+
 
   "editProductForm.title": "Edit Product",
   "editProductForm.name": "Product Name",
@@ -404,10 +439,15 @@ const en = {
   "editProductForm.uploadNewImages": "Upload New Images",
   "editProductForm.saveChanges": "Save Changes",
   "editProductForm.upload3dModel": "upload New 3d model",
+  "editProductForm.addColor": "Add New Color",
+  "editProductForm.removeColor": "Delete color",
+  "editProductForm.colors":"Colors",
+  "editProductForm.3dModel": "3D Model",
 
   "productDetails.loadInfo": "Loading information...",
   "productDetails.size": "Size",
   "productDetails.ProductOutOfStock": "Out of Stock",
+  "productDetails.model3d": "View in 3D",
 
   "productSchema.products": "Products",
   "productSchema.filterAndSearch": "Filter and search",
@@ -423,6 +463,7 @@ const en = {
   "productSchema.price": "Price",
   "productSchema.deleteFilter": "Delete filters",
   "productSchema.applyFilter": "Apply filters",
+  "productSchema.collections": "Collections",
 
   "productsList.products": "Products",
   "productsList.filterAndSearch": "Filter and search",
@@ -438,12 +479,15 @@ const en = {
   "productsList.price": "Price",
   "productsList.deleteFilter": "Delete filters",
   "productsList.applyFilter": "Apply filters",
+  "productsList.collections": "Collections",
+  "productsList.sections": "Product Type",
 
   "promoteProductForm.addDiscount": "Add Discount to Product",
   "promoteProductForm.discount": "Discount",
   "promoteProductForm.originalPrice": "Original Price",
   "promoteProductForm.finalPrice": "Final Price",
   "promoteProductForm.applyDiscount": "Apply Discount",
+  "promoteProductForm.success": "Product promoted successfully",
 
   "forgotPassword.recoverPassword": "Recover Password",
   "forgotPassword.typeEmail": "Enter your email",
@@ -525,7 +569,6 @@ const en = {
   "userProfile.email": "Email",
   "userProfile.phone": "Phone",
   "userProfile.city": "City",
-  "userProfile.address": "Address",
   "userProfile.postalCode": "Postal Code",
   "userProfile.country": "Country",
   "userProfile.imageFormatError": "Only valid image files are allowed (jpg, png, gif, bmp, webp).",
@@ -619,7 +662,6 @@ const en = {
   "forFan.sortedZA": "Sort from Z to A",
   "forFan.sortByMostVotes": "Sort by most votes",
   "forFan.sortByLessVotes": "Sort by least votes",
-  "forFan.sortByLessVotes": "Sort by least votes",
   "forFan.SortByNewest": "Sort by the newest",
   "forFan.SortByOldest": "Sort by the oldest",
 
@@ -634,7 +676,7 @@ const en = {
   "footer.email": "📧 mod.artistheaven@gmail.com",
   "footer.location": "📍 Spain",
   "footer.copyright": "© 2025 Artists' Heaven. All rights reserved.",
-  "footer.emailReport":"Any problems?",
+  "footer.emailReport": "Any problems?",
 
   "faq.title": "Frequently Asked Questions",
 
@@ -658,6 +700,14 @@ const en = {
   "myUserProducts.title": "My Products",
   "myUserProducts.previous": "Previous",
   "myUserProducts.next": "Next",
+
+  "concertMap.filters": "Filter events",
+  "concertMap.filterArtist": "Search artist",
+  "concertMap.anyDistance": "Filter by Distance",
+
+  "artistList.artists": "Artists",
+  "artistList.searchByName": "Search by name",
+  "artistList.sort": "Sort",
 
 };
 export default en;

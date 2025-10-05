@@ -89,7 +89,6 @@ public class UserService {
 
         if (user instanceof Artist artist) {
             dto.setArtistName(artist.getArtistName());
-            dto.setBannerImage(artist.getBannerPhoto());
             dto.setColor(artist.getMainColor());
             dto.setImage(artist.getMainViewPhoto());
         }
@@ -106,7 +105,7 @@ public class UserService {
      * @throws IllegalArgumentException if the user is not authenticated.
      */
     public void updateUserProfile(UserProfileUpdateDTO userProfileDTO, Principal principal, String image,
-            String bannerImage, String lang) {
+            String lang) {
 
         Locale locale = new Locale(lang);
 
@@ -142,9 +141,6 @@ public class UserService {
             if (userProfileDTO.getArtistName() != null) {
                 artist.setArtistName(userProfileDTO.getArtistName());
                 artist.setMainColor(userProfileDTO.getColor());
-            }
-            if (!bannerImage.isEmpty()) {
-                artist.setBannerPhoto(bannerImage);
             }
             if (!image.isEmpty()) {
                 artist.setMainViewPhoto(image);

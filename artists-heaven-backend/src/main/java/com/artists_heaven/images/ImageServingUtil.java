@@ -19,6 +19,13 @@ public class ImageServingUtil {
         // evitar instanciación
     }
 
+    /**
+     * Serves an image file from the specified path.
+     *
+     * @param basePath the base directory of the image
+     * @param fileName the name of the image file
+     * @return a ResponseEntity containing the image resource, or a 404 if not found
+     */
     public ResponseEntity<Resource> serveImage(String basePath, String fileName) {
         Path filePath = Paths.get(basePath, fileName);
         Resource resource = new FileSystemResource(filePath.toFile());
@@ -32,6 +39,36 @@ public class ImageServingUtil {
                 .body(resource);
     }
 
+    /**
+     * Serves a video file from the specified path.
+     *
+     * @param basePath the base directory of the video
+     * @param fileName the name of the video file
+     * @return a ResponseEntity containing the video resource, or a 404 if not found
+     */
+    public ResponseEntity<Resource> serveVideo(String basePath, String fileName) {
+        Path filePath = Paths.get(basePath, fileName);
+        Resource resource = new FileSystemResource(filePath.toFile());
+
+        if (!resource.exists()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_TYPE, "video/mp4")
+                .body(resource);
+    }
+
+    /**
+     * Saves an uploaded image or video file to the server.
+     *
+     * @param file         the MultipartFile to save
+     * @param uploadDir    the directory where the file should be saved
+     * @param mediaUrlCode the URL prefix to access the saved file
+     * @param allowVideo   whether to allow video files (mp4/quicktime)
+     * @return the accessible media URL of the saved file
+     * @throws IllegalArgumentException if the file is invalid or cannot be saved
+     */
     public String saveImages(MultipartFile file, String uploadDir, String mediaUrlCode, boolean allowVideo) {
         String mediaUrl = "";
 

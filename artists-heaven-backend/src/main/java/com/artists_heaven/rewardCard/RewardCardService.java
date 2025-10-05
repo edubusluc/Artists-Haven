@@ -26,37 +26,43 @@ public class RewardCardService {
         this.messageSource = messageSource;
     }
 
+    /**
+     * Redeems a reward card for the authenticated user.
+     *
+     * @param request the redeem request containing required points
+     * @param lang    user's language for localized messages
+     * @return the newly created RewardCard
+     * @throws AppExceptions.BadRequestException if the user doesn't have enough
+     *                                           points,
+     *                                           or already has a pending reward
+     *                                           card
+     */
     public RewardCard redeemRewardCard(RedeemRequest request, String lang) {
         User user = getAuthenticatedUser();
         Locale locale = new Locale(lang);
 
         int requiredPoints = request.getRequiredPoints();
 
-        // Validar puntos suficientes
         if (user.getPoints() < requiredPoints) {
             String msg = messageSource.getMessage("rewardCard.notEnoughPoints", null, locale);
             throw new AppExceptions.BadRequestException(msg);
         }
 
-        // Validar que no tenga reward card activa sin canjear
         boolean hasPendingRewardCard = rewardCardRepository.existsByUserAndRedeemedFalse(user);
         if (hasPendingRewardCard) {
-            String msg = messageSource.getMessage("rewardCard.activeRewardCardExists", null, locale); 
+            String msg = messageSource.getMessage("rewardCard.activeRewardCardExists", null, locale);
             throw new AppExceptions.BadRequestException(msg);
         }
 
-        // Determinar descuento
         int discountPercentage = getDiscountPercentage(requiredPoints, locale);
         if (discountPercentage == -1) {
             String msg = messageSource.getMessage("rewardCard.invalidPointsTier", null, locale);
             throw new AppExceptions.BadRequestException(msg);
         }
 
-        // Restar puntos al usuario
         user.setPoints(user.getPoints() - requiredPoints);
         userRepository.save(user);
 
-        // Crear y guardar RewardCard
         RewardCard card = new RewardCard();
         card.setUser(user);
         card.setRequiredPoints(requiredPoints);
@@ -64,10 +70,15 @@ public class RewardCardService {
         card.setRedeemed(false);
         rewardCardRepository.save(card);
 
-        
         return (card);
     }
 
+    /**
+     * Determines discount based on required points.
+     *
+     * @param requiredPoints points required to redeem the card
+     * @return discount percentage or -1 if invalid
+     */
     private int getDiscountPercentage(int requiredPoints, Locale locale) {
         return switch (requiredPoints) {
             case 500 -> 10;
@@ -76,6 +87,12 @@ public class RewardCardService {
         };
     }
 
+    /**
+     * Gets the currently authenticated user.
+     *
+     * @return authenticated User
+     * @throws RuntimeException if user is not authenticated
+     */
     private User getAuthenticatedUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         Object principal = auth.getPrincipal();
@@ -84,6 +101,13 @@ public class RewardCardService {
         throw new RuntimeException("User not authenticated");
     }
 
+    /**
+     * Activates a reward card for a user based on their points.
+     *
+     * @param user the user to activate the card for
+     * @return the created RewardCard
+     * @throws IllegalArgumentException if the user does not have enough points
+     */
     public RewardCard activateRewardCard(User user) {
         if (user.getPoints() >= 950) {
             user.setPoints(user.getPoints() - 950);

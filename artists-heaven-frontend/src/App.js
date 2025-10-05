@@ -31,7 +31,8 @@ import ArtistsRegister from './components/artist/ArtistsRegister';
 import ArtistDashboard from './components/artist/ArtistDashboard';
 import ArtistHeader from './components/artist/ArtistHeader';
 import ArtistView from './components/ArtistView';
-import ArtistProfile from './components/artist/ArtistProfile'
+import ArtistProfile from './components/artist/ArtistProfile';
+import ArtistList from './components/artist/ArtistList'
 
 // Components - Orders
 import OrderAnonymous from './components/order/OrderAnonymous';
@@ -60,8 +61,8 @@ import AllMyEvents from './components/Event/AllMyEvents';
 // Components - Admin
 import AdminHeader from './components/admin/AdminHeader';
 import AdminDashboard from './components/admin/AdminDashboard';
-import AdminProductList from './components/admin/AdminProductList';
-import AdminClient from './components/admin/AdminClients';
+import AdminProductList from './components/admin/AdminProductList/AdminProductList';
+import AdminClient from './components/admin/AdminClient/AdminClients';
 import AdminOrder from './components/admin/AdminOrder';
 import AdminOrderDetails from './components/admin/AdminOrderDetails';
 
@@ -133,6 +134,7 @@ const AppRoutes = ({ role }) => (
     <Route path="/terms" element={<TermsAndConditions />} />
     <Route path="/about" element={<AboutUs />} />
     <Route path="/terms-and-conditions" element={<ForFanTermsAndConditions />} />
+    <Route path="/artists" element={<ArtistList />} />
   </Routes>
 );
 

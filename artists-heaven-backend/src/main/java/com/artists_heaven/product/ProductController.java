@@ -5,6 +5,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.multipart.MultipartHttpServletRequest;
 
 import com.artists_heaven.admin.CategoryDTO;
 import com.artists_heaven.admin.CollectionDTO;
@@ -19,16 +20,22 @@ import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -61,13 +68,13 @@ public class ProductController {
         @ApiResponse(responseCode = "200", description = "Successfully retrieved products list", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
         @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
         public ResponseEntity<StandardResponse<PageResponse<ProductDTO>>> getAllProducts(
-                        @Parameter(description = "Page number to retrieve (0-based)", example = "0") @RequestParam(defaultValue = "0") int page,
+                        @RequestParam(defaultValue = "0") int page,
+                        @RequestParam(defaultValue = "6") int size,
+                        @RequestParam(required = false) String search,
+                        @RequestParam(required = false) Boolean available,
+                        @RequestParam(required = false) Boolean promoted) {
 
-                        @Parameter(description = "Number of products per page. Use -1 to retrieve all products", example = "6") @RequestParam(defaultValue = "6") int size,
-
-                        @Parameter(description = "Optional search keyword to filter products by name or description", example = "laptop", required = false) @RequestParam(required = false) String search) {
-
-                PageResponse<ProductDTO> products = productService.getProducts(page, size, search);
+                PageResponse<ProductDTO> products = productService.getProducts(page, size, search, available, promoted);
 
                 return ResponseEntity.ok(
                                 new StandardResponse<>("Products retrieved successfully", products,
@@ -101,30 +108,38 @@ public class ProductController {
 
         @PostMapping("/new")
         @PreAuthorize("hasRole('ADMIN')")
-        @Operation(summary = "Create a new product", description = "Creates a new product with provided product details and associated images. "
-                        +
-                        "The images are saved, their URLs are linked to the product, and the product is registered.")
-
+        @Operation(summary = "Create a new product", description = "Creates a new product with provided details, colors, images and optional 3D models per color.")
         @ApiResponse(responseCode = "201", description = "Product created successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
         @ApiResponse(responseCode = "400", description = "Bad request - invalid product data or images", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
         @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
-
         public ResponseEntity<StandardResponse<Product>> newProduct(
-                        @Parameter(description = "Product data to create", required = true) @RequestPart("product") @Valid ProductDTO productDTO,
+                        @RequestPart("product") @Valid ProductDTO productDTO,
+                        @RequestParam(required = false) MultiValueMap<String, MultipartFile> colorImages,
+                        @RequestParam(required = false) MultiValueMap<String, MultipartFile> colorModels) {
 
-                        @Parameter(description = "List of product images", required = true, content = @Content(mediaType = "image/*")) @RequestPart("images") List<MultipartFile> images,
-                        @Parameter(description = "3D model file", required = false, content = @Content(mediaType = "model/*")) @RequestPart(value = "model", required = false) MultipartFile modelFile) {
-
-                if (images == null || images.isEmpty()) {
-                        throw new AppExceptions.InvalidInputException("At least one image is required.");
+                if (productDTO.getColors() == null || productDTO.getColors().isEmpty()) {
+                        throw new AppExceptions.InvalidInputException(
+                                        "Debe haber al menos un color con imágenes y modelo.");
                 }
 
-                List<String> imageUrls = productService.saveImages(images);
-                productDTO.setImages(imageUrls);
+                if (colorImages != null) {
+                        for (int i = 0; i < productDTO.getColors().size(); i++) {
+                                List<MultipartFile> files = colorImages.get("colorImages_" + i);
+                                if (files != null && !files.isEmpty()) {
+                                        List<String> urls = productService.saveImages(files);
+                                        productDTO.getColors().get(i).setImages(urls);
+                                }
+                        }
+                }
 
-                if (modelFile != null && !modelFile.isEmpty()) {
-                        String modelUrl = productService.saveModel(modelFile); // método que debes implementar
-                        productDTO.setModelReference(modelUrl);
+                if (colorModels != null) {
+                        for (int i = 0; i < productDTO.getColors().size(); i++) {
+                                List<MultipartFile> models = colorModels.get("colorModels_" + i);
+                                if (models != null && !models.isEmpty()) {
+                                        String modelUrl = productService.saveModel(models.get(0));
+                                        productDTO.getColors().get(i).setModelReference(modelUrl);
+                                }
+                        }
                 }
 
                 Product newProduct = productService.registerProduct(productDTO);
@@ -134,7 +149,6 @@ public class ProductController {
                                                 HttpStatus.CREATED.value()));
         }
 
-        // Endpoint to retrieve details of a specific product by its ID
         @GetMapping("/details/{id}")
         @Operation(summary = "Retrieve product details by ID", description = "Returns detailed information of a specific product identified by its ID.")
 
@@ -155,26 +169,37 @@ public class ProductController {
 
         @PutMapping("/edit/{id}")
         @PreAuthorize("hasRole('ADMIN')")
-        @Operation(summary = "Update an existing product by ID", description = "Updates the product data, optionally adding new images, removing specified images, and reordering images.")
-
+        @Operation(summary = "Update an existing product by ID", description = "Updates the product data, handling colors, images and optional 3D model per color.")
         @ApiResponse(responseCode = "200", description = "Product updated successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
-        @ApiResponse(responseCode = "400", description = "Bad request - invalid update data", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
-        @ApiResponse(responseCode = "404", description = "Product not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
-        @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+        @ApiResponse(responseCode = "400", description = "Bad request - invalid update data")
+        @ApiResponse(responseCode = "404", description = "Product not found")
+        @ApiResponse(responseCode = "500", description = "Internal server error")
         public ResponseEntity<StandardResponse<ProductDTO>> updateProduct(
                         @Parameter(description = "ID of the product to update", required = true) @PathVariable("id") Long id,
 
                         @Parameter(description = "Product data to update", required = true) @RequestPart("product") @Valid ProductDTO productDTO,
 
-                        @Parameter(description = "List of new images to add", required = false, content = @Content(mediaType = "image/*")) @RequestPart(value = "newImages", required = false) List<MultipartFile> newImages,
+                        HttpServletRequest request) {
 
-                        @Parameter(description = "List of images to remove", required = false, content = @Content(mediaType = "image/*")) @RequestPart(value = "removedImages", required = false) List<MultipartFile> removedImages,
+                Map<Integer, List<MultipartFile>> colorImages = new HashMap<>();
 
-                        @Parameter(description = "Ordered list of image URLs/names", required = false, content = @Content(mediaType = "application/json")) @RequestPart(value = "reorderedImages", required = false) List<String> reorderedImages,
-                        @Parameter(description = "3D model file", required = false, content = @Content(mediaType = "model/*")) @RequestPart(value = "model", required = false) MultipartFile modelFile) {
+                Map<Integer, MultipartFile> colorModels = new HashMap<>();
 
-                productService.updateProduct(id, removedImages, newImages, productDTO,
-                                reorderedImages, modelFile);
+                if (request instanceof MultipartHttpServletRequest multipartRequest) {
+                        for (int i = 0; i < productDTO.getColors().size(); i++) {
+                                List<MultipartFile> files = multipartRequest.getFiles("colorImages_" + i);
+                                if (!files.isEmpty()) {
+                                        colorImages.put(i, files);
+                                }
+
+                                MultipartFile modelFile = multipartRequest.getFile("colorModel_" + i);
+                                if (modelFile != null && !modelFile.isEmpty()) {
+                                        colorModels.put(i, modelFile);
+                                }
+                        }
+                }
+
+                productService.updateProduct(id, productDTO, colorImages, colorModels);
 
                 return ResponseEntity.ok(
                                 new StandardResponse<>("Product updated successfully", null, HttpStatus.OK.value()));
@@ -208,10 +233,9 @@ public class ProductController {
         @ApiResponse(responseCode = "400", description = "Bad request - invalid input data", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
         @ApiResponse(responseCode = "401", description = "Unauthorized - authentication is required", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
         @ApiResponse(responseCode = "403", description = "Forbidden - only admins can demote products", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
-
         public ResponseEntity<StandardResponse<ProductDTO>> demoteProduct(
                         @Parameter(description = "ID of the product to demote", required = true) @PathVariable Long id,
-                        String lang) { // <- importante: inyectar la Locale actual
+                        String lang) {
 
                 productService.demoteProduct(id);
                 Locale locale = new Locale(lang);
@@ -221,36 +245,46 @@ public class ProductController {
                                 new StandardResponse<>(message, null, HttpStatus.OK.value()));
         }
 
+        @Operation(summary = "Get 12 products sorted by name", description = "Retrieves a list of the first 12 products sorted alphabetically by name.", security = @SecurityRequirement(name = "bearerAuth"))
+        @ApiResponse(responseCode = "200", description = "Successfully retrieved 12 sorted products", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+        @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
         @GetMapping("sorted12Product")
-        @Operation(summary = "Get 12 products sorted by name")
         public ResponseEntity<StandardResponse<List<ProductDTO>>> getSorted12Products() {
                 List<Product> product12 = productService.get12ProductsSortedByName();
                 return buildProductResponse(product12, "Retrieved 12 sorted products successfully");
         }
 
+        @Operation(summary = "Get all t-shirts", description = "Retrieves a list of all products categorized as t-shirts.", security = @SecurityRequirement(name = "bearerAuth"))
+        @ApiResponse(responseCode = "200", description = "Successfully retrieved t-shirts", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+        @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
         @GetMapping("tshirt")
-        @Operation(summary = "Get all t-shirts")
         public ResponseEntity<StandardResponse<List<ProductDTO>>> getTshirts() {
                 List<Product> products = productService.findTshirtsProduct();
                 return buildProductResponse(products, "Retrieved t-shirts successfully");
         }
 
+        @Operation(summary = "Get all pants", description = "Retrieves a list of all products categorized as pants.", security = @SecurityRequirement(name = "bearerAuth"))
+        @ApiResponse(responseCode = "200", description = "Successfully retrieved pants", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+        @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
         @GetMapping("pants")
-        @Operation(summary = "Get all pants")
         public ResponseEntity<StandardResponse<List<ProductDTO>>> getPants() {
                 List<Product> products = productService.findPantsProduct();
                 return buildProductResponse(products, "Retrieved pants successfully");
         }
 
+        @Operation(summary = "Get all hoodies", description = "Retrieves a list of all products categorized as hoodies.", security = @SecurityRequirement(name = "bearerAuth"))
+        @ApiResponse(responseCode = "200", description = "Successfully retrieved hoodies", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+        @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
         @GetMapping("hoodies")
-        @Operation(summary = "Get all hoodies")
         public ResponseEntity<StandardResponse<List<ProductDTO>>> getHoodies() {
                 List<Product> products = productService.findHoodiesProduct();
                 return buildProductResponse(products, "Retrieved hoodies successfully");
         }
 
+        @Operation(summary = "Get all accessories", description = "Retrieves a list of all products categorized as accessories.", security = @SecurityRequirement(name = "bearerAuth"))
+        @ApiResponse(responseCode = "200", description = "Successfully retrieved accessories", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+        @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
         @GetMapping("accessories")
-        @Operation(summary = "Get all accessories")
         public ResponseEntity<StandardResponse<List<ProductDTO>>> getAccessories() {
                 List<Product> products = productService.findAccessoriesProduct();
                 return buildProductResponse(products, "Retrieved accessories successfully");
@@ -350,6 +384,21 @@ public class ProductController {
                                 new StandardResponse<>(
                                                 "Products retrieved successfully from collection: " + collectionName,
                                                 productDTOs,
+                                                HttpStatus.OK.value()));
+        }
+
+        @Operation(summary = "Get all collections", description = "Retrieves a list of all product collections sorted by ID, including promotion status.")
+        @ApiResponse(responseCode = "200", description = "Collections retrieved successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+        @GetMapping("/allCollections")
+        public ResponseEntity<StandardResponse<List<CollectionDTO>>> getAllCollections() {
+                List<Collection> collections = productService.findAllCollections();
+                List<CollectionDTO> result = collections.stream()
+                                .sorted(Comparator.comparing(Collection::getId))
+                                .map(coll -> new CollectionDTO(coll.getId(), coll.getName(), coll.getIsPromoted()))
+                                .toList();
+
+                return ResponseEntity.ok(
+                                new StandardResponse<>("Collections retrieved successfully", result,
                                                 HttpStatus.OK.value()));
         }
 

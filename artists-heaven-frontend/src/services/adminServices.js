@@ -39,15 +39,34 @@ const makeRequest = async (url, method = 'GET', body = null, authToken) => {
 export const getAllCategories = (authToken) => makeRequest(`/api/product/categories`, 'GET', null, authToken);
 
 // Obtner todas las colecciones
-export const getAllCollections = (authToken) => makeRequest(`${API_BASE}/allCollections`, 'GET', null, authToken);
+export const getAllCollections = (authToken) => makeRequest(`/api/product/allCollections`, 'GET', null, authToken);
 
 // Obtener gestión de productos
 export const getProductManagement = (authToken) => makeRequest(`${API_BASE}/product-management`, 'GET', null, authToken);
 
 // Obtener todos los productos con paginación y búsqueda
-export const getAllProducts = (authToken, page, pageSize, searchTerm = '') => {
-    const query = searchTerm ? `&search=${encodeURIComponent(searchTerm)}` : '';
-    return makeRequest(`/api/product/allProducts?page=${page}&size=${pageSize}${query}`, 'GET', null, authToken);
+export const getAllProducts = (
+    authToken,
+    page,
+    pageSize,
+    searchTerm = '',
+    available = null,
+    promoted = null
+) => {
+    const params = new URLSearchParams();
+    params.append("page", page);
+    params.append("size", pageSize);
+
+    if (searchTerm) params.append("search", searchTerm);
+    if (available !== null) params.append("available", available);
+    if (promoted !== null) params.append("promoted", promoted);
+
+    return makeRequest(
+        `/api/product/allProducts?${params.toString()}`,
+        'GET',
+        null,
+        authToken
+    );
 };
 
 // Cambiar disponibilidad del producto (habilitar/deshabilitar)
@@ -103,7 +122,7 @@ export const getPendingUserProducts = (authToken) =>
 export const approveUserProduct = (authToken, productId) =>
     makeRequest(`/api/admin/userProduct/${productId}/approve`, 'POST', null, authToken);
 
-export const rejectUserProduct  = (authToken, productId) =>
+export const rejectUserProduct = (authToken, productId) =>
     makeRequest(`/api/admin/userProduct/${productId}/reject`, 'POST', null, authToken);
 
 // Verificar un artista
@@ -116,8 +135,17 @@ export const doRefuseArtist = (authToken, verificationId) =>
     makeRequest(`/api/admin/${verificationId}/refuse`, 'POST', null, authToken);
 
 // Función para obtener lor pedidos
-export const getOrders = (authToken, page, pageSize) => {
-    return makeRequest(`/api/admin/orders?page=${page}&size=${pageSize}`, 'GET', null, authToken);
+export const getOrders = (authToken, page, pageSize, status, search) => {
+    let url = `/api/admin/orders?page=${page}&size=${pageSize}`;
+
+    if (status) {
+        url += `&status=${encodeURIComponent(status)}`;
+    }
+    if (search) {
+        url += `&search=${encodeURIComponent(search)}`;
+    }
+
+    return makeRequest(url, 'GET', null, authToken);
 };
 
 //Función para actualizar el estado de un pedido

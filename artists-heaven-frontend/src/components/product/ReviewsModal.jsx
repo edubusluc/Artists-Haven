@@ -1,22 +1,60 @@
-import React from "react";
+import React, { useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import defaultUserImg from "../../util-image/defaultUser.png";
 import SlidingPanel from "../../utils/SlidingPanel";
 
 const ReviewsModal = ({ isOpen, onClose, reviews }) => {
   const { t } = useTranslation();
+  const [filter, setFilter] = useState("date-desc"); // valor inicial: más recientes primero
+
+  // Reseñas ordenadas según el filtro
+  const filteredReviews = useMemo(() => {
+    if (!reviews) return [];
+    const sorted = [...reviews];
+
+    switch (filter) {
+      case "date-asc":
+        return sorted.sort(
+          (a, b) => new Date(a.createdAt) - new Date(b.createdAt)
+        );
+      case "date-desc":
+        return sorted.sort(
+          (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+        );
+      case "score-asc":
+        return sorted.sort((a, b) => a.score - b.score);
+      case "score-desc":
+        return sorted.sort((a, b) => b.score - a.score);
+      default:
+        return sorted;
+    }
+  }, [reviews, filter]);
 
   return (
     <SlidingPanel
       isOpen={isOpen}
       onClose={onClose}
-      title={t("Product reviews")}
+      title={t("review.form.title")}
       position="right"
       maxWidth="400px"
     >
       {reviews.length > 0 ? (
         <div className="space-y-4">
-          {reviews.map((review, index) => (
+          {/* Selector de filtro */}
+          <div className="flex justify-end mb-2">
+            <select
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              className="border rounded-md text-sm p-1"
+            >
+              <option value="date-desc">{t("Más recientes")}</option>
+              <option value="date-asc">{t("Más antiguas")}</option>
+              <option value="score-desc">{t("Mejor puntuación")}</option>
+              <option value="score-asc">{t("Peor puntuación")}</option>
+            </select>
+          </div>
+
+          {filteredReviews.map((review, index) => (
             <div key={index} className="border-b pb-2">
               {/* Imagen + username */}
               <div className="flex items-center gap-3">

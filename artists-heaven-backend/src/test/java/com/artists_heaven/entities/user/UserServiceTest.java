@@ -186,7 +186,7 @@ class UserServiceTest {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(principal.getName()).thenReturn("OldFirstName");
 
-        userService.updateUserProfile(userProfileDTO, principal, "", "", "es");
+        userService.updateUserProfile(userProfileDTO, principal, "", "es");
 
         assertEquals("NewFirstName", user.getFirstName());
         assertEquals("NewLastName", user.getLastName());
@@ -211,7 +211,7 @@ class UserServiceTest {
         when(userRepository.findById(1L)).thenReturn(Optional.of(artist));
         when(principal.getName()).thenReturn("OldFirstName");
 
-        userService.updateUserProfile(userProfileDTO, principal, "/mainImage", "/image", "es");
+        userService.updateUserProfile(userProfileDTO, principal, "/mainImage", "es");
 
         assertEquals("NewFirstName", artist.getFirstName());
         assertEquals("NewLastName", artist.getLastName());
@@ -226,7 +226,7 @@ class UserServiceTest {
 
         UnauthorizedActionException ex = assertThrows(
                 AppExceptions.UnauthorizedActionException.class,
-                () -> userService.updateUserProfile(dto, null, "", "", "es"));
+                () -> userService.updateUserProfile(dto, null, "", "es"));
 
         assertEquals("User is not authenticated", ex.getMessage());
     }
@@ -247,7 +247,7 @@ class UserServiceTest {
 
         AppExceptions.ForbiddenActionException ex = assertThrows(
                 AppExceptions.ForbiddenActionException.class,
-                () -> userService.updateUserProfile(dto, principal, "", "", "es"));
+                () -> userService.updateUserProfile(dto, principal, "", "es"));
 
         assertEquals("You cannot edit another user's profile", ex.getMessage());
     }
@@ -272,7 +272,7 @@ class UserServiceTest {
 
         DuplicateActionException ex = assertThrows(
                 DuplicateActionException.class,
-                () -> userService.updateUserProfile(dto, principal, "", "", "es"));
+                () -> userService.updateUserProfile(dto, principal, "", "es"));
 
         assertEquals("Username already exists", ex.getMessage());
     }
@@ -293,11 +293,10 @@ class UserServiceTest {
         when(principal.getName()).thenReturn("artistUser");
         when(userRepository.findById(1L)).thenReturn(Optional.of(artist));
 
-        userService.updateUserProfile(dto, principal, "/mainImage", "/bannerImage", "es");
+        userService.updateUserProfile(dto, principal, "/mainImage", "es");
 
         assertEquals("NewArtist", artist.getArtistName());
         assertEquals("/mainImage", artist.getMainViewPhoto());
-        assertEquals("/bannerImage", artist.getBannerPhoto());
         assertEquals("#FFFFFF", artist.getMainColor());
         verify(userRepository, times(1)).save(artist);
     }

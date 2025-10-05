@@ -38,4 +38,6 @@ public class AddProductNonAuthenticatedDTO {
     @NotBlank
     @Schema(description = "Selected product size", example = "M", required = true)
     private String size;
+
+    private String color;
 }

@@ -22,6 +22,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 
+
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -133,6 +134,11 @@ public class ArtistController {
                 return new ArtistMainViewDTO(artist);
         }
 
+        @Operation(summary = "Get main artist image", description = "Retrieve a specific main image file for an artist by providing the file name, including its extension.")
+
+        @ApiResponse(responseCode = "200", description = "Image retrieved successfully", content = @Content(mediaType = "image/jpeg"))
+        @ApiResponse(responseCode = "400", description = "Invalid file name or request error", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+        @ApiResponse(responseCode = "404", description = "Image not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
         @GetMapping("/mainArtist_media/{fileName:.+}")
         public ResponseEntity<Resource> getArtistMainImage(
                         @Parameter(description = "File name including extension", required = true) @PathVariable String fileName) {

@@ -128,9 +128,7 @@ class UserControllerTest {
                 // Simular archivos
                 MockMultipartFile imageFile = new MockMultipartFile(
                                 "image", "profile.jpg", MediaType.IMAGE_JPEG_VALUE, "fake-image-content".getBytes());
-                MockMultipartFile bannerFile = new MockMultipartFile(
-                                "bannerImage", "banner.jpg", MediaType.IMAGE_JPEG_VALUE,
-                                "fake-banner-content".getBytes());
+
 
                 // Simular principal
                 Principal principal = () -> "testUser";
@@ -141,12 +139,11 @@ class UserControllerTest {
 
                 // Simular lógica de actualización sin excepción
                 doNothing().when(userService).updateUserProfile(any(UserProfileUpdateDTO.class), eq(principal),
-                                anyString(), anyString(), eq("es"));
+                                anyString(), eq("es"));
 
                 // Enviar request multipart simulando PUT
                 mockMvc.perform(multipart("/api/users/profile/edit")
                                 .file(imageFile)
-                                .file(bannerFile)
                                 .param("email", "test@example.com")
                                 .param("firstName", "Alice")
                                 .param("lastName", "Smith")
@@ -172,7 +169,7 @@ class UserControllerTest {
                 Principal principal = () -> "testUser";
 
                 doNothing().when(userService).updateUserProfile(any(UserProfileUpdateDTO.class), eq(principal),
-                                anyString(), anyString(), eq("es"));
+                                anyString(), eq("es"));
 
                 mockMvc.perform(multipart("/api/users/profile/edit")
                                 .param("lang", "es")

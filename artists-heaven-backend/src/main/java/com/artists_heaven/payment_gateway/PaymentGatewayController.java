@@ -13,7 +13,6 @@ import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.servlet.http.HttpServletRequest;
 import io.swagger.v3.oas.annotations.parameters.RequestBody;
@@ -38,7 +37,7 @@ public class PaymentGatewayController {
 
     private final PaymentGatewayService paymentGatewayService;
 
-     Dotenv dotenv = Dotenv.load();
+    Dotenv dotenv = Dotenv.load();
 
     public PaymentGatewayController(PaymentGatewayService paymentGatewayService) {
         this.paymentGatewayService = paymentGatewayService;
@@ -46,10 +45,8 @@ public class PaymentGatewayController {
 
     @PostMapping("/checkout")
     @Operation(summary = "Process payment checkout", description = "Processes the payment for the list of cart items associated with the authenticated user.", security = @SecurityRequirement(name = "bearerAuth"))
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Payment processed successfully", content = @Content(mediaType = "text/plain")),
-            @ApiResponse(responseCode = "500", description = "Internal server error during payment processing", content = @Content(mediaType = "text/plain"))
-    })
+    @ApiResponse(responseCode = "200", description = "Payment processed successfully", content = @Content(mediaType = "text/plain"))
+    @ApiResponse(responseCode = "500", description = "Internal server error during payment processing", content = @Content(mediaType = "text/plain"))
     public ResponseEntity<String> paymentCheckout(
             @RequestBody(description = "List of items to checkout", required = true, content = @Content(array = @ArraySchema(schema = @Schema(implementation = CartItemDTO.class)))) @org.springframework.web.bind.annotation.RequestBody List<CartItemDTO> items) {
 
@@ -68,17 +65,17 @@ public class PaymentGatewayController {
         }
     }
 
+    @Operation(summary = "Handle Stripe webhook event", description = "Receives and processes webhook events sent by Stripe after a payment event (e.g., successful payment).", requestBody = @RequestBody(description = "Raw Stripe event payload sent as webhook (read from request body)", required = true))
+    @ApiResponse(responseCode = "200", description = "Event received and processed successfully", content = @Content(mediaType = "text/plain"))
+    @ApiResponse(responseCode = "500", description = "Internal server error while processing Stripe event", content = @Content(mediaType = "text/plain"))
     @PostMapping("/stripeWebhook")
     public ResponseEntity<String> handleStripeEvent(HttpServletRequest request,
             @RequestHeader("Stripe-Signature") String sigHeader) {
         try {
-            // Leer el payload como bytes directamente
             byte[] payloadBytes = request.getInputStream().readAllBytes();
 
-            // Convertir a String usando UTF-8, sin modificar nada
             String payload = new String(payloadBytes, StandardCharsets.UTF_8);
 
-            // Procesar evento
             paymentGatewayService.processStripeEvent(payload, sigHeader);
 
             return ResponseEntity.ok("Evento recibido");
@@ -87,6 +84,10 @@ public class PaymentGatewayController {
         }
     }
 
+    @Operation(summary = "Confirm payment status", description = "Confirms the payment status using the Stripe session ID after a user completes the payment process.")
+    @ApiResponse(responseCode = "200", description = "Payment confirmed successfully", content = @Content(mediaType = "application/json", schema = @Schema(example = "{ \"status\": \"success\", \"amount_total\": 1999, \"currency\": \"usd\", \"email\": \"customer@example.com\" }")))
+    @ApiResponse(responseCode = "400", description = "Payment not completed yet (pending)", content = @Content(mediaType = "application/json", schema = @Schema(example = "{ \"status\": \"pending\" }")))
+    @ApiResponse(responseCode = "500", description = "Internal server error during confirmation", content = @Content(mediaType = "application/json", schema = @Schema(example = "{ \"error\": \"Stripe API key missing or invalid session ID\" }")))
     @GetMapping("/confirm")
     public ResponseEntity<?> confirmPayment(@RequestParam String session_id) {
         try {

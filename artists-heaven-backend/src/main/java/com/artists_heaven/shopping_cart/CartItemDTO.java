@@ -13,10 +13,7 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-@Schema(
-    name = "CartItemDTO",
-    description = "Represents an item in the shopping cart with product details, size, and quantity."
-)
+@Schema(name = "CartItemDTO", description = "Represents an item in the shopping cart with product details, size, and quantity.")
 public class CartItemDTO {
 
     /**
@@ -40,4 +37,8 @@ public class CartItemDTO {
     @Min(1)
     @Schema(description = "Quantity of the product", example = "2", required = true)
     private Integer quantity;
+
+    private String color;
+
+    private String imageUrl;
 }

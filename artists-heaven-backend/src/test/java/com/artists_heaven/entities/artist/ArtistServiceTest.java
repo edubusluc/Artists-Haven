@@ -577,7 +577,6 @@ class ArtistServiceTest {
         artist.setId(artistId);
         artist.setArtistName("Juan Perez");
         artist.setMainColor("blue");
-        artist.setBannerPhoto("banner.jpg");
 
         List<Product> products = List.of(new Product(), new Product());
         List<Event> events = List.of(new Event(), new Event());
@@ -593,7 +592,6 @@ class ArtistServiceTest {
         assertNotNull(result);
         assertEquals("Juan Perez", result.getArtistName());
         assertEquals("blue", result.getPrimaryColor());
-        assertEquals("banner.jpg", result.getBannerPhoto());
         assertEquals(events, result.getArtistEvents());
 
         verify(artistRepository).findById(artistId);

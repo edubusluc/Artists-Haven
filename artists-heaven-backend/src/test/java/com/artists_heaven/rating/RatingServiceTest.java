@@ -232,7 +232,7 @@ class RatingServiceTest {
     }
 
     @Test
-    public void testGetUserEmail_WhenUserIsPresent() {
+    void testGetUserEmail_WhenUserIsPresent() {
         // Arrange
         User user = new User();
         user.setEmail("test@example.com");
@@ -248,7 +248,7 @@ class RatingServiceTest {
     }
 
     @Test
-    public void testGetUserEmail_WhenUserIsNull() {
+    void testGetUserEmail_WhenUserIsNull() {
         // Arrange
         Rating rating = new Rating();
         rating.setUser(null);

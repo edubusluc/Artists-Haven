@@ -3,6 +3,8 @@ package com.artists_heaven.order;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -49,9 +51,10 @@ public class OrderDetailsDTO {
     private Long userId;
 
     @Schema(description = "List of items included in the order")
-    private List<OrderItem> items;
+    private List<OrderItemDTO> items;
 
     @Schema(description = "Date when the order was created", example = "2025-06-15", type = "string", format = "date")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdDate;
 
     @Schema(description = "Email associated with the order", example = "customer@example.com")
@@ -82,7 +85,9 @@ public class OrderDetailsDTO {
         this.city = order.getCity();
         this.country = order.getCountry();
         this.userId = order.getUser() != null ? order.getUser().getId() : null;
-        this.items = order.getItems();
+        this.items = order.getItems() != null
+                ? order.getItems().stream().map(OrderItemDTO::new).toList()
+                : List.of();
         this.createdDate = order.getCreatedDate();
         this.email = order.getEmail();
         this.phone = order.getPhone();

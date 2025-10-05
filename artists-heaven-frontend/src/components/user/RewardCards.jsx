@@ -29,9 +29,6 @@ const RewardCards = () => {
             const cardsJson = await cardsRes.json();
             const cardsData = cardsJson.data;
 
-            console.log("MI DATA" + cardsData);
-            console.log("MI DATAJSON" + JSON.stringify(cardsJson));
-
             setPoints(userData);
             setCards(cardsData);
         } catch (err) {
@@ -41,7 +38,6 @@ const RewardCards = () => {
         }
     };
 
-    console.log(cards)
 
     const redeemCard = async (requiredPoints) => {
         try {

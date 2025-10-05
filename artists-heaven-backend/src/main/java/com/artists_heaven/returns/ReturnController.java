@@ -13,7 +13,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 
 import java.util.Locale;
 
@@ -51,19 +51,17 @@ public class ReturnController {
 
     @PostMapping("/create")
     @Operation(summary = "Create a return request for an order", description = "Allows a user to create a return request for a given order if valid.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "Return request created successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
-            @ApiResponse(responseCode = "400", description = "Invalid request data", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
-            @ApiResponse(responseCode = "403", description = "Forbidden action", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
-            @ApiResponse(responseCode = "404", description = "Order not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
-            @ApiResponse(responseCode = "500", description = "Unexpected error occurred", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
-    })
+    @ApiResponse(responseCode = "201", description = "Return request created successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+    @ApiResponse(responseCode = "400", description = "Invalid request data", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+    @ApiResponse(responseCode = "403", description = "Forbidden action", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+    @ApiResponse(responseCode = "404", description = "Order not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+    @ApiResponse(responseCode = "500", description = "Unexpected error occurred", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
     public ResponseEntity<StandardResponse<String>> createReturnForOrder(
             @Parameter(description = "Return request details including order ID, reason, and email", required = true) @RequestBody ReturnRequestDTO returnRequestDTO,
             @RequestParam String lang) {
 
         Order order = orderService.findOrderById(returnRequestDTO.getOrderId());
-        returnService.createReturnForOrder(order, returnRequestDTO.getReason(), returnRequestDTO.getEmail());
+        returnService.createReturnForOrder(order, returnRequestDTO.getReason(), returnRequestDTO.getEmail(),lang);
 
         Locale locale = new Locale(lang);
         String message = messageSource.getMessage("return.message.successful", null, locale);
@@ -76,12 +74,10 @@ public class ReturnController {
 
     @GetMapping("/{orderId}/label")
     @Operation(summary = "Get return label PDF", description = "Generates and returns the return label PDF for a given order.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Return label PDF generated successfully", content = @Content(mediaType = "application/pdf")),
-            @ApiResponse(responseCode = "403", description = "Forbidden - user not authorized to access this return label", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
-            @ApiResponse(responseCode = "404", description = "Order not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class))),
-            @ApiResponse(responseCode = "500", description = "Unexpected error occurred", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
-    })
+    @ApiResponse(responseCode = "200", description = "Return label PDF generated successfully", content = @Content(mediaType = "application/pdf"))
+    @ApiResponse(responseCode = "403", description = "Forbidden - user not authorized to access this return label", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+    @ApiResponse(responseCode = "404", description = "Order not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+    @ApiResponse(responseCode = "500", description = "Unexpected error occurred", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
     public ResponseEntity<byte[]> getReturnLabel(
             @Parameter(description = "ID of the order to get the return label for", required = true) @PathVariable Long orderId,
             @Parameter(description = "Optional email verification if not authenticated") @RequestParam(required = false) String email) {
@@ -100,11 +96,11 @@ public class ReturnController {
                 throw new AppExceptions.ForbiddenActionException("You are not allowed to access this return label");
             }
         }
-        
-        boolean isAnonymous = authentication == null 
-                      || authentication instanceof AnonymousAuthenticationToken;
-        
-        byte[] pdf = returnService.generateReturnLabelPdf(orderId, isAnonymous) ;
+
+        boolean isAnonymous = authentication == null
+                || authentication instanceof AnonymousAuthenticationToken;
+
+        byte[] pdf = returnService.generateReturnLabelPdf(orderId, isAnonymous);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_PDF);
@@ -114,8 +110,13 @@ public class ReturnController {
         return new ResponseEntity<>(pdf, headers, HttpStatus.OK);
     }
 
+    @Operation(summary = "Get return data by ID", description = "Retrieves detailed return information for a given return ID.", security = @SecurityRequirement(name = "bearerAuth"))
+    @ApiResponse(responseCode = "200", description = "Return found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+    @ApiResponse(responseCode = "404", description = "Return not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
+    @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
     @GetMapping("/{returnId}/return")
-    public ResponseEntity<StandardResponse<Return>> getMethodName(@Parameter(description = "ID of the order to get the return label for", required = true) @PathVariable Long returnId) {
+    public ResponseEntity<StandardResponse<Return>> getMethodName(
+            @Parameter(description = "ID of the order to get the return label for", required = true) @PathVariable Long returnId) {
         Return data = returnService.findById(returnId);
         return ResponseEntity.status(HttpStatus.OK)
                 .body(new StandardResponse<>(
@@ -123,6 +124,5 @@ public class ReturnController {
                         data,
                         HttpStatus.OK.value()));
     }
-    
 
 }

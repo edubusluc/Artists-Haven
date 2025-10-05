@@ -15,12 +15,14 @@ import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.*;
+import org.springframework.context.MessageSource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -31,6 +33,8 @@ import org.springframework.util.StringUtils;
 import com.artists_heaven.entities.artist.Artist;
 import com.artists_heaven.entities.artist.ArtistRepository;
 import com.artists_heaven.exception.AppExceptions.BadRequestException;
+import com.artists_heaven.exception.AppExceptions.ForbiddenActionException;
+import com.artists_heaven.exception.AppExceptions.InvalidInputException;
 import com.artists_heaven.exception.AppExceptions.ResourceNotFoundException;
 import com.artists_heaven.images.ImageServingUtil;
 
@@ -47,6 +51,9 @@ class EventServiceTest {
 
     @Mock
     private Authentication authentication;
+
+    @Mock
+    private MessageSource messageSource;
 
     @InjectMocks
     private EventService eventService;
@@ -96,7 +103,7 @@ class EventServiceTest {
         eventDto.setArtistId(1L);
 
         BadRequestException exception = assertThrows(BadRequestException.class, () -> {
-            eventService.newEvent(eventDto);
+            eventService.newEvent(eventDto, "es");
         });
 
         assertEquals("Event date cannot be null", exception.getMessage());
@@ -118,7 +125,7 @@ class EventServiceTest {
         eventDto.setArtistId(1L);
 
         BadRequestException exception = assertThrows(BadRequestException.class, () -> {
-            eventService.newEvent(eventDto);
+            eventService.newEvent(eventDto, "es");
         });
 
         assertEquals("Event date cannot be in the past", exception.getMessage());
@@ -139,7 +146,7 @@ class EventServiceTest {
         eventDto.setArtistId(null);
 
         ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class, () -> {
-            eventService.newEvent(eventDto);
+            eventService.newEvent(eventDto, "es");
         });
         assertEquals("Artist not found", exception.getMessage());
     }
@@ -161,7 +168,7 @@ class EventServiceTest {
         when(eventRepository.save(any(Event.class))).thenThrow(new BadRequestException("Invalid data"));
 
         BadRequestException exception = assertThrows(BadRequestException.class, () -> {
-            eventService.newEvent(eventDto);
+            eventService.newEvent(eventDto, "es");
         });
         assertEquals("Invalid data", exception.getMessage());
     }
@@ -181,9 +188,80 @@ class EventServiceTest {
         when(artistRepository.findById(anyLong())).thenReturn(Optional.of(artist));
         when(eventRepository.save(any(Event.class))).thenReturn(new Event());
 
-        Event event = eventService.newEvent(eventDto);
+        Event event = eventService.newEvent(eventDto, "es");
         assertNotNull(event);
         verify(eventRepository, times(1)).save(any(Event.class));
+    }
+
+    @Test
+    void testNewEventThrowsForbiddenForUnverifiedArtist() {
+        Artist artist = new Artist();
+        artist.setId(1L);
+        artist.setIsVerificated(false); // no verificado
+        when(artistRepository.findById(1L)).thenReturn(Optional.of(artist));
+
+        EventDTO eventDto = new EventDTO();
+        eventDto.setArtistId(1L);
+        eventDto.setDate(LocalDate.now().plusDays(1));
+        eventDto.setName("Test Event");
+        eventDto.setDescription("Desc");
+        eventDto.setLocation("Some location");
+
+        ForbiddenActionException ex = assertThrows(ForbiddenActionException.class, () -> {
+            eventService.newEvent(eventDto, "es");
+        });
+
+        assertEquals("Artist is not verified to create events", ex.getMessage());
+    }
+
+    @Test
+    void testNewEvent_noGeocodingResults_throwsInvalidInputException() {
+        Artist artist = new Artist();
+        artist.setId(1L);
+        artist.setIsVerificated(true);
+        when(artistRepository.findById(1L)).thenReturn(Optional.of(artist));
+        when(messageSource.getMessage(eq("coordinate.notFound"), any(), any(Locale.class)))
+                .thenReturn("Coordinate not found");
+
+        EventDTO eventDto = new EventDTO();
+        eventDto.setArtistId(1L);
+        eventDto.setDate(LocalDate.now().plusDays(1));
+        eventDto.setName("Event");
+        eventDto.setDescription("Desc");
+        eventDto.setLocation("Invalid Address"); // fuerza a que falle
+        eventDto.setMoreInfo("Info");
+        eventDto.setImage("img.png");
+
+        InvalidInputException ex = assertThrows(InvalidInputException.class, () -> {
+            eventService.newEvent(eventDto, "en");
+        });
+
+        assertEquals("Coordinate not found", ex.getMessage());
+    }
+
+    @Test
+    void testNewEvent_coordinatesApiThrowsException() {
+        Artist artist = new Artist();
+        artist.setId(1L);
+        artist.setIsVerificated(true);
+        when(artistRepository.findById(1L)).thenReturn(Optional.of(artist));
+        when(messageSource.getMessage(eq("coordinate.notFound"), any(), any(Locale.class)))
+                .thenReturn("No se pudo geocodificar la dirección");
+
+        EventDTO eventDto = new EventDTO();
+        eventDto.setArtistId(1L);
+        eventDto.setDate(LocalDate.now().plusDays(1));
+        eventDto.setName("Event");
+        eventDto.setDescription("Desc");
+        eventDto.setLocation("Invalid Location");
+        eventDto.setMoreInfo("Info");
+        eventDto.setImage("img.png");
+
+        InvalidInputException ex = assertThrows(InvalidInputException.class, () -> {
+            eventService.newEvent(eventDto, "es");
+        });
+
+        assertEquals("No se pudo geocodificar la dirección", ex.getMessage());
     }
 
     @Test
@@ -332,7 +410,7 @@ class EventServiceTest {
 
         when(eventRepository.save(any(Event.class))).thenReturn(event);
 
-        eventService.updateEvent(event, eventDTO);
+        eventService.updateEvent(event, eventDTO, "es");
 
         assertEquals("Updated Event", event.getName());
         assertEquals("Updated Description", event.getDescription());
@@ -364,7 +442,7 @@ class EventServiceTest {
         eventDTO.setImage("updated_image.jpg");
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            eventService.updateEvent(event, eventDTO);
+            eventService.updateEvent(event, eventDTO, "es");
         });
 
         assertEquals("Event date cannot be in the past", exception.getMessage());

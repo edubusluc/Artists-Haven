@@ -90,12 +90,8 @@ public class ArtistService {
 
         String imageUrl = imageServingUtil.saveImages(request.getImage(), UPLOAD_DIR, "/mainArtist_media/",
                 false);
-        String bannerUrl = imageServingUtil.saveImages(request.getBannerImage(), UPLOAD_DIR,
-                "/mainArtist_media/",
-                false);
 
         artist.setMainViewPhoto(imageUrl);
-        artist.setBannerPhoto(bannerUrl);
 
         // Configure artist data
         String username = request.getArtistName();
@@ -112,11 +108,25 @@ public class ArtistService {
         return artistRepository.save(artist);
     }
 
+    /**
+     * Finds an artist by their ID.
+     *
+     * @param id the artist's ID
+     * @return the {@link Artist} object
+     * @throws AppExceptions.ResourceNotFoundException if the artist does not exist
+     */
     public Artist findById(Long id) {
         return artistRepository.findById(id)
                 .orElseThrow(() -> new AppExceptions.ResourceNotFoundException("Artist not found with id: " + id));
     }
 
+    /**
+     * Returns the verification status of an artist.
+     *
+     * @param id the artist's ID
+     * @return a string representing the verification status ("Verified", "Not
+     *         Verified", etc.)
+     */
     public String isArtistVerificated(Long id) {
         List<VerificationStatus> latestVerificationStatus = artistRepository.findLatestVerificationStatus(id);
         return latestVerificationStatus.isEmpty()
@@ -124,14 +134,35 @@ public class ArtistService {
                 : latestVerificationStatus.get(0).toString();
     }
 
+    /**
+     * Retrieves the number of future events for an artist in a given year.
+     *
+     * @param id   the artist's ID
+     * @param year the year to filter events
+     * @return the number of future events
+     */
     public Integer getFutureEvents(Long id, Integer year) {
         return artistRepository.findFutureEventsForArtist(id, year);
     }
 
+    /**
+     * Retrieves the number of past events for an artist in a given year.
+     *
+     * @param id   the artist's ID
+     * @param year the year to filter events
+     * @return the number of past events
+     */
     public Integer getPastEvents(Long id, Integer year) {
         return artistRepository.findPastEventsForArtist(id, year);
     }
 
+    /**
+     * Retrieves the count of order items sold by an artist in a given year.
+     *
+     * @param id   the artist's ID
+     * @param year the year to filter orders
+     * @return a map of product name to quantity sold
+     */
     public Map<String, Integer> getOrderItemCount(Long id, Integer year) {
         Artist artist = findById(id);
         List<OrderItem> ordersItemsByYear = artistRepository.getOrdersPerYear(artist.getArtistName().toUpperCase(),
@@ -145,6 +176,13 @@ public class ArtistService {
         return itemsCount;
     }
 
+    /**
+     * Retrieves the countries where an artist's products were sold in a given year.
+     *
+     * @param id   the artist's ID
+     * @param year the year to filter orders
+     * @return a map of country name to number of items sold
+     */
     public Map<String, Integer> getMostCountrySold(Long id, Integer year) {
         Artist artist = findById(id);
         List<OrderItem> ordersItemsByYear = artistRepository.getOrdersPerYear(artist.getArtistName().toUpperCase(),
@@ -157,6 +195,13 @@ public class ArtistService {
         return itemsCount;
     }
 
+    /**
+     * Retrieves monthly sales data for a specific artist.
+     *
+     * @param artistId the artist's ID
+     * @param year     the year to filter orders
+     * @return a list of {@link MonthlySalesDTO} with monthly sales information
+     */
     public List<MonthlySalesDTO> getMonthlySalesDataPerArtist(Long artistId, int year) {
         Artist artist = findById(artistId);
 
@@ -175,10 +220,24 @@ public class ArtistService {
                 .toList();
     }
 
+    /**
+     * Retrieves all valid artists in the system.
+     *
+     * @return a list of {@link Artist}
+     */
     public List<Artist> getValidArtists() {
         return artistRepository.findValidAritst();
     }
 
+    /**
+     * Validates an artist, marks them as verified, creates a category,
+     * and updates the corresponding verification record.
+     *
+     * @param artistId       the artist's ID
+     * @param verificationId the verification record ID
+     * @throws AppExceptions.ResourceNotFoundException if the artist or verification
+     *                                                 does not exist
+     */
     public void validateArtist(Long artistId, Long verificationId) {
         Artist artist = artistRepository.findById(artistId)
                 .orElseThrow(() -> new AppExceptions.ResourceNotFoundException("Artist not found"));
@@ -197,36 +256,53 @@ public class ArtistService {
         verificationRepository.save(verification);
     }
 
+    /**
+     * Retrieves an artist's detailed information including products and events.
+     *
+     * @param artistId the artist's ID
+     * @return an {@link ArtistDTO} containing artist details
+     * @throws AppExceptions.ResourceNotFoundException if the artist does not exist
+     */
     public ArtistDTO getArtistWithDetails(Long artistId) {
-        // Buscar artista
         Artist artist = artistRepository.findById(artistId)
                 .orElseThrow(
                         () -> new AppExceptions.ResourceNotFoundException("Artist not found with id: " + artistId));
 
-        // Obtener productos
         String artistKey = normalizeArtistName(artist.getArtistName());
         List<Product> artistProducts = productService.findProductsByArtist(artistKey);
 
-        // Obtener eventos de este año
         List<Event> artistEvents = eventService.findEventThisYearByArtist(artistId);
 
-        // Mapear a DTO
         ArtistDTO artistDTO = new ArtistDTO();
         artistDTO.setArtistName(artist.getArtistName());
         artistDTO.setArtistEvents(artistEvents);
         artistDTO.setArtistProducts(artistProducts);
         artistDTO.setPrimaryColor(artist.getMainColor());
-        artistDTO.setBannerPhoto(artist.getBannerPhoto());
 
         return artistDTO;
     }
 
+    /**
+     * Normalizes an artist name by converting it to uppercase and removing
+     * whitespace.
+     *
+     * @param artistName the original artist name
+     * @return the normalized artist name
+     */
     private String normalizeArtistName(final String artistName) {
         if (artistName == null)
             return "";
         return artistName.toUpperCase().replaceAll("\\s+", "");
     }
 
+    /**
+     * Retrieves dashboard data for an artist for a given year.
+     *
+     * @param artistId the artist's ID
+     * @param year     the year to filter events and orders
+     * @return an {@link ArtistDashboardDTO} containing dashboard metrics
+     * @throws AppExceptions.ResourceNotFoundException if the artist does not exist
+     */
     public ArtistDashboardDTO getArtistDashboard(Long artistId, int year) {
         Artist artist = artistRepository.findById(artistId)
                 .orElseThrow(() -> new AppExceptions.ResourceNotFoundException("Artist not found with id " + artistId));

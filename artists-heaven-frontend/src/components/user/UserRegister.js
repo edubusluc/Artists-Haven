@@ -122,8 +122,12 @@ const UserRegister = () => {
 
   const customSingleValue = ({ data }) => (
     <div className="flex items-center gap-2">
-      <img src={data.flag} alt="" className="w-5 h-4 rounded-sm" />
-      <span>{data.label}</span>
+      <img
+        src={data.flag}
+        alt=""
+        className="w-5 h-4 object-contain rounded-sm"
+      />
+      <span className="leading-none">{data.label}</span>
     </div>
   );
 
@@ -135,14 +139,19 @@ const UserRegister = () => {
         {...innerProps}
         className="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 cursor-pointer"
       >
-        <img src={data.flag} alt="" className="w-5 h-4 rounded-sm" />
-        <span>{data.label}</span>
+        <img
+          src={data.flag}
+          alt=""
+          className="w-5 h-4 object-contain rounded-sm"
+        />
+        <span className="leading-none">{data.label}</span>
       </div>
     );
   };
 
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 py-12 px-4 ">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 py-12 px-4 mt-10">
       <div className="max-w-5xl mx-auto bg-white rounded-3xl shadow-xl p-10">
         <h2 className="text-4xl font-bold text-center text-blue-700 mb-10">
           {t('userForm.title.register')}
@@ -236,7 +245,38 @@ const UserRegister = () => {
                 placeholder={t('userForm.placeholder.selectCountry')}
                 isClearable
                 components={{ Option: customOption, SingleValue: customSingleValue }}
+                styles={{
+                  control: (base, state) => ({
+                    ...base,
+                    minHeight: "44px", // igual que tus inputs
+                    borderRadius: "0.75rem", // rounded-xl
+                    borderColor: state.isFocused ? "#60a5fa" : "#d1d5db",
+                    boxShadow: state.isFocused ? "0 0 0 2px #93c5fd" : "none", // focus:ring
+                    "&:hover": { borderColor: "#60a5fa" },
+                    display: "flex",
+                    alignItems: "center",
+                  }),
+                  valueContainer: (base) => ({
+                    ...base,
+                    padding: "0 0.75rem",
+                    display: "flex",
+                    alignItems: "center",
+                  }),
+                  singleValue: (base) => ({
+                    ...base,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                  }),
+                  input: (base) => ({
+                    ...base,
+                    margin: 0,
+                    padding: 0,
+                    minWidth: "1px", // evita que agrande el contenedor
+                  }),
+                }}
               />
+
               {validationErrors.country && (
                 <p className="text-red-600 text-sm">{validationErrors.country}</p>
               )}

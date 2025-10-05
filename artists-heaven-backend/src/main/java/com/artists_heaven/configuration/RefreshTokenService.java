@@ -21,7 +21,11 @@ public class RefreshTokenService {
     }
 
     /**
-     * Crea un nuevo refresh token válido por 7 días.
+     * Creates or updates a refresh token for the given user.
+     * The token will be valid for 7 days.
+     *
+     * @param user the user to associate the refresh token with
+     * @return the newly created or updated {@link RefreshToken}
      */
     @Transactional
     public RefreshToken createOrUpdateRefreshToken(User user) {
@@ -40,8 +44,13 @@ public class RefreshTokenService {
     }
 
     /**
-     * Verifica si el token ha expirado.
-     * Si expiró, lo elimina y lanza excepción.
+     * Verifies if the given refresh token is still valid.
+     * If the token has expired, it is removed from the repository
+     * and a {@link RuntimeException} is thrown.
+     *
+     * @param token the {@link RefreshToken} to verify
+     * @return the same token if it is still valid
+     * @throws RuntimeException if the token has expired
      */
     public RefreshToken verifyExpiration(RefreshToken token) {
         if (token.getExpiryDate().isBefore(Instant.now())) {
@@ -52,15 +61,20 @@ public class RefreshTokenService {
     }
 
     /**
-     * Busca un refresh token por su string.
+     * Finds a refresh token by its string value.
+     *
+     * @param token the token string to look up
+     * @return an {@link Optional} containing the {@link RefreshToken} if found
      */
     public Optional<RefreshToken> findByToken(String token) {
         return refreshTokenRepository.findByToken(token);
     }
 
     /**
-     * Elimina todos los tokens de un usuario.
-     * Puedes usarlo en logout.
+     * Deletes all refresh tokens associated with a given user.
+     * Typically used during logout.
+     *
+     * @param user the user whose tokens should be deleted
      */
     @Transactional
     public void deleteByUser(User user) {

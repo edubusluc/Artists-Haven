@@ -5,26 +5,27 @@ import ProductCard from "./ProductCard";
 import SlidingPanel from "../../utils/SlidingPanel";
 import { useTranslation } from 'react-i18next';
 
-const ProductSchema = ({ endpoint, title }) => {
+const ProductSchema = ({ endpoint, title, hideCollectionFilter }) => {
     const [products, setProducts] = useState([]);
+    const [collections, setCollections] = useState([]);
+
     const [isFilterOpen, setIsFilterOpen] = useState(false);
 
     const [orderBy, setOrderBy] = useState("default");
     const [selectedSizes, setSelectedSizes] = useState([]);
     const [priceRange, setPriceRange] = useState({ min: 0, max: 1000 });
     const [selectedCategories, setSelectedCategories] = useState([]);
+    const [selectedCollections, setSelectedCollections] = useState([]);
+    const [tempSelectedCollections, setTempSelectedCollections] = useState([]);
 
     const [tempOrderBy, setTempOrderBy] = useState(orderBy);
     const [tempSelectedSizes, setTempSelectedSizes] = useState(selectedSizes);
     const [tempPriceRange, setTempPriceRange] = useState(priceRange);
     const [tempSelectedCategories, setTempSelectedCategories] = useState(selectedCategories);
 
-    const { t, i18n } = useTranslation();
+    const { t } = useTranslation();
 
     const [maxAbsolutePrice, setMaxAbsolutePrice] = useState(1000);
-    const [imagesLoaded, setImagesLoaded] = useState(false);
-
-    // Nuevo estado para controlar visibilidad y animación fadeIn
     const [isVisible, setIsVisible] = useState(false);
 
     useEffect(() => {
@@ -37,12 +38,10 @@ const ProductSchema = ({ endpoint, title }) => {
         });
 
         Promise.all(imageUrls.map(loadImage)).then(() => {
-            setImagesLoaded(true);
             setTimeout(() => {
-                setIsVisible(true); // Activamos el fadeIn
-            }, 60); // Delay suave
+                setIsVisible(true);
+            }, 60);
         });
-
     }, [products]);
 
     useEffect(() => {
@@ -53,6 +52,7 @@ const ProductSchema = ({ endpoint, title }) => {
             })
             .then((productData) => {
                 setProducts(productData.data);
+
                 const prices = productData.data.map((p) => p.price);
                 const maxPrice = Math.max(...prices);
                 setMaxAbsolutePrice(maxPrice);
@@ -61,6 +61,14 @@ const ProductSchema = ({ endpoint, title }) => {
             })
             .catch((error) => console.error("Error:", error));
     }, [endpoint]);
+
+    // ✅ Cargar colecciones desde backend
+    useEffect(() => {
+        fetch("/api/product/allCollections")
+            .then(res => res.json())
+            .then(data => setCollections(data.data))
+            .catch(err => console.error("Error cargando colecciones", err));
+    }, []);
 
     const categories = useMemo(() => {
         const catsMap = new Map();
@@ -82,10 +90,12 @@ const ProductSchema = ({ endpoint, title }) => {
         let result = [...products];
 
         if (selectedSizes.length > 0) {
-            result = result.filter((product) => {
-                if (product.section === "ACCESSORIES") return true;
-                return selectedSizes.some((size) => product.sizes?.[size] > 0);
-            });
+            result = result.filter((product) =>
+                product.colors?.some((color) =>
+                    color.availableUnits == null &&
+                    selectedSizes.some((size) => (color.sizes?.[size] ?? 0) > 0)
+                )
+            );
         }
 
         result = result.filter(
@@ -95,6 +105,13 @@ const ProductSchema = ({ endpoint, title }) => {
         if (selectedCategories.length > 0) {
             result = result.filter((product) =>
                 product.categories?.some((cat) => selectedCategories.includes(cat))
+            );
+        }
+
+        // ✅ Filtrado por colecciones
+        if (selectedCollections.length > 0) {
+            result = result.filter((product) =>
+                selectedCollections.includes(product.collectionId)
             );
         }
 
@@ -116,7 +133,7 @@ const ProductSchema = ({ endpoint, title }) => {
         }
 
         return result;
-    }, [products, selectedSizes, priceRange, selectedCategories, orderBy]);
+    }, [products, selectedSizes, priceRange, selectedCategories, selectedCollections, orderBy]);
 
     const toggleTempSize = (size) => {
         setTempSelectedSizes((prev) =>
@@ -130,11 +147,21 @@ const ProductSchema = ({ endpoint, title }) => {
         );
     };
 
+    // ✅ Toggle de colecciones (guardar solo IDs)
+    const toggleTempCollection = (collectionId) => {
+        setTempSelectedCollections((prev) =>
+            prev.includes(collectionId)
+                ? prev.filter((c) => c !== collectionId)
+                : [...prev, collectionId]
+        );
+    };
+
     const handleApplyFilters = () => {
         setOrderBy(tempOrderBy);
         setSelectedSizes(tempSelectedSizes);
         setPriceRange(tempPriceRange);
         setSelectedCategories(tempSelectedCategories);
+        setSelectedCollections(tempSelectedCollections); // ✅ Colecciones
         setIsFilterOpen(false);
     };
 
@@ -143,11 +170,13 @@ const ProductSchema = ({ endpoint, title }) => {
         setSelectedSizes([]);
         setPriceRange({ min: 0, max: maxAbsolutePrice });
         setSelectedCategories([]);
+        setSelectedCollections([]); // ✅ Reset
 
         setTempOrderBy("default");
         setTempSelectedSizes([]);
         setTempPriceRange({ min: 0, max: maxAbsolutePrice });
         setTempSelectedCategories([]);
+        setTempSelectedCollections([]); // ✅ Reset
 
         setIsFilterOpen(false);
     };
@@ -158,8 +187,9 @@ const ProductSchema = ({ endpoint, title }) => {
             setTempSelectedSizes(selectedSizes);
             setTempPriceRange(priceRange);
             setTempSelectedCategories(selectedCategories);
+            setTempSelectedCollections(selectedCollections); // ✅ Mantener colecciones
         }
-    }, [isFilterOpen, orderBy, selectedSizes, priceRange, selectedCategories]);
+    }, [isFilterOpen, orderBy, selectedSizes, priceRange, selectedCategories, selectedCollections]);
 
     return (
         <>
@@ -170,7 +200,7 @@ const ProductSchema = ({ endpoint, title }) => {
                     opacity: isVisible ? 1 : 0,
                     transition: "opacity 0.7s ease-in-out",
                 }}
-                className="p-4 mt-4"
+                className="p-4 mt-12"
             >
                 <div className="flex justify-between mt-5">
                     <p className="custom-font-shop-regular mb-4" style={{ color: "black" }}>
@@ -254,6 +284,24 @@ const ProductSchema = ({ endpoint, title }) => {
                     ))}
                 </div>
 
+                {/* ✅ Colecciones */}
+                {!hideCollectionFilter && (
+                    <div className="p-4 custom-font-shop-regular mb-4" style={{ color: "black" }}>
+                        <p className="font-semibold mb-2">{t('productSchema.collections')}</p>
+                        {collections.map((col) => (
+                            <label key={col.id} className="inline-flex items-center mr-4 mb-2 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    className="form-checkbox"
+                                    checked={tempSelectedCollections.includes(col.id)}
+                                    onChange={() => toggleTempCollection(col.id)}
+                                />
+                                <span className="ml-2">{col.name}</span>
+                            </label>
+                        ))}
+                    </div>
+                )}
+
                 <div className="p-4 custom-font-shop-regular mb-4" style={{ color: "black" }}>
                     <p className="font-semibold mb-2">{t('productSchema.sortPrice')}</p>
                     <input
@@ -290,7 +338,6 @@ const ProductSchema = ({ endpoint, title }) => {
                     <button
                         onClick={handleApplyFilters}
                         className="slide-on-hover border border-black cursor-pointer px-8 py-6 flex-1 transition-transform duration-300 ease-in-out hover:translate-x-2"
-
                         style={{ backgroundColor: "black" }}
                     >
                         <span className="custom-font-shop">
@@ -298,7 +345,6 @@ const ProductSchema = ({ endpoint, title }) => {
                         </span>
                     </button>
                 </div>
-
             </SlidingPanel>
 
             <Footer />

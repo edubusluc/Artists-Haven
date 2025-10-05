@@ -50,7 +50,9 @@ public class OrderItem {
 
     private Section section;
 
-    public OrderItem(Long productId, int quantity, String size, String name, Float price, Order order, Section section) {
+    private String color;
+
+    public OrderItem(Long productId, int quantity, String size, String name, Float price, Order order, Section section, String color) {
         this.productId = productId;
         this.quantity = quantity;
         this.size = size;
@@ -58,5 +60,6 @@ public class OrderItem {
         this.price = price;
         this.order = order;
         this.section = section;
+        this.color = color;
     }
 }

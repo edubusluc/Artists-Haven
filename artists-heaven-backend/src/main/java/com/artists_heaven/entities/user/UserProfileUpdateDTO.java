@@ -13,7 +13,4 @@ public class UserProfileUpdateDTO extends BaseUserProfileDTO {
 
     @Schema(description = "Profile image file")
     private MultipartFile image;
-
-    @Schema(description = "Banner image file")
-    private MultipartFile bannerImage;
 }

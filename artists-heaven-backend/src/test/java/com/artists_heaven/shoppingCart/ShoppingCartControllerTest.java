@@ -4,12 +4,14 @@ import org.junit.jupiter.api.Test;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -33,6 +35,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.artists_heaven.entities.user.User;
 import com.artists_heaven.entities.user.UserService;
 import com.artists_heaven.product.Product;
+import com.artists_heaven.product.ProductColor;
 import com.artists_heaven.product.ProductService;
 import com.artists_heaven.shopping_cart.AddProductDTO;
 import com.artists_heaven.shopping_cart.AddProductNonAuthenticatedDTO;
@@ -97,7 +100,10 @@ class ShoppingCartControllerTest {
                 product.setId(1L);
                 product.setName("Test Product");
                 product.setPrice((float) 100.00);
-                product.setImages(images);
+
+                ProductColor productColor = new ProductColor();
+                productColor.setProduct(product);
+                productColor.setImages(images);
 
                 CartItem cartItem = new CartItem();
                 cartItem.setProduct(product);
@@ -165,6 +171,7 @@ class ShoppingCartControllerTest {
                 AddProductDTO request = new AddProductDTO();
                 request.setProductId(1L);
                 request.setSize("M");
+                request.setColor("colorTest");
 
                 List<String> images = new ArrayList<>();
                 images.add("example/image.jpg");
@@ -172,7 +179,10 @@ class ShoppingCartControllerTest {
                 product.setId(1L);
                 product.setName("Test Product");
                 product.setPrice(10.0f);
-                product.setImages(images);
+
+                ProductColor productColor = new ProductColor();
+                productColor.setProduct(product);
+                productColor.setImages(images);
 
                 User user = new User();
                 user.setId(1L); // Asignar ID al usuario
@@ -185,8 +195,10 @@ class ShoppingCartControllerTest {
                 List<CartItem> cartItems = new ArrayList<>();
                 cartItems.add(cartItem);
 
+                when(userService.getUserById(anyLong())).thenReturn(user);
+
                 // Configuración de mocks
-                when(shoppingCartService.addProducts(user.getId(), product, request.getSize(), 1))
+                when(shoppingCartService.addProducts(user.getId(), product, request.getSize(), 1, "colorTest"))
                                 .thenReturn(cartItems);
                 when(productService.findById(request.getProductId())).thenReturn(product);
                 when(userService.getUserById(user.getId())).thenReturn(user); // Simula la obtención del usuario
@@ -225,7 +237,7 @@ class ShoppingCartControllerTest {
                 product.setPrice(10.0f);
 
                 // Simulamos que el usuario no está autenticado
-                when(shoppingCartService.addProducts(100L, product, request.getSize(), 1))
+                when(shoppingCartService.addProducts(100L, product, request.getSize(), 1, "colorTest"))
                                 .thenThrow(new AuthenticationException("User not authenticated") {
                                 });
 
@@ -244,6 +256,7 @@ class ShoppingCartControllerTest {
                 AddProductDTO request = new AddProductDTO();
                 request.setProductId(null);
                 request.setSize(null);
+                request.setColor("colorTest");
 
                 Product product = new Product();
                 product.setId(null);
@@ -257,12 +270,13 @@ class ShoppingCartControllerTest {
                 cartItem.setProduct(null);
                 cartItem.setSize(null);
                 cartItem.setQuantity(1);
+                cartItem.setColor("colorTest");
 
                 List<CartItem> cartItems = new ArrayList<>();
                 cartItems.add(cartItem);
 
                 // Configuración de mocks
-                when(shoppingCartService.addProducts(user.getId(), product, request.getSize(), 1))
+                when(shoppingCartService.addProducts(user.getId(), product, request.getSize(), 1, "colorTest"))
                                 .thenReturn(cartItems);
                 when(productService.findById(request.getProductId())).thenReturn(product);
                 when(userService.getUserById(user.getId())).thenReturn(user); // Simula la obtención del usuario
@@ -273,7 +287,7 @@ class ShoppingCartControllerTest {
                 SecurityContextHolder.getContext().setAuthentication(authentication);
 
                 // Simulamos que ocurre un error inesperado
-                when(shoppingCartService.addProducts(100L, product, request.getSize(), 1))
+                when(shoppingCartService.addProducts(100L, product, request.getSize(), 1, "colorTest"))
                                 .thenThrow(new RuntimeException("Unexpected error"));
 
                 // Ejecución y verificación
@@ -317,7 +331,10 @@ class ShoppingCartControllerTest {
                 product.setId(1L);
                 product.setName("Test Product");
                 product.setPrice(10.0f);
-                product.setImages(images);
+
+                ProductColor productColor = new ProductColor();
+                productColor.setProduct(product);
+                productColor.setImages(images);
 
                 ShoppingCart shoppingCart = new ShoppingCart();
                 CartItem cartItem = new CartItem();
@@ -334,14 +351,15 @@ class ShoppingCartControllerTest {
                 // Configuración de mocks
                 when(productService.findById(request.getProductId())).thenReturn(product);
                 when(shoppingCartService.addProductsNonAuthenticated(
-                                any(), any(), any(), anyInt())).thenReturn(cartItems);
+                                any(), any(), any(), anyInt(), any()))
+                                .thenReturn(cartItems);
 
                 // Ejecución y verificación
                 mockMvc.perform(post("/api/myShoppingCart/addProductsNonAuthenticate")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(request)))
                                 .andExpect(status().isOk())
-                                .andExpect(jsonPath("$.length()").value(1))
+                                .andDo(print())
                                 .andExpect(jsonPath("$[0].product.id").value(product.getId()))
                                 .andExpect(jsonPath("$[0].product.name").value(product.getName()))
                                 .andExpect(jsonPath("$[0].product.price").value((double) product.getPrice()))

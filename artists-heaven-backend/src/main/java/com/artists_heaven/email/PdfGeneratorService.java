@@ -3,6 +3,7 @@ package com.artists_heaven.email;
 import com.artists_heaven.order.Order;
 import com.artists_heaven.order.OrderItem;
 import com.artists_heaven.order.OrderItemRepository;
+import com.artists_heaven.product.Section;
 import com.itextpdf.io.font.constants.StandardFonts;
 import com.itextpdf.kernel.colors.Color;
 import com.itextpdf.kernel.colors.ColorConstants;
@@ -29,10 +30,20 @@ public class PdfGeneratorService {
 
         private final OrderItemRepository orderItemRepository;
 
-        public PdfGeneratorService(OrderItemRepository orderItemRepository) throws Exception {
+        public PdfGeneratorService(OrderItemRepository orderItemRepository) {
                 this.orderItemRepository = orderItemRepository;
         }
 
+        /**
+         * Generates an invoice PDF for the given order.
+         *
+         * @param orderReference the unique reference number of the order
+         * @param order          the {@link Order} containing order details
+         * @param total          the total price of the order
+         * @param discount       the discount applied to the order (can be null)
+         * @return a byte array containing the PDF file
+         * @throws RuntimeException if the PDF cannot be generated
+         */
         public byte[] generateInvoice(Long orderReference, Order order, Float total, Long discount) {
                 List<OrderItem> items = orderItemRepository.findByOrderId(order.getId());
 
@@ -40,27 +51,21 @@ public class PdfGeneratorService {
                                 InputStream templateStream = new ClassPathResource("Plantilla-Factura.pdf")
                                                 .getInputStream()) {
 
-                        // 1. Documento final
                         PdfWriter writer = new PdfWriter(out);
                         PdfDocument pdfDoc = new PdfDocument(writer);
 
-                        // 2. Abrir plantilla
                         PdfDocument templateDoc = new PdfDocument(new PdfReader(templateStream));
 
-                        // 3. Copiar la primera página
                         PdfPage templatePage = templateDoc.getFirstPage();
                         pdfDoc.addPage(templatePage.copyTo(pdfDoc));
                         templateDoc.close();
 
-                        // 4. Asociar Document
                         Document document = new Document(pdfDoc);
                         document.setMargins(40, 40, 40, 40);
 
-                        // 🔑 Crear fuentes por factura
                         PdfFont bold = PdfFontFactory.createFont(StandardFonts.HELVETICA_BOLD);
                         PdfFont normal = PdfFontFactory.createFont(StandardFonts.HELVETICA);
 
-                        // Pasarlas a tus métodos
                         addHeader(document, bold, normal);
                         addTitle(document, bold);
                         addInvoiceInfo(document, orderReference, order, bold, normal);
@@ -76,16 +81,21 @@ public class PdfGeneratorService {
                 }
         }
 
+        /**
+         * Adds the company header to the PDF document.
+         *
+         * @param document the PDF {@link Document} to add content to
+         * @param bold     the bold {@link PdfFont}
+         * @param normal   the normal {@link PdfFont}
+         */
         private void addHeader(Document document, PdfFont bold, PdfFont normal) {
                 try {
                         Table headerTable = new Table(UnitValue.createPercentArray(new float[] { 3, 7 }))
                                         .useAllAvailableWidth();
 
-                        // Celda vacía (columna izquierda)
                         Cell emptyCell = new Cell().setBorder(Border.NO_BORDER);
                         headerTable.addCell(emptyCell);
 
-                        // Celda con la info (columna derecha)
                         Cell companyInfoCell = new Cell()
                                         .add(new Paragraph("ARTISTS HEAVEN").setFont(bold).setFontSize(14))
                                         .add(new Paragraph("Email: mod.artistheaven@gmail.com").setFont(normal))
@@ -103,6 +113,12 @@ public class PdfGeneratorService {
                 }
         }
 
+        /**
+         * Adds the invoice title to the PDF document.
+         *
+         * @param document the PDF {@link Document}
+         * @param bold     the bold {@link PdfFont} to use
+         */
         private void addTitle(Document document, PdfFont bold) {
                 document.add(new Paragraph("Detalles de la compra")
                                 .setFont(bold)
@@ -111,19 +127,26 @@ public class PdfGeneratorService {
                                 .setMarginTop(20));
         }
 
+        /**
+         * Adds invoice details such as reference number, date, and shipping address.
+         *
+         * @param document       the PDF {@link Document}
+         * @param orderReference the order reference number
+         * @param order          the {@link Order} object
+         * @param bold           bold {@link PdfFont} for labels
+         * @param normal         normal {@link PdfFont} for values
+         */
         private void addInvoiceInfo(Document document, Long orderReference, Order order, PdfFont bold, PdfFont normal) {
                 Table infoTable = new Table(UnitValue.createPercentArray(new float[] { 1, 2 }))
                                 .useAllAvailableWidth()
                                 .setMarginTop(20)
                                 .setBorder(new SolidBorder(1));
 
-                // Número de Factura
                 infoTable.addCell(new Cell().add(new Paragraph("Número de Seguimiento:").setFont(bold))
                                 .setBorder(Border.NO_BORDER));
                 infoTable.addCell(new Cell().add(new Paragraph(orderReference.toString()))
                                 .setBorder(Border.NO_BORDER));
 
-                // Fecha (formateada)
                 DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd 'de' MMMM 'de' yyyy, HH:mm");
                 String formattedDate = order.getCreatedDate().format(formatter);
 
@@ -132,7 +155,6 @@ public class PdfGeneratorService {
                 infoTable.addCell(new Cell().add(new Paragraph(formattedDate))
                                 .setBorder(Border.NO_BORDER));
 
-                // Dirección de Envío
                 infoTable.addCell(new Cell().add(new Paragraph("Dirección de Envío:").setFont(bold))
                                 .setBorder(Border.NO_BORDER));
 
@@ -150,6 +172,14 @@ public class PdfGeneratorService {
                 document.add(infoTable);
         }
 
+        /**
+         * Adds a table listing all order items.
+         *
+         * @param document the PDF {@link Document}
+         * @param items    the list of {@link OrderItem} to display
+         * @param bold     bold {@link PdfFont} for headers
+         * @param normal   normal {@link PdfFont} for cells
+         */
         private void addProductTable(Document document, List<OrderItem> items, PdfFont bold, PdfFont normal) {
                 document.add(new Paragraph("\n"));
 
@@ -174,25 +204,44 @@ public class PdfGeneratorService {
 
                                 table.addCell(new Cell().add(new Paragraph(sanitize(product.getName())))
                                                 .setBackgroundColor(rowColor));
+
                                 table.addCell(new Cell().add(new Paragraph(String.valueOf(product.getQuantity())))
-                                                .setTextAlignment(TextAlignment.CENTER).setBackgroundColor(rowColor));
-                                table.addCell(new Cell().add(new Paragraph(sanitize(String.valueOf(product.getSize()))))
-                                                .setTextAlignment(TextAlignment.CENTER).setBackgroundColor(rowColor));
+                                                .setTextAlignment(TextAlignment.CENTER)
+                                                .setBackgroundColor(rowColor));
+
+                                String sizeValue = "-";
+                                if (product.getSection() != Section.ACCESSORIES) {
+                                        sizeValue = sanitize(String.valueOf(product.getSize()));
+                                }
+
+                                table.addCell(new Cell().add(new Paragraph(sizeValue))
+                                                .setTextAlignment(TextAlignment.CENTER)
+                                                .setBackgroundColor(rowColor));
+
                                 table.addCell(new Cell().add(new Paragraph(formatPrice(product.getPrice()) + " €"))
-                                                .setTextAlignment(TextAlignment.RIGHT).setBackgroundColor(rowColor));
+                                                .setTextAlignment(TextAlignment.RIGHT)
+                                                .setBackgroundColor(rowColor));
                         }
                 }
 
                 document.add(table);
         }
 
+        /**
+         * Adds subtotal, discount, and total to the invoice.
+         *
+         * @param document the PDF {@link Document}
+         * @param total    total price of the order
+         * @param discount discount applied (can be null)
+         * @param bold     bold {@link PdfFont} for total
+         * @param normal   normal {@link PdfFont} for other values
+         */
         private void addTotal(Document document, Float total, Long discount, PdfFont bold, PdfFont normal) {
                 document.add(new Paragraph("\n"));
 
                 Table totalTable = new Table(UnitValue.createPercentArray(new float[] { 6, 2 }))
                                 .useAllAvailableWidth();
 
-                // Mostrar Subtotal
                 if (discount != null && discount > 0) {
                         float subtotal = total + discount;
 
@@ -204,7 +253,6 @@ public class PdfGeneratorService {
                                         .setBorder(Border.NO_BORDER)
                                         .setTextAlignment(TextAlignment.RIGHT));
 
-                        // Mostrar Descuento
                         totalTable.addCell(new Cell().add(new Paragraph("Descuento:").setFont(normal))
                                         .setBorder(Border.NO_BORDER)
                                         .setTextAlignment(TextAlignment.RIGHT));
@@ -215,7 +263,6 @@ public class PdfGeneratorService {
                                         .setTextAlignment(TextAlignment.RIGHT));
                 }
 
-                // Mostrar Total a pagar
                 totalTable.addCell(new Cell().add(new Paragraph("TOTAL A PAGAR:").setFont(bold).setFontSize(14))
                                 .setBorder(Border.NO_BORDER)
                                 .setTextAlignment(TextAlignment.RIGHT));
@@ -228,7 +275,12 @@ public class PdfGeneratorService {
                 document.add(totalTable);
         }
 
-        // ✅ Método seguro para formatear precios
+        /**
+         * Formats a price as a string with two decimal places.
+         *
+         * @param price the price to format
+         * @return formatted price string
+         */
         private String formatPrice(Float price) {
                 if (price == null) {
                         return "0.00";
@@ -237,11 +289,22 @@ public class PdfGeneratorService {
                 return df.format(price);
         }
 
-        // ✅ Sanitización básica
+        /**
+         * Sanitizes text for PDF output to prevent errors.
+         *
+         * @param input the text to sanitize
+         * @return sanitized text
+         */
         private String sanitize(String input) {
                 return input == null ? "" : input.replaceAll("%", "%%");
         }
 
+        /**
+         * Adds a footer message to the invoice PDF.
+         *
+         * @param document the PDF {@link Document}
+         * @param normal   normal {@link PdfFont} to use
+         */
         private void addFooter(Document document, PdfFont normal) {
                 document.add(new Paragraph("\nGracias por su compra en Artists Heaven!")
                                 .setTextAlignment(TextAlignment.CENTER)
