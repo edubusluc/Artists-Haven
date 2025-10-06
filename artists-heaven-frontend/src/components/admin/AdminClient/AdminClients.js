@@ -374,13 +374,13 @@ const AdminClient = () => {
                                                             onClick={() => approveProduct(product.id)}
                                                             className="px-3 py-1 text-sm bg-green-500 text-white rounded hover:bg-green-600 transition mr-2"
                                                         >
-                                                            APPROVE
+                                                            {t('adminclient.approve')}
                                                         </button>
                                                         <button
                                                             onClick={() => rejectProduct(product.id)}
                                                             className="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600 transition"
                                                         >
-                                                            REJECT
+                                                            {t('adminclient.reject')}
                                                         </button>
                                                     </>
                                                 ) : (
