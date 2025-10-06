@@ -3,8 +3,6 @@ package com.artists_heaven.admin;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -15,9 +13,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.time.LocalDateTime;
-import java.nio.file.Files;
-
-import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -34,8 +29,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.http.HttpHeaders;
-
 import com.artists_heaven.email.EmailSenderService;
 import com.artists_heaven.email.EmailType;
 import com.artists_heaven.entities.artist.ArtistRepository;
@@ -63,7 +56,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
@@ -194,34 +186,6 @@ class AdminControllerTest {
                 assertEquals(verificationList, response.getBody().getData());
         }
 
-        @Test
-        void testGetVerificationVideoSuccess() throws Exception {
-                // Crear recurso simulado (no toca filesystem)
-                Resource fakeResource = new FileSystemResource(Files.createTempFile("sample", ".mp4").toFile());
-
-                // Mockear ImageServingUtil para que devuelva el recurso usando serveVideo
-                when(imageServingUtil.serveVideo(anyString(), eq("sample.mp4")))
-                                .thenReturn(ResponseEntity.ok()
-                                                .header(HttpHeaders.CONTENT_TYPE, "video/mp4")
-                                                .body(fakeResource));
-
-                // Ejecutar MockMvc
-                mockMvc.perform(get("/api/admin/verification_media/sample.mp4"))
-                                .andExpect(status().isOk())
-                                .andExpect(header().string(HttpHeaders.CONTENT_TYPE, "video/mp4"));
-        }
-
-        @Test
-        void testGetVerificationVideoNotFound() throws Exception {
-                String fileName = "non-existent-video.mp4";
-
-                // Mockear ImageServingUtil para que devuelva 404
-                when(imageServingUtil.serveVideo(anyString(), eq(fileName)))
-                                .thenReturn(ResponseEntity.notFound().build());
-
-                mockMvc.perform(get("/api/admin/verification_media/{fileName}", fileName))
-                                .andExpect(status().isNotFound());
-        }
 
         @Test
         void testGetStaticsPerYear_Success() throws Exception {

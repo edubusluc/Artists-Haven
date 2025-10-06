@@ -5,7 +5,9 @@ import io.swagger.v3.oas.annotations.Parameter;
 import java.util.List;
 
 import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,7 +20,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.artists_heaven.entities.user.User;
-import com.artists_heaven.images.ImageServingUtil;
 import com.artists_heaven.standardResponse.StandardResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -33,11 +34,11 @@ public class UserProductController {
 
         private final UserProductService userProductService;
 
-        private final ImageServingUtil imageServingUtil;
+        private final ResourceLoader resourceLoader;
 
-        public UserProductController(UserProductService userProductService, ImageServingUtil imageServingUtil) {
+        public UserProductController(UserProductService userProductService, ResourceLoader resourceLoader) {
                 this.userProductService = userProductService;
-                this.imageServingUtil = imageServingUtil;
+                this.resourceLoader = resourceLoader;
 
         }
 
@@ -83,9 +84,19 @@ public class UserProductController {
         @ApiResponse(responseCode = "404", description = "Image file not found", content = @Content)
 
         public ResponseEntity<Resource> getProductImage(@PathVariable String fileName) {
-                String basePath = System.getProperty("user.dir")
-                                + "/artists-heaven-backend/src/main/resources/userProduct_media/";
-                return imageServingUtil.serveImage(basePath, fileName);
+                try {
+                        Resource resource = resourceLoader.getResource("classpath:userProduct_media/" + fileName);
+                        if (resource.exists()) {
+                                return ResponseEntity.ok()
+                                                .contentType(MediaType.IMAGE_PNG)
+                                                .body(resource);
+                        } else {
+                                return ResponseEntity.notFound().build();
+                        }
+                } catch (Exception e) {
+                        return ResponseEntity.internalServerError().build();
+                }
+                
         }
 
         @Operation(summary = "Get products created by the authenticated user", description = "Retrieves all products that have been created or uploaded by the currently authenticated user.", security = @SecurityRequirement(name = "bearerAuth"))
