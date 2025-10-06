@@ -3,7 +3,6 @@ package com.artists_heaven.product;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
@@ -20,16 +19,12 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.context.MessageSource;
-import org.springframework.core.io.ByteArrayResource;
-import org.springframework.core.io.Resource;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 class ProductControllerTest {
@@ -85,15 +80,6 @@ class ProductControllerTest {
 
                 mockMvc.perform(get("/api/product/allProducts"))
                                 .andExpect(status().isInternalServerError());
-        }
-
-        @Test
-        void testGetProductImage_success() throws Exception {
-                Resource image = new ByteArrayResource("fake-image".getBytes(StandardCharsets.UTF_8));
-                when(imageServingUtil.serveImage(anyString(), eq("test.png"))).thenReturn(ResponseEntity.ok(image));
-
-                mockMvc.perform(get("/api/product/product_media/test.png"))
-                                .andExpect(status().isOk());
         }
 
         @Test

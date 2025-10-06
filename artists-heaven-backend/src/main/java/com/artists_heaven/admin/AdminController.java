@@ -1,13 +1,11 @@
 package com.artists_heaven.admin;
 
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.ResponseStatusException;
 
 import com.artists_heaven.email.EmailSenderService;
 import com.artists_heaven.entities.artist.ArtistService;
 import com.artists_heaven.entities.user.UserProfileDTO;
 import com.artists_heaven.exception.AppExceptions.BadRequestException;
-import com.artists_heaven.images.ImageServingUtil;
 import com.artists_heaven.order.Order;
 import com.artists_heaven.order.OrderDetailsDTO;
 import com.artists_heaven.order.OrderService;
@@ -34,10 +32,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -66,14 +66,14 @@ public class AdminController {
 
         private final UserProductService userProductService;
 
-        private final ImageServingUtil imageServingUtil;
+        private final ResourceLoader resourceLoader;
 
         public AdminController(VerificationRepository verificationRepository,
                         OrderService orderService, EmailSenderService emailSenderService, AdminService adminService,
                         VerificationService verificationService,
                         ProductService productService, ArtistService artistService,
                         UserProductService userProductService,
-                        ImageServingUtil imageServingUtil) {
+                        ResourceLoader resourceLoader) {
                 this.orderService = orderService;
                 this.emailSenderService = emailSenderService;
                 this.artistService = artistService;
@@ -82,7 +82,7 @@ public class AdminController {
                 this.verificationService = verificationService;
                 this.productService = productService;
                 this.userProductService = userProductService;
-                this.imageServingUtil = imageServingUtil;
+                this.resourceLoader = resourceLoader;
         }
 
         private <T> ResponseEntity<StandardResponse<Object>> handleRequest(
@@ -151,14 +151,18 @@ public class AdminController {
         public ResponseEntity<Resource> getVerificationVideo(
                         @PathVariable String fileName) {
 
-                if (fileName.contains("..")) {
-                        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid file name");
+                try {
+                        Resource resource = resourceLoader.getResource("classpath:verification_media/" + fileName);
+                        if (resource.exists()) {
+                                return ResponseEntity.ok()
+                                                .contentType(MediaType.valueOf("video/mp4"))
+                                                .body(resource);
+                        } else {
+                                return ResponseEntity.notFound().build();
+                        }
+                } catch (Exception e) {
+                        return ResponseEntity.internalServerError().build();
                 }
-
-                String basePath = System.getProperty("user.dir")
-                                + "/artists-heaven-backend/src/main/resources/verification_media/";
-
-                return imageServingUtil.serveVideo(basePath, fileName);
         }
 
         @Operation(summary = "Get yearly platform statistics", description = "Returns statistical data for a given year, including number of orders, total income, email counts, "

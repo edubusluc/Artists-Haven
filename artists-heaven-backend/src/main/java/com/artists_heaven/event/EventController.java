@@ -19,6 +19,7 @@ import java.util.List;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -41,10 +42,13 @@ public class EventController {
 
     private static final String UPLOAD_DIR = "artists-heaven-backend/src/main/resources/event_media/";
 
+    private final ResourceLoader resourceLoader;
+
     private final ImageServingUtil imageServingUtil;
 
-    public EventController(EventService eventService, ImageServingUtil imageServingUtil) {
+    public EventController(EventService eventService, ResourceLoader resourceLoader, ImageServingUtil imageServingUtil) {
         this.eventService = eventService;
+        this.resourceLoader = resourceLoader;
         this.imageServingUtil = imageServingUtil;
     }
 
@@ -326,8 +330,18 @@ public class EventController {
     @GetMapping("/event_media/{fileName:.+}")
     public ResponseEntity<Resource> getProductImage(
             @Parameter(description = "Name of the image file to retrieve", required = true, example = "event_image.png") @PathVariable String fileName) {
-        // Constructing the base path to the directory where event media is stored
-        String basePath = System.getProperty("user.dir") + "/artists-heaven-backend/src/main/resources/event_media/";
-        return imageServingUtil.serveImage(basePath, fileName);
+        
+        try {
+                        Resource resource = resourceLoader.getResource("classpath:event_media/" + fileName);
+                        if (resource.exists()) {
+                                return ResponseEntity.ok()
+                                                .contentType(MediaType.IMAGE_PNG)
+                                                .body(resource);
+                        } else {
+                                return ResponseEntity.notFound().build();
+                        }
+                } catch (Exception e) {
+                        return ResponseEntity.internalServerError().build();
+                }
     }
 }

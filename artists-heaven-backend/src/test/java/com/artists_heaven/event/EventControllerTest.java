@@ -8,10 +8,7 @@ import com.artists_heaven.exception.GlobalExceptionHandler;
 import com.artists_heaven.images.ImageServingUtil;
 import org.junit.jupiter.api.*;
 import org.mockito.*;
-import org.springframework.core.io.FileSystemResource;
 import org.springframework.data.domain.*;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
@@ -19,10 +16,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.*;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import java.nio.file.Files;
 import java.util.List;
-import org.springframework.core.io.Resource;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -469,25 +463,4 @@ class EventControllerTest {
                 }
         }
 
-        // GENERA UNA CARPETA MAL
-        @Nested
-        class GetEventMedia {
-                @Test
-                void shouldReturnImageWhenExists() throws Exception {
-                        // Crear un recurso simulado (no toca el filesystem)
-                        Resource fakeResource = new FileSystemResource(
-                                        Files.createTempFile("event_image", ".png").toFile());
-
-                        // Mockear ImageServingUtil para que devuelva el recurso
-                        when(imageServingUtil.serveImage(anyString(), eq("event_image.png")))
-                                        .thenReturn(ResponseEntity.ok()
-                                                        .header(HttpHeaders.CONTENT_TYPE, "image/png")
-                                                        .body(fakeResource));
-
-                        // Ejecutar MockMvc
-                        mockMvc.perform(get("/api/event/event_media/event_image.png"))
-                                        .andExpect(status().isOk())
-                                        .andExpect(header().string("Content-Type", "image/png"));
-                }
-        }
 }

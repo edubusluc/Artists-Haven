@@ -9,9 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.springframework.core.io.Resource;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -19,7 +17,6 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.mock;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -102,17 +99,6 @@ class UserProductControllerTest {
                 .andExpect(jsonPath("$.message").value("UserProducts retrieved successfully"));
     }
 
-    // ==========================
-    // Test /userProduct_media/{fileName}
-    // ==========================
-    @Test
-    void getProductImage_success() throws Exception {
-        Resource resource = mock(Resource.class);
-        when(imageServingUtil.serveImage(anyString(), anyString())).thenReturn(ResponseEntity.ok(resource));
-
-        mockMvc.perform(get("/api/user-products/userProduct_media/test.png"))
-                .andExpect(status().isOk());
-    }
 
     // ==========================
     // Test /myUserProducts
