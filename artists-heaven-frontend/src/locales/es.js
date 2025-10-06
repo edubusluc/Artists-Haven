@@ -193,6 +193,8 @@ const es = {
   "adminclient.username": "Usuario",
   "adminclient.image": "Imágenes",
   "adminclient.noProducts": "No hay productos de usuario disponible",
+  "adminclient.approve": "APROBAR",
+  "adminclient.reject": "RECHAZAR",
 
 
   "adminDashboard.year": "Año",

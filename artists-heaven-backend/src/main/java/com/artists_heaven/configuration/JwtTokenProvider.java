@@ -8,11 +8,11 @@ import io.jsonwebtoken.security.Keys;
 
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Component;
 import com.artists_heaven.entities.user.User;
 
 import com.artists_heaven.entities.user.UserRepository;
+import com.artists_heaven.exception.AppExceptions;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -74,7 +74,7 @@ public class JwtTokenProvider {
 
         if (optionalUser.isEmpty()) {
             // Throw an exception if the user is not found
-            throw new UsernameNotFoundException("User not found with this email");
+            throw new AppExceptions.ResourceNotFoundException("User not found with this email");
         }
 
         User myUser = optionalUser.get();
