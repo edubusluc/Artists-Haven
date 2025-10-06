@@ -1,0 +1,342 @@
+package com.artists_heaven.chat;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.core.io.Resource;
+
+import com.artists_heaven.exception.AppExceptions;
+import com.artists_heaven.product.ProductService;
+
+import io.github.cdimascio.dotenv.Dotenv;
+import jakarta.annotation.PostConstruct;
+import java.io.InputStream;
+
+@Service
+public class ChatbotService {
+
+    private final ProductService productService;
+    private final QARepository qaRepository;
+    private final Dotenv dotenv = Dotenv.load();
+
+    private final String geminiApiKey = dotenv.get("GEMINI_KEY");
+    private final static String geminiApiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+
+    private final double similarityThreshold;
+
+    private Resource systemPromptResource;
+
+    private String systemPromptText;
+
+    @PostConstruct
+    public void loadSystemPrompt() throws IOException {
+        try (InputStream is = systemPromptResource.getInputStream()) {
+            this.systemPromptText = new String(is.readAllBytes(), StandardCharsets.UTF_8);
+        }
+    }
+
+    public RestTemplate createRestTemplate() {
+        return new RestTemplate();
+    }
+
+    public ChatbotService(QARepository qaRepository, ProductService productService,
+            @Value("classpath:chatbot/system-prompt.txt") Resource systemPromptResource,
+            @Value("${chatbot.similarity-threshold:0.4}") double similarityThreshold) {
+        this.qaRepository = qaRepository;
+        this.productService = productService;
+        this.systemPromptResource = systemPromptResource;
+        this.similarityThreshold = similarityThreshold;
+    }
+
+    /**
+     * Searches for an answer in the predefined Q&A repository using token
+     * similarity.
+     *
+     * @param text user input
+     * @return predefined answer if found, otherwise {@code null}
+     */
+    public String searchNLPAnswer(String text) {
+        if (text == null || text.isBlank())
+            return null;
+
+        ChatMessageContext context = new ChatMessageContext(text);
+        Set<String> messageTokens = context.getTokens();
+        String originalText = context.getOriginalText();
+
+        Map<String, ChatMessageContext> predefinedQAContexts = qaRepository.getAllQAContexts();
+
+        List<Map.Entry<String, Double>> matches = predefinedQAContexts.entrySet().stream()
+                .map(entry -> {
+                    Set<String> questionTokens = entry.getValue().getTokens();
+                    double similarity = ChatbotUtils.jaccardSimilarity(messageTokens, questionTokens);
+                    return Map.entry(entry.getKey(), similarity);
+                })
+                .filter(e -> e.getValue() >= similarityThreshold)
+                .toList();
+
+        if (matches.isEmpty()) {
+            return null;
+        }
+
+        double maxSim = matches.stream()
+                .mapToDouble(Map.Entry::getValue)
+                .max()
+                .orElse(0.0);
+
+        List<String> bestMatches = matches.stream()
+                .filter(e -> e.getValue() == maxSim)
+                .map(Map.Entry::getKey)
+                .toList();
+
+        String selected = bestMatches.stream()
+                .min(Comparator.comparingInt(q -> Math.abs(q.length() - originalText.length())))
+                .orElse(bestMatches.get(0));
+
+        return qaRepository.getAnswer(selected);
+    }
+
+    /**
+     * Searches for a dynamic answer based on detected intent (recommendation,
+     * bestseller).
+     *
+     * @param text user input
+     * @return dynamically generated answer or {@code null} if no intent is detected
+     */
+    public String searchDynamicAnswer(String text) {
+        if (text == null || text.isBlank())
+            return null;
+
+        ChatMessageContext context = new ChatMessageContext(text);
+
+        String intent = detectIntent(context.getNormalizedText());
+        if (intent == null) {
+            return null;
+        }
+
+        return generateResponseForIntent(intent, context.getLanguage() == ChatMessageContext.Language.ENGLISH);
+
+    }
+
+    /**
+     * Detects the intent of the given message (e.g., recommendation, bestseller).
+     *
+     * @param message normalized user input
+     * @return intent key (e.g., "recommendation", "bestseller") or {@code null}
+     */
+    private String detectIntent(String message) {
+        String cleanedMessage = normalizeText(message);
+
+        Map<String, List<String>> intents = Map.of(
+                "recommendation", List.of(
+                        // Español
+                        "recomiendame", "me recomiendas", "sugerencia", "que me aconsejas", "quiero una recomendacion",
+                        "aconsejame", "sugiere algo", "dame una sugerencia", "que me puedes sugerir",
+                        "que me recomiendas", "tienes alguna sugerencia", "que producto me sugieres",
+                        "cual me recomiendas", "me ayudas a elegir", "recomendacion de producto",
+                        "me aconsejas algo", "dame ideas", "alguna idea", "que opcion me sugieres",
+                        "elige por mi", "me das un consejo", "que deberia comprar",
+                        // Inglés
+                        "recommend me", "can you recommend", "suggestion", "what do you suggest",
+                        "i want a recommendation",
+                        "do you suggest", "suggest me something", "give me advice", "what should i buy",
+                        "any recommendations", "which one do you recommend", "recommendation please",
+                        "can you help me choose", "help me decide", "what do you advise",
+                        "pick something for me", "what should i pick", "give me some ideas"),
+                "bestseller", List.of(
+                        // Español
+                        "mas vendido", "top ventas", "producto popular", "lo que mas se vende", "mas comprado",
+                        "producto mas vendido", "ventas altas", "mas pedido", "producto famoso", "producto estrella",
+                        "cual se vende mas", "que compran mas", "producto mas comprado", "lo mas popular",
+                        "lo mas pedido", "articulo mas vendido", "mas solicitado",
+                        // Inglés
+                        "best seller", "top selling", "popular product", "most sold", "best selling product",
+                        "best product",
+                        "most purchased", "most ordered", "top product", "hot item", "what sells the most",
+                        "trending product", "people are buying", "most popular", "most requested",
+                        "most wanted", "customer favorite"));
+
+        for (Map.Entry<String, List<String>> entry : intents.entrySet()) {
+            for (String keyword : entry.getValue()) {
+                if (cleanedMessage.contains(normalizeText(keyword))) {
+                    return entry.getKey();
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Normalizes text by converting to lowercase, removing accents and special
+     * characters.
+     *
+     * @param text raw user input
+     * @return normalized text
+     */
+    private String normalizeText(String text) {
+        if (text == null)
+            return "";
+        return text.toLowerCase()
+                .replaceAll("[áàäâ]", "a")
+                .replaceAll("[éèëê]", "e")
+                .replaceAll("[íìïî]", "i")
+                .replaceAll("[óòöô]", "o")
+                .replaceAll("[úùüû]", "u")
+                .replaceAll("[^a-z0-9 ]", ""); // elimina caracteres no alfanuméricos
+    }
+
+    /**
+     * Generates a chatbot response based on the detected intent.
+     *
+     * @param intent    detected intent
+     * @param isEnglish whether the language is English (true) or Spanish (false)
+     * @return generated response text
+     */
+    private String generateResponseForIntent(String intent, boolean isEnglish) {
+        switch (intent) {
+            case "recommendation":
+                return getRecommendedProductMessage(isEnglish);
+            case "bestseller":
+                return getTopSellingProductMessage(isEnglish);
+            default:
+                return null;
+        }
+    }
+
+    /**
+     * Builds a message recommending products based on ProductService data.
+     *
+     * @param isEnglish whether the response should be in English
+     * @return formatted recommendation message
+     */
+    private String getRecommendedProductMessage(boolean isEnglish) {
+        Map<String, String> recommendedProducts = productService.getRecommendedProduct();
+        if (recommendedProducts != null && !recommendedProducts.isEmpty()) {
+            StringBuilder message = new StringBuilder();
+
+            if (isEnglish) {
+                message.append("Here are some of our top recommended products:\n");
+                for (Map.Entry<String, String> entry : recommendedProducts.entrySet()) {
+                    String name = sanitize(entry.getKey());
+                    String details = sanitize(entry.getValue());
+                    message.append("- ").append(name).append(": ").append(details).append("\n");
+                }
+                message.append("Check them out and let us know which one you like!");
+            } else {
+                message.append("Estos son algunos de nuestros productos más recomendados:\n");
+                for (Map.Entry<String, String> entry : recommendedProducts.entrySet()) {
+                    String name = sanitize(entry.getKey());
+                    String details = sanitize(entry.getValue());
+                    message.append("- ").append(name).append(": ").append(details).append("\n");
+                }
+                message.append("¡Échales un vistazo y cuéntanos cuál te gusta más!");
+            }
+
+            return message.toString();
+        } else {
+            return isEnglish
+                    ? "Sorry, I don’t have any recommended products to show at the moment."
+                    : "Lo siento, no tengo productos recomendados para mostrar en este momento.";
+        }
+    }
+
+    /**
+     * Builds a message about the current best-selling product.
+     *
+     * @param isEnglish whether the response should be in English
+     * @return formatted bestseller message
+     */
+    private String getTopSellingProductMessage(boolean isEnglish) {
+        Map<String, String> topProduct = productService.getTopSellingProduct();
+        if (topProduct != null && !topProduct.isEmpty()) {
+            String name = sanitize(topProduct.getOrDefault("nombre", "Unknown product"));
+            String price = sanitize(topProduct.getOrDefault("precio", "price not available"));
+
+            return isEnglish
+                    ? "Our current best-selling product is '" + name + "'. Final price: €" + price
+                            + ". Take a look and see what you think!"
+                    : "El producto más vendido actualmente es '" + name + "'. Precio final: " + price
+                            + "€. ¡Échale un vistazo y a ver qué te parece!";
+        } else {
+            return isEnglish
+                    ? "Sorry, I don’t have information about our best-selling product at the moment."
+                    : "Lo siento, no tengo información sobre el producto más vendido en este momento.";
+        }
+    }
+
+    private String sanitize(String input) {
+        return input == null ? "" : input.replace("%", "%%");
+    }
+
+    /**
+     * Checks if the Gemini API key is correctly configured.
+     *
+     * @return true if the key exists and is not blank
+     */
+    public boolean isApiKeyConfigured() {
+        return geminiApiKey != null && !geminiApiKey.isBlank();
+    }
+
+    /**
+     * Calls the Gemini API with the given user message and returns the generated
+     * response.
+     *
+     * @param userMessage user input to send to Gemini
+     * @return generated response text from Gemini
+     * @throws AppExceptions.InternalServerErrorException if the API response is
+     *                                                    invalid or empty
+     */
+    public String callGeminiAPI(String userMessage) {
+        RestTemplate restTemplate = createRestTemplate();
+
+        Map<String, Object> systemMessage = Map.of("text", systemPromptText);
+
+        Map<String, Object> userMessageMap = Map.of("text", userMessage);
+        Map<String, Object> content1 = Map.of("role", "user", "parts", List.of(systemMessage));
+        Map<String, Object> content2 = Map.of("role", "user", "parts", List.of(userMessageMap));
+        Map<String, Object> requestBody = Map.of("contents", List.of(content1, content2));
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("X-goog-api-key", geminiApiKey);
+
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
+
+        ResponseEntity<Map> response = restTemplate.postForEntity(geminiApiUrl, entity, Map.class);
+
+        if (!response.getStatusCode().is2xxSuccessful()) {
+            throw new AppExceptions.InternalServerErrorException("Error del servidor de Gemini");
+        }
+
+        Map<String, Object> responseBody = response.getBody();
+        if (responseBody == null || !responseBody.containsKey("candidates")) {
+            throw new AppExceptions.InternalServerErrorException("Respuesta inesperada de Gemini");
+        }
+
+        var candidatesList = (List<Map<String, Object>>) responseBody.get("candidates");
+        if (candidatesList.isEmpty()) {
+            throw new AppExceptions.InternalServerErrorException("No se generó respuesta de Gemini");
+        }
+
+        Map<String, Object> firstCandidate = candidatesList.get(0);
+        Map<String, Object> contentResponse = (Map<String, Object>) firstCandidate.get("content");
+        var parts = (List<Map<String, Object>>) contentResponse.get("parts");
+
+        if (parts.isEmpty()) {
+            throw new AppExceptions.InternalServerErrorException("Respuesta sin partes de texto");
+        }
+
+        return (String) parts.get(0).get("text");
+    }
+}

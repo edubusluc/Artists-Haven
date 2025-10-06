@@ -1,0 +1,94 @@
+name: CI - Run Tests and SonarQube Analysis
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+  push:
+    branches:
+      - main
+      - develop
+
+jobs:
+  test-and-analyze:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:latest
+        env:
+          POSTGRES_USER: ${{ secrets.DB_USERNAME }}
+          POSTGRES_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          POSTGRES_DB: test_artists_heaven
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U ${POSTGRES_USER}" --health-interval=10s --health-timeout=5s --health-retries=5
+
+    steps:
+      # Checkout the code
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Needed for SonarQube analysis
+
+      # Create .env file
+      - name: Create .env file
+        run: |
+          echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" > artists-heaven-backend/src/main/resources/.env
+          echo "POSTGRES_USER=${{ secrets.DB_USERNAME }}" >> artists-heaven-backend/src/main/resources/.env
+          echo "POSTGRES_PASSWORD=${{ secrets.DB_PASSWORD }}" >> artists-heaven-backend/src/main/resources/.env
+          echo "POSTGRES_DB=test_artists_heaven" >> artists-heaven-backend/src/main/resources/.env
+          echo "EMAIL_PASSWORD=${{ secrets.EMAIL_PASSWORD }}" >> artists-heaven-backend/src/main/resources/.env
+          echo "STRIPE_KEY=${{ secrets.STRIPE_KEY }}" >> artists-heaven-backend/src/main/resources/.env
+          echo "STRIPE_WEBHOOK=${{ secrets.STRIPE_WEBHOOK }}" >> artists-heaven-backend/src/main/resources/.env
+          echo "GEMINI_KEY=${{ secrets.GEMINI_KEY }}" >> artists-heaven-backend/src/main/resources/.env
+
+      # Set up JDK
+      - name: Set up JDK 20.0.2
+        uses: actions/setup-java@v3
+        with:
+          java-version: '20.0.2'
+          distribution: 'temurin'
+          cache: maven
+
+      # Compile the project
+      - name: Compile the project
+        run: mvn clean install -DskipTests=true -f artists-heaven-backend/pom.xml
+
+      # Run tests
+      - name: Run test case
+        run: mvn clean test -f artists-heaven-backend/pom.xml
+
+      # Set up JDK for SonarQube
+      - name: Set up JDK 17 for SonarQube
+        uses: actions/setup-java@v3
+        with:
+          java-version: 17
+          distribution: 'zulu'
+
+      # Cache SonarQube packages
+      - name: Cache SonarQube packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
+
+      # Cache Maven packages
+      - name: Cache Maven packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2
+
+      # SonarQube analysis
+      - name: SonarQube Analysis Backend
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: mvn -B verify sonar:sonar -Dsonar.projectKey=edubusluc_Artists-Haven -Dsonar.coverage.jacoco.xmlReportPaths=target/jacoco/jacoco.xml -f artists-heaven-backend/pom.xml
+
+
+

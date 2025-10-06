@@ -1,0 +1,4 @@
+{"properties": [{
+  "name": "chatbot.similarity-threshold",
+  "type": "java.lang.String"
+}]}

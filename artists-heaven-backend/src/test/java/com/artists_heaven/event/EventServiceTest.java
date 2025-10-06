@@ -1,0 +1,518 @@
+package com.artists_heaven.event;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
+
+import java.io.IOException;
+import java.nio.file.DirectoryStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.LocalDate;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
+
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.*;
+import org.springframework.context.MessageSource;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.util.StringUtils;
+import com.artists_heaven.entities.artist.Artist;
+import com.artists_heaven.entities.artist.ArtistRepository;
+import com.artists_heaven.exception.AppExceptions.BadRequestException;
+import com.artists_heaven.exception.AppExceptions.ForbiddenActionException;
+import com.artists_heaven.exception.AppExceptions.InvalidInputException;
+import com.artists_heaven.exception.AppExceptions.ResourceNotFoundException;
+import com.artists_heaven.images.ImageServingUtil;
+
+class EventServiceTest {
+
+    @Mock
+    private EventRepository eventRepository;
+
+    @Mock
+    private MultipartFile multipartFile;
+
+    @Mock
+    private ArtistRepository artistRepository;
+
+    @Mock
+    private Authentication authentication;
+
+    @Mock
+    private MessageSource messageSource;
+
+    @InjectMocks
+    private EventService eventService;
+
+    @Mock
+    private ImageServingUtil imageServingUtil;
+
+    @BeforeEach
+    void setUp() {
+        MockitoAnnotations.openMocks(this);
+        SecurityContextHolder.clearContext();
+    }
+
+    @AfterEach
+    void cleanUp() throws Exception {
+        Path uploadDir = Paths.get("artists-heaven-backend/src/main/resources/event_media/");
+
+        if (Files.exists(uploadDir)) {
+            // Borrar todos los archivos dentro de la carpeta
+            try (DirectoryStream<Path> stream = Files.newDirectoryStream(uploadDir)) {
+                for (Path filePath : stream) {
+                    Files.deleteIfExists(filePath);
+                }
+            }
+        }
+    }
+
+    @Test
+    void testGetAllEvents() {
+        eventService.getAllEvents();
+        verify(eventRepository, times(1)).findAll();
+    }
+
+    @Test
+    void testValidateEventDateThrowsExceptionForNullDate() {
+        Artist artist = new Artist();
+        artist.setId(1L);
+        when(artistRepository.findById(anyLong())).thenReturn(Optional.of(artist));
+
+        EventDTO eventDto = new EventDTO();
+        eventDto.setDate(null);
+        eventDto.setName("Test Event");
+        eventDto.setDescription("Description");
+        eventDto.setLocation("Location");
+        eventDto.setMoreInfo("More Info");
+        eventDto.setImage("Image");
+        eventDto.setArtistId(1L);
+
+        BadRequestException exception = assertThrows(BadRequestException.class, () -> {
+            eventService.newEvent(eventDto, "es");
+        });
+
+        assertEquals("Event date cannot be null", exception.getMessage());
+    }
+
+    @Test
+    void testValidateEventDateThrowsExceptionForPastDate() {
+        Artist artist = new Artist();
+        artist.setId(1L);
+        when(artistRepository.findById(anyLong())).thenReturn(Optional.of(artist));
+
+        EventDTO eventDto = new EventDTO();
+        eventDto.setDate(LocalDate.now().minusDays(1)); // Fecha en el pasado
+        eventDto.setName("Test Event");
+        eventDto.setDescription("Description");
+        eventDto.setLocation("Location");
+        eventDto.setMoreInfo("More Info");
+        eventDto.setImage("Image");
+        eventDto.setArtistId(1L);
+
+        BadRequestException exception = assertThrows(BadRequestException.class, () -> {
+            eventService.newEvent(eventDto, "es");
+        });
+
+        assertEquals("Event date cannot be in the past", exception.getMessage());
+    }
+
+    @Test
+    void testNewEventThrowsExceptionForInvalidArtist() {
+
+        when(artistRepository.findById(anyLong())).thenReturn(Optional.empty());
+
+        EventDTO eventDto = new EventDTO();
+        eventDto.setDate(LocalDate.now().minusDays(1));
+        eventDto.setName("Test Event");
+        eventDto.setDescription("Description");
+        eventDto.setLocation("Location");
+        eventDto.setMoreInfo("More Info");
+        eventDto.setImage("Image");
+        eventDto.setArtistId(null);
+
+        ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class, () -> {
+            eventService.newEvent(eventDto, "es");
+        });
+        assertEquals("Artist not found", exception.getMessage());
+    }
+
+    @Test
+    void testNewEventThrowsExceptionForInvalidData() {
+        EventDTO eventDto = new EventDTO();
+        eventDto.setDate(LocalDate.now().plusDays(1));
+        eventDto.setName(null);
+        eventDto.setDescription("Description");
+        eventDto.setLocation("Location");
+        eventDto.setMoreInfo("More Info");
+        eventDto.setImage("Image");
+        eventDto.setArtistId(1L);
+
+        Artist artist = new Artist();
+        artist.setIsVerificated(true);
+        when(artistRepository.findById(anyLong())).thenReturn(Optional.of(artist));
+        when(eventRepository.save(any(Event.class))).thenThrow(new BadRequestException("Invalid data"));
+
+        BadRequestException exception = assertThrows(BadRequestException.class, () -> {
+            eventService.newEvent(eventDto, "es");
+        });
+        assertEquals("Invalid data", exception.getMessage());
+    }
+
+    @Test
+    void testNewEventSuccess() {
+        EventDTO eventDto = new EventDTO();
+        eventDto.setDate(LocalDate.now().plusDays(1));
+        eventDto.setName("Event Test");
+        eventDto.setDescription("Description");
+        eventDto.setLocation("Location");
+        eventDto.setMoreInfo("More Info");
+        eventDto.setImage("Image");
+        eventDto.setArtistId(1L);
+        Artist artist = new Artist();
+        artist.setIsVerificated(true);
+        when(artistRepository.findById(anyLong())).thenReturn(Optional.of(artist));
+        when(eventRepository.save(any(Event.class))).thenReturn(new Event());
+
+        Event event = eventService.newEvent(eventDto, "es");
+        assertNotNull(event);
+        verify(eventRepository, times(1)).save(any(Event.class));
+    }
+
+    @Test
+    void testNewEventThrowsForbiddenForUnverifiedArtist() {
+        Artist artist = new Artist();
+        artist.setId(1L);
+        artist.setIsVerificated(false); // no verificado
+        when(artistRepository.findById(1L)).thenReturn(Optional.of(artist));
+
+        EventDTO eventDto = new EventDTO();
+        eventDto.setArtistId(1L);
+        eventDto.setDate(LocalDate.now().plusDays(1));
+        eventDto.setName("Test Event");
+        eventDto.setDescription("Desc");
+        eventDto.setLocation("Some location");
+
+        ForbiddenActionException ex = assertThrows(ForbiddenActionException.class, () -> {
+            eventService.newEvent(eventDto, "es");
+        });
+
+        assertEquals("Artist is not verified to create events", ex.getMessage());
+    }
+
+    @Test
+    void testNewEvent_noGeocodingResults_throwsInvalidInputException() {
+        Artist artist = new Artist();
+        artist.setId(1L);
+        artist.setIsVerificated(true);
+        when(artistRepository.findById(1L)).thenReturn(Optional.of(artist));
+        when(messageSource.getMessage(eq("coordinate.notFound"), any(), any(Locale.class)))
+                .thenReturn("Coordinate not found");
+
+        EventDTO eventDto = new EventDTO();
+        eventDto.setArtistId(1L);
+        eventDto.setDate(LocalDate.now().plusDays(1));
+        eventDto.setName("Event");
+        eventDto.setDescription("Desc");
+        eventDto.setLocation("Invalid Address"); // fuerza a que falle
+        eventDto.setMoreInfo("Info");
+        eventDto.setImage("img.png");
+
+        InvalidInputException ex = assertThrows(InvalidInputException.class, () -> {
+            eventService.newEvent(eventDto, "en");
+        });
+
+        assertEquals("Coordinate not found", ex.getMessage());
+    }
+
+    @Test
+    void testNewEvent_coordinatesApiThrowsException() {
+        Artist artist = new Artist();
+        artist.setId(1L);
+        artist.setIsVerificated(true);
+        when(artistRepository.findById(1L)).thenReturn(Optional.of(artist));
+        when(messageSource.getMessage(eq("coordinate.notFound"), any(), any(Locale.class)))
+                .thenReturn("No se pudo geocodificar la dirección");
+
+        EventDTO eventDto = new EventDTO();
+        eventDto.setArtistId(1L);
+        eventDto.setDate(LocalDate.now().plusDays(1));
+        eventDto.setName("Event");
+        eventDto.setDescription("Desc");
+        eventDto.setLocation("Invalid Location");
+        eventDto.setMoreInfo("Info");
+        eventDto.setImage("img.png");
+
+        InvalidInputException ex = assertThrows(InvalidInputException.class, () -> {
+            eventService.newEvent(eventDto, "es");
+        });
+
+        assertEquals("No se pudo geocodificar la dirección", ex.getMessage());
+    }
+
+    @Test
+    void testDeleteEventSuccess() {
+        Event event = new Event();
+        event.setId(1L);
+
+        when(eventRepository.findById(1L)).thenReturn(Optional.of(event));
+
+        eventService.deleteEvent(1L);
+
+        verify(eventRepository, times(1)).findById(1L);
+        verify(eventRepository, times(1)).delete(event);
+    }
+
+    @Test
+    void testDeleteEventThrowsExceptionForNotFound() {
+        when(eventRepository.findById(1L)).thenReturn(Optional.empty());
+
+        ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class, () -> {
+            eventService.deleteEvent(1L);
+        });
+
+        assertEquals("Event not found", exception.getMessage());
+        verify(eventRepository, times(1)).findById(1L);
+        verify(eventRepository, times(0)).delete(any(Event.class));
+    }
+
+    @Test
+    void testGetAllMyEvents() {
+        int page = 0;
+        int size = 6;
+        PageRequest pageable = PageRequest.of(page, size);
+
+        Event event = new Event();
+        Page<Event> events = new PageImpl<>(List.of(event), pageable, 1);
+
+        when(eventRepository.findByArtistId(1L, pageable)).thenReturn(events);
+
+        Page<Event> result = eventService.getAllMyEvents(1L, pageable);
+        assertEquals(1, result.getContent().size());
+        verify(eventRepository, times(1)).findByArtistId(1L, pageable);
+    }
+
+    @Test
+    void testDeleteImagesSuccess() {
+        String removedImage = "event_media/test.jpg";
+        String cleanedPath = StringUtils.cleanPath(removedImage);
+        Path targetPath = Paths.get("artists-heaven-backend/src/main/resources", cleanedPath).normalize();
+
+        // Mock the static method Files.delete
+        try (MockedStatic<Files> mockedFiles = mockStatic(Files.class)) {
+            mockedFiles.when(() -> Files.delete(targetPath)).thenAnswer(invocation -> null);
+
+            eventService.deleteImages(removedImage);
+
+            mockedFiles.verify(() -> Files.delete(targetPath), times(1));
+        }
+    }
+
+    @Test
+    void testDeleteImagesThrowsException() {
+        String removedImage = "event_media/test.jpg";
+        String cleanedPath = StringUtils.cleanPath(removedImage);
+        Path targetPath = Paths.get("artists-heaven-backend/src/main/resources", cleanedPath).normalize();
+
+        // Mock the static method Files.delete to throw an IOException
+        try (MockedStatic<Files> mockedFiles = mockStatic(Files.class)) {
+            mockedFiles.when(() -> Files.delete(targetPath)).thenThrow(new IOException("Test IOException"));
+
+            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+                eventService.deleteImages(removedImage);
+            });
+
+            assertEquals("Error while deleting the image.", exception.getMessage());
+            mockedFiles.verify(() -> Files.delete(targetPath), times(1));
+        }
+    }
+
+    @Test
+    void testGetEventByIdSuccess() {
+        Event event = new Event();
+        event.setId(1L);
+
+        when(eventRepository.findById(1L)).thenReturn(Optional.of(event));
+
+        Event result = eventService.getEventById(1L);
+
+        assertNotNull(result);
+        assertEquals(1L, result.getId());
+        verify(eventRepository, times(1)).findById(1L);
+    }
+
+    @Test
+    void testGetEventByIdThrowsExceptionForNotFound() {
+        when(eventRepository.findById(1L)).thenReturn(Optional.empty());
+
+        ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class, () -> {
+            eventService.getEventById(1L);
+        });
+
+        assertEquals("Event not found", exception.getMessage());
+        verify(eventRepository, times(1)).findById(1L);
+    }
+
+    @Test
+    void testIsArtistReturnsTrue() {
+        Artist artist = new Artist();
+        when(authentication.getPrincipal()).thenReturn(artist);
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        Boolean result = eventService.isArtist();
+
+        assertTrue(result);
+    }
+
+    @Test
+    void testIsArtistReturnsFalse() {
+        Object user = new Object();
+        when(authentication.getPrincipal()).thenReturn(user);
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        Boolean result = eventService.isArtist();
+
+        assertFalse(result);
+    }
+
+    @Test
+    void testUpdateEventSuccess() {
+        Event event = new Event();
+        event.setId(1L);
+        event.setName("Original Event");
+        event.setDescription("Original Description");
+        event.setDate(LocalDate.now().plusDays(10));
+        event.setLocation("Original Location");
+        event.setMoreInfo("Original More Info");
+        event.setImage("original_image.jpg");
+
+        EventDTO eventDTO = new EventDTO();
+        eventDTO.setName("Updated Event");
+        eventDTO.setDescription("Updated Description");
+        eventDTO.setDate(LocalDate.now().plusDays(20));
+        eventDTO.setLocation("Updated Location");
+        eventDTO.setMoreInfo("Updated More Info");
+        eventDTO.setImage("updated_image.jpg");
+
+        when(eventRepository.save(any(Event.class))).thenReturn(event);
+
+        eventService.updateEvent(event, eventDTO, "es");
+
+        assertEquals("Updated Event", event.getName());
+        assertEquals("Updated Description", event.getDescription());
+        assertEquals(LocalDate.now().plusDays(20), event.getDate());
+        assertEquals("Updated Location", event.getLocation());
+        assertEquals("Updated More Info", event.getMoreInfo());
+        assertEquals("updated_image.jpg", event.getImage());
+
+        verify(eventRepository, times(1)).save(event);
+    }
+
+    @Test
+    void testUpdateEventThrowsExceptionForPastDate() {
+        Event event = new Event();
+        event.setId(1L);
+        event.setName("Original Event");
+        event.setDescription("Original Description");
+        event.setDate(LocalDate.now().plusDays(10));
+        event.setLocation("Original Location");
+        event.setMoreInfo("Original More Info");
+        event.setImage("original_image.jpg");
+
+        EventDTO eventDTO = new EventDTO();
+        eventDTO.setName("Updated Event");
+        eventDTO.setDescription("Updated Description");
+        eventDTO.setDate(LocalDate.now().minusDays(1)); // Fecha en el pasado
+        eventDTO.setLocation("Updated Location");
+        eventDTO.setMoreInfo("Updated More Info");
+        eventDTO.setImage("updated_image.jpg");
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            eventService.updateEvent(event, eventDTO, "es");
+        });
+
+        assertEquals("Event date cannot be in the past", exception.getMessage());
+        verify(eventRepository, times(0)).save(event);
+    }
+
+    @Test
+    void testFindEventThisYearByArtist() {
+        Long artistId = 10L;
+        Event event = new Event();
+        event.setDate(LocalDate.now().plusDays(10));
+
+        List<Event> events = List.of(event);
+
+        when(eventRepository.findArtistEventThisYear(artistId, LocalDate.now().getYear())).thenReturn(events);
+
+        List<Event> result = eventService.findEventThisYearByArtist(artistId);
+        assertNotNull(result);
+        assertTrue(event.getDate().equals(LocalDate.now().plusDays(10)));
+    }
+
+    @Test
+    void findEventThisYearByArtistInvalidId() {
+        List<Event> result = eventService.findEventThisYearByArtist(null);
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void findFutureEventsByArtist_ArtistExistsWithEvents_ReturnsEvents() {
+        Long artistId = 1L;
+        Artist artist = new Artist();
+        Event event1 = new Event();
+        Event event2 = new Event();
+        List<Event> expectedEvents = Arrays.asList(event1, event2);
+
+        when(artistRepository.findById(artistId)).thenReturn(Optional.of(artist));
+        when(eventRepository.findFutureEventsByArtist(eq(artistId), any(LocalDate.class)))
+                .thenReturn(expectedEvents);
+
+        List<Event> result = eventService.findFutureEventsByArtist(artistId);
+
+        assertEquals(2, result.size());
+        assertTrue(result.contains(event1));
+        assertTrue(result.contains(event2));
+    }
+
+    @Test
+    void findFutureEventsByArtist_ArtistExistsNoEvents_ReturnsEmptyList() {
+        Long artistId = 1L;
+        Artist artist = new Artist();
+
+        when(artistRepository.findById(artistId)).thenReturn(Optional.of(artist));
+        when(eventRepository.findFutureEventsByArtist(eq(artistId), any(LocalDate.class)))
+                .thenReturn(Collections.emptyList());
+
+        List<Event> result = eventService.findFutureEventsByArtist(artistId);
+
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void testFutureEvents() {
+        Event event = new Event();
+        when(eventRepository.findFutureEvents(LocalDate.now())).thenReturn(List.of(event));
+        List<Event> result = eventService.findFutureEvents();
+        assertNotNull(result);
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
+    }
+}
