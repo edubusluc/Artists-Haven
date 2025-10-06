@@ -1,24 +1,17 @@
 package com.artists_heaven.entities.artist;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
-import org.springframework.core.io.Resource;
-
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
 import java.time.LocalDate;
-import java.nio.file.Files;
-
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,15 +20,11 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.http.HttpHeaders;
-
 import com.artists_heaven.admin.MonthlySalesDTO;
 import com.artists_heaven.entities.user.UserRepository;
 import com.artists_heaven.event.Event;
@@ -190,24 +179,6 @@ class ArtistControllerTest {
                 mockMvc.perform(get("/api/artists/main"))
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$.data[0].name").value("Test Artist"));
-        }
-
-        @Test
-        void testGetArtistMainImage_Success() throws Exception {
-                String testFileName = "test-image.png";
-
-                Resource fakeResource = new FileSystemResource(Files.createTempFile("test-image", ".png").toFile());
-
-                // Mockear ImageServingUtil para que devuelva el recurso
-                when(imageServingUtil.serveImage(anyString(), eq(testFileName)))
-                                .thenReturn(ResponseEntity.ok()
-                                                .header(HttpHeaders.CONTENT_TYPE, "image/png")
-                                                .body(fakeResource));
-
-                // Ejecutar MockMvc
-                mockMvc.perform(get("/api/artists/mainArtist_media/" + testFileName))
-                                .andExpect(status().isOk())
-                                .andExpect(header().string(HttpHeaders.CONTENT_TYPE, "image/png"));
         }
 
         @Test

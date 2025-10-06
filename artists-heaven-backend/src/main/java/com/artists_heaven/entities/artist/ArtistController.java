@@ -3,6 +3,7 @@ package com.artists_heaven.entities.artist;
 import java.util.List;
 
 import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -12,7 +13,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.http.MediaType;
 
 import com.artists_heaven.admin.MonthlySalesDTO;
-import com.artists_heaven.images.ImageServingUtil;
 import com.artists_heaven.standardResponse.StandardResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -21,7 +21,6 @@ import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
-
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -34,11 +33,11 @@ public class ArtistController {
 
         private final ArtistService artistService;
 
-        private final ImageServingUtil imageServingUtil;
+        private final ResourceLoader resourceLoader;
 
-        public ArtistController(ArtistService artistService, ImageServingUtil imageServingUtil) {
+        public ArtistController(ArtistService artistService, ResourceLoader resourceLoader) {
                 this.artistService = artistService;
-                this.imageServingUtil = imageServingUtil;
+                this.resourceLoader = resourceLoader;
         }
 
         @Operation(summary = "Get artist by ID", description = "Retrieve an artist along with their products and events for the current year.")
@@ -142,9 +141,20 @@ public class ArtistController {
         @GetMapping("/mainArtist_media/{fileName:.+}")
         public ResponseEntity<Resource> getArtistMainImage(
                         @Parameter(description = "File name including extension", required = true) @PathVariable String fileName) {
-                String basePath = System.getProperty("user.dir")
-                                + "/artists-heaven-backend/src/main/resources/mainArtist_media/";
-                return imageServingUtil.serveImage(basePath, fileName);
+
+                try {
+                        Resource resource = resourceLoader.getResource("classpath:mainArtist_media/" + fileName);
+                        if (resource.exists()) {
+                                return ResponseEntity.ok()
+                                                .contentType(MediaType.IMAGE_PNG)
+                                                .body(resource);
+                        } else {
+                                return ResponseEntity.notFound().build();
+                        }
+                } catch (Exception e) {
+                        return ResponseEntity.internalServerError().build();
+                }
+
         }
 
 }

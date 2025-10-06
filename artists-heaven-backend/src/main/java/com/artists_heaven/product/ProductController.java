@@ -10,7 +10,6 @@ import org.springframework.web.multipart.MultipartHttpServletRequest;
 import com.artists_heaven.admin.CategoryDTO;
 import com.artists_heaven.admin.CollectionDTO;
 import com.artists_heaven.exception.AppExceptions;
-import com.artists_heaven.images.ImageServingUtil;
 import com.artists_heaven.page.PageResponse;
 import com.artists_heaven.standardResponse.StandardResponse;
 
@@ -33,6 +32,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.util.MultiValueMap;
@@ -42,6 +42,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.context.MessageSource;
 import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.web.bind.annotation.RequestBody;
 
 @RestController
@@ -50,14 +51,14 @@ public class ProductController {
 
         private final ProductService productService;
 
-        private final ImageServingUtil imageServingUtil;
+        private final ResourceLoader resourceLoader;
 
         private final MessageSource messageSource;
 
-        public ProductController(ProductService productService, ImageServingUtil imageServingUtil,
+        public ProductController(ProductService productService, ResourceLoader resourceLoader,
                         MessageSource messageSource) {
                 this.productService = productService;
-                this.imageServingUtil = imageServingUtil;
+                this.resourceLoader = resourceLoader;
                 this.messageSource = messageSource;
         }
 
@@ -85,11 +86,19 @@ public class ProductController {
         @Operation(summary = "Retrieve product image by file name", description = "Returns the product image file corresponding to the given file name. Supports serving PNG images stored in the product_media directory.")
         @ApiResponse(responseCode = "200", description = "Image file successfully retrieved", content = @Content(mediaType = "image/png"))
         @ApiResponse(responseCode = "404", description = "Image file not found", content = @Content)
-        public ResponseEntity<Resource> getProductImage(
-                        @Parameter(description = "File name including extension", required = true) @PathVariable String fileName) {
-                String basePath = System.getProperty("user.dir")
-                                + "/artists-heaven-backend/src/main/resources/product_media/";
-                return imageServingUtil.serveImage(basePath, fileName);
+        public ResponseEntity<Resource> getProductImage(@PathVariable String fileName) {
+                try {
+                        Resource resource = resourceLoader.getResource("classpath:product_media/" + fileName);
+                        if (resource.exists()) {
+                                return ResponseEntity.ok()
+                                                .contentType(MediaType.IMAGE_PNG)
+                                                .body(resource);
+                        } else {
+                                return ResponseEntity.notFound().build();
+                        }
+                } catch (Exception e) {
+                        return ResponseEntity.internalServerError().build();
+                }
         }
 
         @GetMapping("/categories")
