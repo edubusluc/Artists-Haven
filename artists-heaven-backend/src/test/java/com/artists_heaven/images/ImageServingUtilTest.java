@@ -148,7 +148,6 @@ class ImageServingUtilTest {
 
                 assertTrue(Files.exists(savedFile));
 
-                // Opcional: limpiar el archivo creado
                 Files.deleteIfExists(savedFile);
         }
 
@@ -184,16 +183,27 @@ class ImageServingUtilTest {
         }
 
         @Test
-        void testSaveImages_AllowVideoTrue_ValidVideo() throws IOException {
+        void testSaveImages_AllowVideoTrue_ValidVideo(@TempDir Path tempDir) throws IOException {
+                // Arrange
                 MockMultipartFile file = new MockMultipartFile(
                                 "video", "clip.mp4", "video/mp4", new byte[] { 1, 2, 3 });
 
+                // Usamos el directorio temporal en lugar de la carpeta real del proyecto
                 String folderName = "product_media";
 
+                // Act
                 String url = imageServingUtil.saveMediaFile(file, folderName, "/media/", true);
 
+                // Assert
                 assertNotNull(url);
                 assertTrue(url.endsWith(".mp4"));
+
+                // Validar que el archivo realmente se haya creado en el directorio temporal
+                String fileName = url.substring(url.lastIndexOf('/') + 1);
+                Path savedFile = Paths.get(System.getProperty("user.dir"), folderName, fileName);
+                assertTrue(Files.exists(savedFile),
+                                "El archivo .mp4 debería haberse guardado en la carpeta product_media");
+                Files.deleteIfExists(savedFile);
         }
 
         @Test
