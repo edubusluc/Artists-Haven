@@ -69,16 +69,20 @@ function LocateButton({ userPosition }) {
 
 function FlyToConcert({ position }) {
     const map = useMap();
-    useEffect(() => { if (position) map.flyTo(position, 10, { duration: 1.5 }); }, [position, map]);
+    useEffect(() => {
+        if (!position || !map || !map._loaded) return;
+        map.flyTo(position, 10, { duration: 1.5 });
+    }, [position, map]);
     return null;
 }
-
 function FlyToUser({ position }) {
     const map = useMap();
-    useEffect(() => { if (position) map.flyTo(position, 10, { duration: 1.5 }); }, [position, map]);
+    useEffect(() => {
+        if (!position || !map || !map._loaded) return;
+        map.flyTo(position, 10, { duration: 1.5 });
+    }, [position, map]);
     return null;
 }
-
 export default function ConcertMap() {
     const [concerts, setConcerts] = useState([]);
     const [showLegend, setShowLegend] = useState(false);
@@ -90,7 +94,7 @@ export default function ConcertMap() {
     const { t } = useTranslation();
 
     useEffect(() => {
-        fetch("/api/event/allFutureEvents")
+        fetch("http://localhost:8080/api/event/allFutureEvents")
             .then((res) => res.json())
             .then((response) => setConcerts(response.data))
             .catch((err) => console.error(err));

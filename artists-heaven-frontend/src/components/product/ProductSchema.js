@@ -64,7 +64,7 @@ const ProductSchema = ({ endpoint, title, hideCollectionFilter }) => {
 
     // ✅ Cargar colecciones desde backend
     useEffect(() => {
-        fetch("/api/product/allCollections")
+        fetch("http://localhost:8080/api/product/allCollections")
             .then(res => res.json())
             .then(data => setCollections(data.data))
             .catch(err => console.error("Error cargando colecciones", err));

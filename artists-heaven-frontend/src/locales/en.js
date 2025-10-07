@@ -710,6 +710,7 @@ const en = {
   "artistList.artists": "Artists",
   "artistList.searchByName": "Search by name",
   "artistList.sort": "Sort",
+  "artistList.searchPlaceholder": "Search artist...",
 
 };
 export default en;

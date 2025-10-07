@@ -54,7 +54,7 @@ const ProductList = () => {
     }, [products]);
 
     useEffect(() => {
-        fetch(`/api/product/allProducts?size=-1`)
+        fetch(`http://localhost:8080/api/product/allProducts?size=-1`)
             .then((response) => {
                 if (!response.ok) throw new Error("Hubo un error al obtener los productos");
                 return response.json();
@@ -83,7 +83,7 @@ const ProductList = () => {
     }, []);
 
     useEffect(() => {
-        fetch("/api/product/allCollections")
+        fetch("http://localhost:8080/api/product/allCollections")
             .then(res => res.json())
             .then(data => setCollections(data.data))
             .catch(err => console.error("Error cargando colecciones", err));

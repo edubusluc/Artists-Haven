@@ -56,7 +56,7 @@ const Header = () => {
   useEffect(() => {
     const fetchCollections = async () => {
       try {
-        const response = await fetch('/api/product/promoted-collections');
+        const response = await fetch('http://localhost:8080/api/product/promoted-collections');
         if (!response.ok) throw new Error(`Error ${response.status}: ${await response.text()}`);
         const responseCollections = await response.json();
         setPromotedCollections(responseCollections.data);
@@ -118,7 +118,7 @@ const Header = () => {
     if (checkTokenExpiration()) {
       const fetchRewardCard = async () => {
         try {
-          const res = await fetch("/api/reward-cards/my", {
+          const res = await fetch("http://localhost:8080/api/reward-cards/my", {
             headers: { "Authorization": `Bearer ${authToken}` }
           });
           const result = await res.json();
@@ -166,7 +166,7 @@ const Header = () => {
   const handleSearchByIdentifier = async ({ identifier }) => {
     if (identifier.trim() === '') return alert('Por favor, escribe un valor para buscar.');
     try {
-      const response = await fetch(`/api/orders/by-identifier?identifier=${encodeURIComponent(identifier)}&lang=${language}`);
+      const response = await fetch(`http://localhost:8080/api/orders/by-identifier?identifier=${encodeURIComponent(identifier)}&lang=${language}`);
 
       const result = await response.json();
       const errorMessage = result.message;
@@ -186,7 +186,7 @@ const Header = () => {
   const handleSearchProduct = async ({ reference }) => {
     if (reference.trim() === '') return alert('Por favor, escribe un valor para buscar.');
     try {
-      const response = await fetch(`/api/product/by-reference?reference=${encodeURIComponent(reference)}&lang=${language}`);
+      const response = await fetch(`http://localhost:8080/api/product/by-reference?reference=${encodeURIComponent(reference)}&lang=${language}`);
 
       const result = await response.json();
       const errorMessage = result.message;
@@ -204,7 +204,7 @@ const Header = () => {
 
   const handleRedirectToPayment = async () => {
     try {
-      const response = await fetch("/api/payment_process/checkout", {
+      const response = await fetch("http://localhost:8080/api/payment_process/checkout", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -424,7 +424,7 @@ const Header = () => {
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <div style={{ display: 'flex' }}>
                     <img
-                      src={`/api/product${item.imageUrl}`}
+                      src={`http://localhost:8080/api/product${item.imageUrl}`}
                       alt={item.product.name}
                       style={{
                         height: '90px',

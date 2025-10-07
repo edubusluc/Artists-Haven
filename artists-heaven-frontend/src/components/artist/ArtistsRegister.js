@@ -92,7 +92,7 @@ const ArtistForm = () => {
     data.append("image", images);
 
     try {
-      const response = await fetch(`/api/artists/register?lang=${currentLang}`, {
+      const response = await fetch(`http://localhost:8080/api/artists/register?lang=${currentLang}`, {
         method: "POST",
         body: data,
       });

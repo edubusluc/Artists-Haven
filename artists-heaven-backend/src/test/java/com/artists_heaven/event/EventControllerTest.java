@@ -157,13 +157,14 @@ class EventControllerTest {
                         MockMultipartFile image = new MockMultipartFile("images", "test.png", "image/png",
                                         "fake".getBytes());
 
-                        when(imageServingUtil.saveImages(any(), anyString(), anyString(), anyBoolean()))
+                        when(imageServingUtil.saveMediaFile(any(), anyString(), anyString(), anyBoolean()))
                                         .thenReturn("test.png");
                         when(eventService.newEvent(any(EventDTO.class), anyString())).thenReturn(event);
 
                         mockMvc.perform(multipart("/api/event/new")
                                         .file(eventPart)
-                                        .file(image))
+                                        .file(image)
+                                        .param("lang", "en"))
                                         .andExpect(status().isCreated())
                                         .andExpect(jsonPath("$.message").value("Event created successfully"));
                 }
@@ -178,7 +179,8 @@ class EventControllerTest {
 
                         mockMvc.perform(multipart("/api/event/new")
                                         .file(eventPart)
-                                        .file(image))
+                                        .file(image)
+                                        .param("lang", "en"))
                                         .andExpect(status().isUnauthorized());
                 }
 
@@ -192,7 +194,8 @@ class EventControllerTest {
 
                         mockMvc.perform(multipart("/api/event/new")
                                         .file(eventPart)
-                                        .file(image))
+                                        .file(image)
+                                        .param("lang", "en"))
                                         .andExpect(status().isForbidden());
                 }
 
@@ -368,7 +371,7 @@ class EventControllerTest {
                         mockAuthenticatedArtist();
                         when(eventService.isArtist()).thenReturn(true);
                         when(eventService.getEventById(100L)).thenReturn(event);
-                        when(imageServingUtil.saveImages(any(), anyString(), anyString(), anyBoolean()))
+                        when(imageServingUtil.saveMediaFile(any(), anyString(), anyString(), anyBoolean()))
                                         .thenReturn("new.png");
 
                         MockMultipartFile eventPart = new MockMultipartFile("event", "", "application/json",
@@ -379,6 +382,7 @@ class EventControllerTest {
                         mockMvc.perform(multipart("/api/event/edit/100")
                                         .file(eventPart)
                                         .file(image)
+                                        .param("lang", "en")
                                         .with(request -> {
                                                 request.setMethod("PUT");
                                                 return request;
@@ -389,14 +393,20 @@ class EventControllerTest {
 
                 @Test
                 void shouldFailWhenNotArtist() throws Exception {
-                        mockAuthenticatedArtist();
-                        when(eventService.isArtist()).thenReturn(false);
+                        Authentication authentication = mock(Authentication.class);
+                        when(authentication.getPrincipal()).thenReturn("not an artist");
+
+                        SecurityContext securityContext = mock(SecurityContext.class);
+                        when(securityContext.getAuthentication()).thenReturn(authentication);
+
+                        SecurityContextHolder.setContext(securityContext);
 
                         MockMultipartFile eventPart = new MockMultipartFile("event", "", "application/json",
                                         "{\"name\":\"Updated Event\"}".getBytes());
 
                         mockMvc.perform(multipart("/api/event/edit/100")
                                         .file(eventPart)
+                                        .param("lang", "en")
                                         .with(request -> {
                                                 request.setMethod("PUT");
                                                 return request;
@@ -415,6 +425,7 @@ class EventControllerTest {
 
                         mockMvc.perform(multipart("/api/event/edit/100")
                                         .file(eventPart)
+                                        .param("lang", "en")
                                         .with(request -> {
                                                 request.setMethod("PUT");
                                                 return request;
@@ -451,6 +462,7 @@ class EventControllerTest {
 
                         mockMvc.perform(multipart("/api/event/edit/100")
                                         .file(eventPart)
+                                        .param("lang", "en")
                                         .with(request -> {
                                                 request.setMethod("PUT");
                                                 return request;

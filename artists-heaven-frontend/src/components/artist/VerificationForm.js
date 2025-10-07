@@ -32,7 +32,7 @@ function VerificationForm() {
         formData.append('video', video);
 
         try {
-            const response = await fetch(`/api/verification/send?lang=${language}`, {
+            const response = await fetch(`http://localhost:8080/api/verification/send?lang=${language}`, {
                 method: 'POST',
                 body: formData,
                 headers: {

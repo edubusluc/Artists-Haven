@@ -42,7 +42,7 @@ const OrderAnonymous = () => {
 
   const handleSubmitReason = async (reason, email) => {
     try {
-      const res = await fetch(`/api/returns/create?lang=${currentLang}`, {
+      const res = await fetch(`http://localhost:8080/api/returns/create?lang=${currentLang}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -83,7 +83,7 @@ const OrderAnonymous = () => {
       emailParam = `?email=${encodeURIComponent(email.trim())}`;
     }
 
-    const response = await fetch(`/api/returns/${orderId}/label${emailParam}`, {
+    const response = await fetch(`http://localhost:8080/api/returns/${orderId}/label${emailParam}`, {
       method: 'GET',
       headers: {
         ...(authToken && { Authorization: `Bearer ${authToken}` }),
@@ -156,7 +156,7 @@ const OrderAnonymous = () => {
           {order.items.map((item) => {
             const imagesByColor = productImages[item.productId] || {};
             const colorImages = imagesByColor[item.color] || [];
-            const imagePath = colorImages.length > 0 ? `/api/product${colorImages[0]}` : '/placeholder.jpg';
+            const imagePath = colorImages.length > 0 ? `http://localhost:8080/api/product${colorImages[0]}` : '/placeholder.jpg';
 
             return (
               <div

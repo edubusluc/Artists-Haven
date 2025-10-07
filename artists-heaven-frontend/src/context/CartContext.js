@@ -21,7 +21,7 @@ export const CartProvider = ({ children }) => {
         if (authToken) {
             const fetchShoppingCart = async () => {
                 try {
-                    const response = await fetch(`/api/myShoppingCart`, {
+                    const response = await fetch(`http://localhost:8080/api/myShoppingCart`, {
                         method: "GET",
                         headers: { Authorization: `Bearer ${authToken}` },
                     });
@@ -65,8 +65,8 @@ export const CartProvider = ({ children }) => {
 
     const handleDeleteProduct = async (id, size) => {
         const endpoint = authToken
-            ? `/api/myShoppingCart/deleteProducts`
-            : `/api/myShoppingCart/deleteProductsNonAuthenticated`;
+            ? `http://localhost:8080/api/myShoppingCart/deleteProducts`
+            : `http://localhost:8080/api/myShoppingCart/deleteProductsNonAuthenticated`;
 
         const payload = authToken
             ? { itemId: id }

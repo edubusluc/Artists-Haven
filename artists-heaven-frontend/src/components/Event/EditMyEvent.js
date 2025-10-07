@@ -48,7 +48,7 @@ const EditMyEvent = () => {
 
         const fetchVerificationStatus = async () => {
             try {
-                const response = await fetch('/api/event/isVerified', {
+                const response = await fetch('http://localhost:8080/api/event/isVerified', {
                     headers: { 'Authorization': `Bearer ${token}` },
                 });
                 if (response.ok) {
@@ -67,7 +67,7 @@ const EditMyEvent = () => {
 
         const fetchEventDetails = async () => {
             try {
-                const response = await fetch(`/api/event/details/${id}`, {
+                const response = await fetch(`http://localhost:8080/api/event/details/${id}`, {
                     method: "GET",
                     headers: {
                         Authorization: `Bearer ${authToken}`,
@@ -80,7 +80,7 @@ const EditMyEvent = () => {
 
                 const eventDetails = await response.json();
                 setEvent(eventDetails.data);
-                setPreviewImage(`/api/event${eventDetails.data.image}`);
+                setPreviewImage(`http://localhost:8080/api/event${eventDetails.data.image}`);
             } catch (error) {
                 setErrorMessage(error.message);
             }
@@ -158,7 +158,7 @@ const EditMyEvent = () => {
         if (image) data.append("image", image);
 
         try {
-            const response = await fetch(`/api/event/edit/${id}?lang=${language}`, {
+            const response = await fetch(`http://localhost:8080/api/event/edit/${id}?lang=${language}`, {
                 method: "PUT",
                 headers: {
                     Authorization: `Bearer ${authToken}`,

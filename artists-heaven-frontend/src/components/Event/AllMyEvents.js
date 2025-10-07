@@ -49,7 +49,7 @@ const AllMyEvents = () => {
         const fetchVerificationStatus = async () => {
 
             try {
-                const response = await fetch('/api/event/isVerified', {
+                const response = await fetch('http://localhost:8080/api/event/isVerified', {
                     headers: { 'Authorization': `Bearer ${token}` },
                 });
                 if (response.ok) {
@@ -68,7 +68,7 @@ const AllMyEvents = () => {
             setLoading(true);
             try {
                 const query = searchTerm ? `&search=${encodeURIComponent(searchTerm)}` : "";
-                const response = await fetch(`/api/event/allMyEvents?page=${page}&size=${pageSize}${query}`, {
+                const response = await fetch(`http://localhost:8080/api/event/allMyEvents?page=${page}&size=${pageSize}${query}`, {
                     headers: { 'Authorization': `Bearer ${token}` },
                 });
 
@@ -106,7 +106,7 @@ const AllMyEvents = () => {
     const handleDelete = async (id) => {
         if (!window.confirm("¿Estás seguro de que quieres eliminar este evento?")) return;
         try {
-            const response = await fetch(`/api/event/delete/${id}`, {
+            const response = await fetch(`http://localhost:8080/api/event/delete/${id}`, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -219,7 +219,7 @@ const AllMyEvents = () => {
                                 {events.map(event => (
                                     <li key={event.id} className="bg-white rounded-lg shadow p-4 flex flex-col">
                                         <img
-                                            src={`/api/event${event.image}`}
+                                            src={`http://localhost:8080/api/event${event.image}`}
                                             alt={event.name}
                                             className="w-full h-40 object-cover rounded-md mb-3"
                                             loading="lazy"

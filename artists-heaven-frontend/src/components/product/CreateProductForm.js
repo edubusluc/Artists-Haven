@@ -146,7 +146,7 @@ Para más detalles, puedes escribirnos a **mod.artistheaven@gmail.com**.
 
     const fetchCategories = async () => {
       try {
-        const response = await fetch("/api/product/categories");
+        const response = await fetch("http://localhost:8080/api/product/categories");
         if (!response.ok) {
           throw new Error('Error al cargar las categorías');
         }
@@ -160,7 +160,7 @@ Para más detalles, puedes escribirnos a **mod.artistheaven@gmail.com**.
 
     const fetchCollections = async () => {
       try {
-        const response = await fetch("/api/product/allCollections", {
+        const response = await fetch("http://localhost:8080/api/product/allCollections", {
           headers: {
             'Authorization': `Bearer ${authToken}`,
           }
@@ -289,7 +289,7 @@ Para más detalles, puedes escribirnos a **mod.artistheaven@gmail.com**.
     });
 
     try {
-      const response = await fetch(`/api/product/new?lang=${language}`, {
+      const response = await fetch(`http://localhost:8080/api/product/new?lang=${language}`, {
         method: "POST",
         body: formData,
         headers: {

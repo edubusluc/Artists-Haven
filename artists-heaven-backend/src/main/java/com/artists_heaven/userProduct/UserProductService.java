@@ -34,8 +34,6 @@ public class UserProductService {
 
     private final MessageSource messageSource;
 
-    private static final String UPLOAD_DIR = "artists-heaven-backend/src/main/resources/userProduct_media/";
-
     public UserProductService(UserProductRepository userProductRepository, UserRepository userRepository,
             ProductVoteRepository productVoteRepository, MessageSource messageSource,
             ImageServingUtil imageServingUtil) {
@@ -117,9 +115,9 @@ public class UserProductService {
         List<String> imageUrls = new ArrayList<>();
 
         for (MultipartFile image : images) {
-            String imageUrl = imageServingUtil.saveImages(
+            String imageUrl = imageServingUtil.saveMediaFile(
                     image,
-                    UPLOAD_DIR,
+                    "userProduct_media",
                     "/userProduct_media/",
                     false);
 

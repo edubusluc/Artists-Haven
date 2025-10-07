@@ -49,8 +49,8 @@ INSERT INTO shopping_cart (id, user_id) VALUES
 INSERT INTO Artist (id, artist_name, is_verificated, artist_url, main_view_photo, main_color) 
 VALUES (3, 'Duki', 'true', 'https://www.youtube.com/@duki', '/mainArtist_media/duki.png', '#8d0100'),
        (4, 'Maria Becerra', 'true', 'https://www.youtube.com/@MariaBecerraMusic', '/mainArtist_media/MariaBecerra.jpg', '#FF99F5'),
-       (5, 'Lit Killah', 'true', 'https://www.youtube.com/@LITkillah', '/mainArtist_media/Litkillah.png', '#4C0059'),
-	   (6, 'Trueno', 'true', 'https://www.youtube.com/@TruenoOficial', '/mainArtist_media/trueno.png', '#F3B229');
+       (5, 'Lit Killah', 'true', 'https://www.youtube.com/@LITkillah', '/mainArtist_media/LitKillah.png', '#4C0059'),
+	   (6, 'Trueno', 'true', 'https://www.youtube.com/@TruenoOficial', '/mainArtist_media/Trueno.png', '#F3B229');
 	   
 INSERT INTO Collection (id, created_at, is_promoted,name) VALUES 
 (1, '2025-09-01', true, 'SUMMER-2025');

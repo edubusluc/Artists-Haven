@@ -26,7 +26,7 @@ const UserProfile = () => {
 
     useEffect(() => {
         const token = localStorage.getItem("authToken");
-        fetch('/api/users/profile', {
+        fetch('http://localhost:8080/api/users/profile', {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
@@ -142,7 +142,7 @@ const UserProfile = () => {
         try {
             setFormErrors({});
 
-            const response = await fetch(`/api/users/profile/edit?lang=${currentLang}`, {
+            const response = await fetch(`http://localhost:8080/api/users/profile/edit?lang=${currentLang}`, {
                 method: 'PUT',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -298,7 +298,7 @@ const UserProfile = () => {
                                         // Si no hay imagen nueva, mostrar la actual
                                         formData.image && (
                                             <img
-                                                src={`/api/artists/${formData.image}`}
+                                                src={`http://localhost:8080/api/artists/${formData.image}`}
                                                 alt="Imagen actual de perfil"
                                                 className="mt-2 w-48 h-48 object-cover rounded-lg border"
                                             />
@@ -334,7 +334,7 @@ const UserProfile = () => {
                                     <p className="text-gray-600 font-semibold mb-1">{t('userProfile.profileImage')}</p>
                                     {formData.image ? (
                                         <img
-                                            src={`/api/artists/${formData.image}`}
+                                            src={`http://localhost:8080/api/artists/${formData.image}`}
                                             alt="Imagen de perfil"
                                             className="w-48 h-48 object-cover rounded-lg border"
                                         />

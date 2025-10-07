@@ -16,7 +16,7 @@ const ProductCard = ({ product, onVote }) => {
         <div className="w-full group">
             <div className="relative w-full aspect-[700/986] flex items-center justify-center bg-gray-100 overflow-hidden">
                 <img
-                    src={`/api/user-products${product.images[0]}`}
+                    src={`http://localhost:8080/api/user-products${product.images[0]}`}
                     alt={product.name}
                     loading="lazy"
                     onLoad={() => setLoaded(true)}
@@ -27,7 +27,7 @@ const ProductCard = ({ product, onVote }) => {
                 />
                 {product.images[1] && (
                     <img
-                        src={`/api/user-products${product.images[1]}`}
+                        src={`http://localhost:8080/api/user-products${product.images[1]}`}
                         alt={`${product.name} hover`}
                         loading="lazy"
                         className={`h-auto absolute object-cover transition-all duration-700 ease-in-out
@@ -92,7 +92,7 @@ export default function UserProductsPage() {
 
     const fetchProducts = useCallback(async () => {
         try {
-            const res = await fetch("/api/user-products/all", {
+            const res = await fetch("http://localhost:8080/api/user-products/all", {
                 headers: {
                     'Authorization': authToken ? `Bearer ${authToken}` : undefined,
                 },
@@ -180,7 +180,7 @@ export default function UserProductsPage() {
                 return;
             }
 
-            const response = await fetch(`/api/productVote/${productId}?lang=${language}`, {
+            const response = await fetch(`http://localhost:8080/api/productVote/${productId}?lang=${language}`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${authToken}` },
             });
@@ -228,7 +228,7 @@ export default function UserProductsPage() {
                 formData.append("images", newProduct.images[i]);
             }
 
-            const res = await fetch(`/api/user-products/create?lang=${language}`, {
+            const res = await fetch(`http://localhost:8080/api/user-products/create?lang=${language}`, {
                 method: "POST",
                 headers: { 'Authorization': `Bearer ${authToken}` },
                 body: formData,

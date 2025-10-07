@@ -33,6 +33,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.MediaTypeFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.util.MultiValueMap;
@@ -43,7 +44,10 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.context.MessageSource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
+import org.springframework.core.io.UrlResource;
 import org.springframework.web.bind.annotation.RequestBody;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 @RestController
 @RequestMapping("/api/product")
@@ -88,14 +92,29 @@ public class ProductController {
         @ApiResponse(responseCode = "404", description = "Image file not found", content = @Content)
         public ResponseEntity<Resource> getProductImage(@PathVariable String fileName) {
                 try {
+                        // 1️⃣ Intentar cargar desde classpath (resources embebidos)
                         Resource resource = resourceLoader.getResource("classpath:product_media/" + fileName);
-                        if (resource.exists()) {
+                        if (resource.exists() && resource.isReadable()) {
                                 return ResponseEntity.ok()
-                                                .contentType(MediaType.IMAGE_PNG)
+                                                .contentType(MediaTypeFactory.getMediaType(fileName)
+                                                                .orElse(MediaType.APPLICATION_OCTET_STREAM))
                                                 .body(resource);
-                        } else {
-                                return ResponseEntity.notFound().build();
                         }
+
+                        // 2️⃣ Si no existe en classpath, intentar desde filesystem
+                        Path filePath = Paths.get(System.getProperty("user.dir"), "product_media", fileName)
+                                        .normalize();
+                        Resource fileResource = new UrlResource(filePath.toUri());
+                        if (fileResource.exists() && fileResource.isReadable()) {
+                                return ResponseEntity.ok()
+                                                .contentType(MediaTypeFactory.getMediaType(fileName)
+                                                                .orElse(MediaType.APPLICATION_OCTET_STREAM))
+                                                .body(fileResource);
+                        }
+
+                        // 3️⃣ No se encontró en ninguna ruta
+                        return ResponseEntity.notFound().build();
+
                 } catch (Exception e) {
                         return ResponseEntity.internalServerError().build();
                 }

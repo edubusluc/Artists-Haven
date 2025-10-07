@@ -18,7 +18,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 import com.artists_heaven.entities.artist.Artist;
 import com.artists_heaven.entities.artist.ArtistRepository;
 import com.artists_heaven.exception.AppExceptions;
@@ -212,19 +211,34 @@ public class EventService {
      * @param removedImage the path of the image to be deleted.
      * @throws IllegalArgumentException if an error occurs while deleting the image.
      */
-    public void deleteImages(String removedImage) {
-        // Clean the file path to prevent security issues
-        String fileName = StringUtils.cleanPath(removedImage);
-
-        // Create the target path to the file in the resources directory
-        Path targetPath = Paths.get("artists-heaven-backend/src/main/resources", fileName).normalize();
+    public void deleteImages(String mediaUrl) {
+        if (mediaUrl == null || mediaUrl.isEmpty())
+            return;
 
         try {
-            // Attempt to delete the file
-            Files.delete(targetPath);
+            // Extraer el nombre del archivo
+            String fileName = Paths.get(mediaUrl).getFileName().toString();
+
+            // Determinar la carpeta física según el prefijo de la URL
+            String folderName;
+            if (mediaUrl.startsWith("/event_media/")) {
+                folderName = "event_media";
+            } else if (mediaUrl.startsWith("/mainArtist_media/")) {
+                folderName = "mainArtist_media";
+            } else if (mediaUrl.startsWith("/verification_media/")) {
+                folderName = "verification_media";
+            } else {
+                throw new IllegalArgumentException("Unknown media folder for URL: " + mediaUrl);
+            }
+
+            // Construir path absoluto
+            Path targetPath = Paths.get(System.getProperty("user.dir"), folderName, fileName).normalize();
+
+            // Intentar eliminar el archivo si existe
+            Files.deleteIfExists(targetPath);
+
         } catch (IOException e) {
-            // Throw an exception if the file cannot be deleted
-            throw new IllegalArgumentException("Error while deleting the image.");
+            throw new IllegalArgumentException("Error while deleting the image.", e);
         }
     }
 

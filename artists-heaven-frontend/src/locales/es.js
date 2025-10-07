@@ -738,6 +738,7 @@ const es = {
   "artistList.artists": "Artistas",
   "artistList.searchByName": "Buscar por nombre",
   "artistList.sort": "Ordenar",
+  "artistList.searchPlaceholder": "Buscar artista...",
 
 
 

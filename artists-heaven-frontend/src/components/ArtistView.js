@@ -54,7 +54,7 @@ const ProductCard = ({ product, bgColor }) => {
             >
                 {/* Imagen principal */}
                 <img
-                    src={`/api/product${product.colors[0].images[0]}`}
+                    src={`http://localhost:8080/api/product${product.colors[0].images[0]}`}
                     alt={product.name}
                     loading="lazy"
                     decoding="async"
@@ -65,7 +65,7 @@ const ProductCard = ({ product, bgColor }) => {
                 {/* Imagen hover */}
                 {product.colors[0].images[1] && (
                     <img
-                        src={`/api/product${product.colors[0].images[1]}`}
+                        src={`http://localhost:8080/api/product${product.colors[0].images[1]}`}
                         alt={`${product.name} hover`}
                         loading="lazy"
                         decoding="async"
@@ -189,7 +189,7 @@ const ArtistView = () => {
 
         const fetchArtist = async () => {
             try {
-                const res = await fetch(`/api/artists/${artistId}`);
+                const res = await fetch(`http://localhost:8080/api/artists/${artistId}`);
                 if (!res.ok) throw new Error('Error al obtener artista');
                 const response = await res.json();
                 setArtist(response.data);
@@ -200,7 +200,7 @@ const ArtistView = () => {
 
         const fetchFutureEvents = async () => {
             try {
-                const res = await fetch(`/api/event/futureEvents/${artistId}`);
+                const res = await fetch(`http://localhost:8080/api/event/futureEvents/${artistId}`);
 
                 if (res.status === 204) {
                     setEvents([]);
@@ -250,7 +250,7 @@ const ArtistView = () => {
                 className="artist-page min-h-screen p-4"
                 style={{ backgroundColor: bgColor || '#ffffff', transition: 'background-color 0.8s ease' }}
             >
-                <h1 className='text-left custom-font uppercase'>{t('artistView.products')}</h1>
+                <h1 className='text-left custom-font uppercase mt-20'>{t('artistView.products')}</h1>
                 <hr className='mb-2' style={{ height: '2px', backgroundColor: 'white' }} />
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1 w-full">
                     {artist.artistProducts.map((product) => (
@@ -286,7 +286,7 @@ const ArtistView = () => {
                                 <div className="group relative w-full h-[600px] md:h-[800px] overflow-hidden shadow-lg">
                                     {/* Imagen de fondo */}
                                     <img
-                                        src={`/api/event/${event.image}`}
+                                        src={`http://localhost:8080/api/event${event.image}`}
                                         alt={artist.name}
                                         loading="lazy"
                                         decoding="async"

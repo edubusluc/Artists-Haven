@@ -127,8 +127,8 @@ public class SecurityConfiguration {
                         "/api/productVote/{id}",
                         "/api/reward-cards/**",
                         "/api/user-products/myUserProducts"
-                        
-                 };
+
+        };
 
         @Bean
         public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -163,7 +163,8 @@ public class SecurityConfiguration {
                                                                 .policyDirectives("default-src 'self'; " +
                                                                                 "script-src 'self'; " +
                                                                                 "style-src 'self'; " +
-                                                                                "img-src 'self' data:; " +
+                                                                                "img-src 'self' data: http://localhost:8080; "
+                                                                                +
                                                                                 "font-src 'self'; " +
                                                                                 "connect-src 'self' http://localhost:8080; "
                                                                                 +

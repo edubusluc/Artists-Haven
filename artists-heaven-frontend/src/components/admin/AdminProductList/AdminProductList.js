@@ -300,7 +300,7 @@ const AdminProductList = () => {
                     {product.onPromotion ? (
                       <div className="w-full">
                         <LazyLoadImage
-                          src={`/api/product${product.colors[0].images[0]}`}
+                          src={`http://localhost:8080/api/product${product.colors[0].images[0]}`}
                           alt={product.name}
                           className="w-full h-40 object-contain rounded-md mb-3"
                         />
@@ -359,7 +359,7 @@ const AdminProductList = () => {
                     ) : (
                       <Link to={`/product/edit/${product.id}`} className="w-full">
                         <LazyLoadImage
-                          src={`/api/product${product.colors[0].images[0]}`}
+                          src={`http://localhost:8080/api/product${product.colors[0].images[0]}`}
                           alt={product.name}
                           className="w-full h-40 object-contain rounded-md mb-3"
                         />

@@ -30,7 +30,7 @@ export function useAuth() {
 
       setIsRefreshing(true);
 
-      const refreshResponse = await fetch("/api/auth/refresh-token", {
+      const refreshResponse = await fetch("http://localhost:8080/api/auth/refresh-token", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ refreshToken }),

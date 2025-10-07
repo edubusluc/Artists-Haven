@@ -97,7 +97,7 @@ const UserRegister = () => {
 
     try {
       setValidationErrors({});
-      const response = await fetch(`/api/users/register?lang=${currentLang}`, {
+      const response = await fetch(`http://localhost:8080/api/users/register?lang=${currentLang}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(user),

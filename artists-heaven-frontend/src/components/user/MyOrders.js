@@ -111,7 +111,7 @@ const MyOrders = () => {
         }
 
         setLoading(true);
-        fetch(`/api/orders/myOrders?page=${page}&size=${size}`, {
+        fetch(`http://localhost:8080/api/orders/myOrders?page=${page}&size=${size}`, {
             method: "GET",
             headers: {
                 "Content-Type": "application/json",
@@ -156,7 +156,7 @@ const MyOrders = () => {
 
     const handleSubmitReason = async (reason) => {
         try {
-            const response = await fetch(`/api/returns/create?lang=${language}`, {
+            const response = await fetch(`http://localhost:8080/api/returns/create?lang=${language}`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -185,7 +185,7 @@ const MyOrders = () => {
 
     const handleDownloadLabel = async (orderId) => {
 
-        const response = await fetch(`/api/returns/${orderId}/label`, {
+        const response = await fetch(`http://localhost:8080/api/returns/${orderId}/label`, {
             method: "GET",
             headers: {
                 'Content-Type': 'application/json',
@@ -271,7 +271,7 @@ const MyOrders = () => {
                         {order.items.map((item) => {
                             const imagesByColor = productImages[item.productId] || {};
                             const colorImages = imagesByColor[item.color] || [];
-                            const imagePath = colorImages.length > 0 ? `/api/product${colorImages[0]}` : '/placeholder.jpg';
+                            const imagePath = colorImages.length > 0 ? `http://localhost:8080/api/product${colorImages[0]}` : '/placeholder.jpg';
                             return (
                                 <div
                                     key={item.id}
