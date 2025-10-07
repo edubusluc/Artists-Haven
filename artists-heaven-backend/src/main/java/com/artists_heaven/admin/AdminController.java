@@ -178,7 +178,6 @@ public class AdminController {
                         return ResponseEntity.notFound().build();
 
                 } catch (Exception e) {
-                        e.printStackTrace(); // Para debug en consola
                         return ResponseEntity.internalServerError().build();
                 }
         }

@@ -116,7 +116,6 @@ public class ProductController {
                         return ResponseEntity.notFound().build();
 
                 } catch (Exception e) {
-                        e.printStackTrace(); // Para ver el error exacto en consola
                         return ResponseEntity.internalServerError().build();
                 }
         }

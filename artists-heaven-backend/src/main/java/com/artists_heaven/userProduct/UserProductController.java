@@ -112,7 +112,6 @@ public class UserProductController {
                         return ResponseEntity.notFound().build();
 
                 } catch (Exception e) {
-                        e.printStackTrace(); // Para depuración
                         return ResponseEntity.internalServerError().build();
                 }
         }
