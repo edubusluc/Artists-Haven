@@ -51,9 +51,6 @@ public class AppConfig implements WebMvcConfigurer {
             // Construye la ruta dinámica
             String resourceLocation = "file:" + System.getProperty("user.dir") + "/product_media/";
 
-            // Imprime la ruta que se usará
-            System.out.println("Ruta de los recursos: " + resourceLocation);
-
             registry.addResourceHandler("/product_media/**")
                     .addResourceLocations(resourceLocation);
         }
