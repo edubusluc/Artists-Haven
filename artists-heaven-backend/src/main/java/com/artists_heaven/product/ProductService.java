@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.security.SecureRandom;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
@@ -195,41 +196,46 @@ public class ProductService {
      */
     public List<String> saveImages(List<MultipartFile> images) {
         List<String> imageUrls = new ArrayList<>();
-        // Validate that all images are valid before proceeding
-        validateImages(images);
 
-        // Iterate through each image and save it
+        validateImages(images); // Tu método de validación actual
+
         for (MultipartFile image : images) {
-            // Clean the filename to ensure it is safe to use
+            // Limpiar el nombre del archivo
             String fileName = StringUtils.cleanPath(image.getOriginalFilename());
             String extension = "";
 
             int dotIndex = fileName.lastIndexOf('.');
             if (dotIndex > 0) {
-                extension = fileName.substring(dotIndex);
+                extension = fileName.substring(dotIndex).toLowerCase();
             }
 
+            // Puedes validar extensiones si quieres limitar formatos:
+            List<String> allowedExtensions = Arrays.asList(".png", ".jpg", ".jpeg", ".webp");
+            if (!allowedExtensions.contains(extension)) {
+                throw new IllegalArgumentException("Invalid image type. Only PNG, JPG, JPEG and WEBP are allowed.");
+            }
+
+            // Crear nombre único
             String uniqueFileName = UUID.randomUUID().toString() + extension;
 
-            Path targetPath = Paths.get(UPLOAD_DIR, uniqueFileName).normalize();
-
-            // Ensure the file is not saved outside the target directory for security
-            if (!targetPath.startsWith(TARGET_PATH)) {
-                throw new IllegalArgumentException("Entry is outside of the target directory");
-            }
+            // Ruta absoluta a la carpeta product_media/
+            Path targetPath = Paths.get(System.getProperty("user.dir"), "product_media", uniqueFileName).normalize();
 
             try {
-                // Save the image to the directory
-                Files.copy(image.getInputStream(), targetPath);
-                // Add the image's URL to the list (adjust the URL according to the system)
+                // Crear carpeta si no existe
+                Files.createDirectories(targetPath.getParent());
+
+                // Guardar la imagen
+                Files.copy(image.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
+
+                // Agregar la URL pública (la misma que sirve tu WebConfig)
                 imageUrls.add("/product_media/" + uniqueFileName);
+
             } catch (IOException e) {
-                // Throw an exception if an error occurs while saving the image
-                throw new IllegalArgumentException("Error while saving images.");
+                throw new IllegalArgumentException("Error while saving image: " + e.getMessage());
             }
         }
 
-        // Return the list of image URLs after all images are saved
         return imageUrls;
     }
 
@@ -935,49 +941,46 @@ public class ProductService {
     }
 
     public String saveModel(MultipartFile modelFile) {
-        // Validate that the model file is valid before proceeding
+        // Validar el archivo
         validateModel(modelFile);
 
-        // Clean the filename to ensure it is safe to use
+        // Limpiar el nombre del archivo
         String fileName = StringUtils.cleanPath(modelFile.getOriginalFilename());
         String extension = "";
 
         int dotIndex = fileName.lastIndexOf('.');
         if (dotIndex > 0) {
-            extension = fileName.substring(dotIndex);
+            extension = fileName.substring(dotIndex).toLowerCase();
         }
 
-        // You can customize the file extensions you accept for 3D models (e.g., .obj,
-        // .fbx, .stl)
+        // Validar extensiones permitidas para modelos 3D
         List<String> allowedExtensions = Arrays.asList(".obj", ".fbx", ".stl", ".glb");
         if (!allowedExtensions.contains(extension)) {
             throw new IllegalArgumentException("Invalid file type. Only .obj, .fbx, .stl, .glb files are allowed.");
         }
 
-        // Generate a unique file name for the model
+        // Crear nombre único
         String uniqueFileName = UUID.randomUUID().toString() + extension;
 
-        // Define the path where the model will be saved
-        Path targetPath = Paths.get(UPLOAD_DIR, uniqueFileName).normalize();
-
-        // Ensure the file is not saved outside of the target directory for security
-        if (!targetPath.startsWith(TARGET_PATH)) {
-            throw new IllegalArgumentException("Entry is outside of the target directory");
-        }
+        // Ruta absoluta a la carpeta product_media/
+        Path targetPath = Paths.get(System.getProperty("user.dir"), "product_media", uniqueFileName).normalize();
 
         try {
-            // Save the model to the directory
-            Files.copy(modelFile.getInputStream(), targetPath);
+            // Crear carpeta si no existe
+            Files.createDirectories(targetPath.getParent());
 
-            // Return the URL or path for the saved model (adjust the URL accordingly)
+            // Guardar el archivo
+            Files.copy(modelFile.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
+
+            // Devolver la URL pública para frontend
             return "/product_media/" + uniqueFileName;
+
         } catch (IOException e) {
-            // Throw an exception if an error occurs while saving the model
-            throw new IllegalArgumentException("Error while saving the model.");
+            throw new IllegalArgumentException("Error while saving model: " + e.getMessage());
         }
     }
 
-    // Helper method to validate the model file
+    // Helper method para validar el archivo
     private void validateModel(MultipartFile modelFile) {
         if (modelFile == null || modelFile.isEmpty()) {
             throw new IllegalArgumentException("The model file is empty or invalid.");

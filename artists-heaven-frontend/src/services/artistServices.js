@@ -1,4 +1,4 @@
-const API_BASE = '/api/artists';
+const API_BASE = 'http://localhost:8080/api/artists';
 
 // Función auxiliar para hacer peticiones fetch
 const makeRequest = async (url, method = 'GET', body = null, authToken) => {

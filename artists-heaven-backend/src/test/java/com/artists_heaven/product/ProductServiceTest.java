@@ -7,6 +7,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
@@ -1106,15 +1107,19 @@ class ProductServiceTest {
         images.add(new MockMultipartFile("file", "test.jpg", "image/jpeg", new byte[] { 1, 2, 3, 4 }));
 
         try (MockedStatic<Files> mockedFiles = mockStatic(Files.class)) {
-            mockedFiles.when(() -> Files.copy(any(InputStream.class), any(Path.class)))
+            mockedFiles.when(() -> Files.createDirectories(any(Path.class))).thenReturn(null);
+
+            mockedFiles.when(() -> Files.copy(any(InputStream.class), any(Path.class), any(StandardCopyOption.class)))
                     .thenThrow(new IOException("Test IOException"));
 
             IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
                 productService.saveImages(images);
             });
 
-            assertEquals("Error while saving images.", exception.getMessage());
-            mockedFiles.verify(() -> Files.copy(any(InputStream.class), any(Path.class)), times(1));
+            assertTrue(exception.getMessage().contains("Error while saving image: Test IOException"));
+
+            mockedFiles.verify(() -> Files.copy(any(InputStream.class), any(Path.class), any(StandardCopyOption.class)),
+                    times(1));
         }
     }
 
@@ -2096,7 +2101,8 @@ class ProductServiceTest {
         when(mockFile.getInputStream()).thenReturn(new ByteArrayInputStream("fake".getBytes()));
 
         try (MockedStatic<Files> mockedFiles = Mockito.mockStatic(Files.class)) {
-            mockedFiles.when(() -> Files.copy(any(InputStream.class), any(Path.class)))
+            mockedFiles.when(() -> Files.createDirectories(any(Path.class))).thenReturn(null);
+            mockedFiles.when(() -> Files.copy(any(InputStream.class), any(Path.class), any(StandardCopyOption.class)))
                     .thenThrow(new IOException("Disk full"));
 
             IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
@@ -2105,4 +2111,5 @@ class ProductServiceTest {
             assertTrue(ex.getMessage().contains("Error while saving"));
         }
     }
+
 }

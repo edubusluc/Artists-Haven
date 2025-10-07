@@ -3,11 +3,15 @@ package com.artists_heaven.userProduct;
 import io.swagger.v3.oas.annotations.Parameter;
 
 import java.util.List;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
+import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.MediaTypeFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -79,24 +83,37 @@ public class UserProductController {
         }
 
         @GetMapping("/userProduct_media/{fileName:.+}")
-        @Operation(summary = "Retrieve product image by file name", description = "Returns the product image file corresponding to the given file name. Supports serving PNG images stored in the product_media directory.")
+        @Operation(summary = "Retrieve product image by file name", description = "Returns the product image file corresponding to the given file name. Supports serving images stored in the userProduct_media directory.")
         @ApiResponse(responseCode = "200", description = "Image file successfully retrieved", content = @Content(mediaType = "image/png"))
         @ApiResponse(responseCode = "404", description = "Image file not found", content = @Content)
-
-        public ResponseEntity<Resource> getProductImage(@PathVariable String fileName) {
+        public ResponseEntity<Resource> getUserProductImage(@PathVariable String fileName) {
                 try {
+                        // 1️⃣ Intentar cargar desde classpath (recursos embebidos)
                         Resource resource = resourceLoader.getResource("classpath:userProduct_media/" + fileName);
-                        if (resource.exists()) {
+                        if (resource.exists() && resource.isReadable()) {
                                 return ResponseEntity.ok()
-                                                .contentType(MediaType.IMAGE_PNG)
+                                                .contentType(MediaTypeFactory.getMediaType(fileName)
+                                                                .orElse(MediaType.APPLICATION_OCTET_STREAM))
                                                 .body(resource);
-                        } else {
-                                return ResponseEntity.notFound().build();
                         }
+
+                        // 2️⃣ Intentar cargar desde filesystem (ruta física)
+                        Path filePath = Paths.get(System.getProperty("user.dir"), "userProduct_media", fileName)
+                                        .normalize();
+                        Resource fileResource = new UrlResource(filePath.toUri());
+                        if (fileResource.exists() && fileResource.isReadable()) {
+                                return ResponseEntity.ok()
+                                                .contentType(MediaTypeFactory.getMediaType(fileName)
+                                                                .orElse(MediaType.APPLICATION_OCTET_STREAM))
+                                                .body(fileResource);
+                        }
+
+                        // 3️⃣ No se encontró en ninguna ruta
+                        return ResponseEntity.notFound().build();
+
                 } catch (Exception e) {
                         return ResponseEntity.internalServerError().build();
                 }
-                
         }
 
         @Operation(summary = "Get products created by the authenticated user", description = "Retrieves all products that have been created or uploaded by the currently authenticated user.", security = @SecurityRequirement(name = "bearerAuth"))

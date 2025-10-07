@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
+import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.http.MediaType;
+import org.springframework.http.MediaTypeFactory;
 
 import com.artists_heaven.admin.MonthlySalesDTO;
 import com.artists_heaven.standardResponse.StandardResponse;
@@ -26,6 +28,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 @RestController
 @RequestMapping("/api/artists")
@@ -133,28 +137,42 @@ public class ArtistController {
                 return new ArtistMainViewDTO(artist);
         }
 
+        @GetMapping("/mainArtist_media/{fileName:.+}")
         @Operation(summary = "Get main artist image", description = "Retrieve a specific main image file for an artist by providing the file name, including its extension.")
-
         @ApiResponse(responseCode = "200", description = "Image retrieved successfully", content = @Content(mediaType = "image/jpeg"))
         @ApiResponse(responseCode = "400", description = "Invalid file name or request error", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
         @ApiResponse(responseCode = "404", description = "Image not found", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StandardResponse.class)))
-        @GetMapping("/mainArtist_media/{fileName:.+}")
         public ResponseEntity<Resource> getArtistMainImage(
                         @Parameter(description = "File name including extension", required = true) @PathVariable String fileName) {
 
                 try {
+                        // 1️⃣ Intentar cargar desde classpath (recursos embebidos)
                         Resource resource = resourceLoader.getResource("classpath:mainArtist_media/" + fileName);
-                        if (resource.exists()) {
+                        if (resource.exists() && resource.isReadable()) {
                                 return ResponseEntity.ok()
-                                                .contentType(MediaType.IMAGE_PNG)
+                                                .contentType(MediaTypeFactory.getMediaType(fileName)
+                                                                .orElse(MediaType.APPLICATION_OCTET_STREAM))
                                                 .body(resource);
-                        } else {
-                                return ResponseEntity.notFound().build();
                         }
+
+                        // 2️⃣ Intentar cargar desde filesystem (ruta física)
+                        Path filePath = Paths.get(System.getProperty("user.dir"), "mainArtist_media", fileName)
+                                        .normalize();
+                        Resource fileResource = new UrlResource(filePath.toUri());
+                        if (fileResource.exists() && fileResource.isReadable()) {
+                                return ResponseEntity.ok()
+                                                .contentType(MediaTypeFactory.getMediaType(fileName)
+                                                                .orElse(MediaType.APPLICATION_OCTET_STREAM))
+                                                .body(fileResource);
+                        }
+
+                        // 3️⃣ No se encontró en ninguna ruta
+                        return ResponseEntity.notFound().build();
+
                 } catch (Exception e) {
+
                         return ResponseEntity.internalServerError().build();
                 }
-
         }
 
 }

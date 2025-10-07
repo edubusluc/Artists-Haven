@@ -140,7 +140,7 @@ class UserProductServiceTest {
         when(file.getInputStream()).thenReturn(new ByteArrayInputStream("fake".getBytes()));
 
         // Mock del ImageServingUtil
-        when(imageServingUtil.saveImages(eq(file), anyString(), eq("/userProduct_media/"), eq(false)))
+        when(imageServingUtil.saveMediaFile(eq(file), anyString(), eq("/userProduct_media/"), eq(false)))
                 .thenReturn("/userProduct_media/fake-file.png");
 
         // Ejecutar el método
@@ -158,22 +158,8 @@ class UserProductServiceTest {
         when(file.getOriginalFilename()).thenReturn("test.png");
 
         // Mockear ImageServingUtil para simular que el archivo está vacío
-        when(imageServingUtil.saveImages(eq(file), anyString(), eq("/userProduct_media/"), eq(false)))
+        when(imageServingUtil.saveMediaFile(eq(file), anyString(), eq("/userProduct_media/"), eq(false)))
                 .thenThrow(new IllegalArgumentException("The file is not a valid image or video."));
-
-        assertThrows(IllegalArgumentException.class,
-                () -> userProductService.saveImages(List.of(file)));
-    }
-
-    @Test
-    void saveImages_fails_ioException() throws IOException {
-        MultipartFile file = mock(MultipartFile.class);
-        when(file.isEmpty()).thenReturn(false);
-        when(file.getOriginalFilename()).thenReturn("test.png");
-
-        // Mockear ImageServingUtil para simular IOException al guardar
-        when(imageServingUtil.saveImages(eq(file), anyString(), eq("/userProduct_media/"), eq(false)))
-                .thenThrow(new IllegalArgumentException("Error while saving the file.", new IOException()));
 
         assertThrows(IllegalArgumentException.class,
                 () -> userProductService.saveImages(List.of(file)));

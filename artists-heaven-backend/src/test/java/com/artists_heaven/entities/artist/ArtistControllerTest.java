@@ -81,7 +81,7 @@ class ArtistControllerTest {
                 Artist artist = new Artist();
                 artist.setMainViewPhoto("mianViewPhoto.jpg");
 
-                when(imageServingUtil.saveImages(image, "artists-heaven-backend/src/main/resources/mainArtist_media/",
+                when(imageServingUtil.saveMediaFile(image, "artists-heaven-backend/src/main/resources/mainArtist_media/",
                                 "/mainArtist_media/", false))
                                 .thenReturn("mianViewPhoto.jpg");
                 when(artistService.registerArtist(any(), any())).thenReturn(artist);

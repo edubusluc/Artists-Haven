@@ -9,7 +9,7 @@ const ArtistiCard = ({ artist }) => {
     return (
         <div className="group relative w-full h-[400px] sm:h-[500px] md:h-[650px] lg:h-[750px] xl:h-[850px] overflow-hidden shadow-lg">
             <img
-                src={`/api/artists/${artist.mainPhoto}`}
+                src={`http://localhost:8080/api/artists${artist.mainPhoto}`}
                 alt={artist.name}
                 loading="lazy"
                 onLoad={() => setLoaded(true)}
@@ -55,7 +55,7 @@ const ArtistList = () => {
 
     const fetchMainArtists = useCallback(async () => {
         try {
-            const response = await fetchData("/api/artists/main");
+            const response = await fetchData("http://localhost:8080/api/artists/main");
             setArtists(response.data);
         } catch (error) {
             console.error(error.message);

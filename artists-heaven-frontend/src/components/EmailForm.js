@@ -66,7 +66,7 @@ const EmailForm = () => {
         }
 
         try {
-            const response = await fetch("/api/emails/send", {
+            const response = await fetch("http://localhost:8080/api/emails/send", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

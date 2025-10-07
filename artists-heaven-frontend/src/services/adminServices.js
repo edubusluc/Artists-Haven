@@ -1,6 +1,6 @@
 // services/adminServices.js
 
-const API_BASE = '/api/admin';
+const API_BASE = 'http://localhost:8080/api/admin';
 
 // Función auxiliar para hacer peticiones fetch
 const makeRequest = async (url, method = 'GET', body = null, authToken) => {
@@ -36,10 +36,10 @@ const makeRequest = async (url, method = 'GET', body = null, authToken) => {
 
 
 // Obtener todas las categorías
-export const getAllCategories = (authToken) => makeRequest(`/api/product/categories`, 'GET', null, authToken);
+export const getAllCategories = (authToken) => makeRequest(`http://localhost:8080/api/product/categories`, 'GET', null, authToken);
 
 // Obtner todas las colecciones
-export const getAllCollections = (authToken) => makeRequest(`/api/product/allCollections`, 'GET', null, authToken);
+export const getAllCollections = (authToken) => makeRequest(`http://localhost:8080/api/product/allCollections`, 'GET', null, authToken);
 
 // Obtener gestión de productos
 export const getProductManagement = (authToken) => makeRequest(`${API_BASE}/product-management`, 'GET', null, authToken);
@@ -62,7 +62,7 @@ export const getAllProducts = (
     if (promoted !== null) params.append("promoted", promoted);
 
     return makeRequest(
-        `/api/product/allProducts?${params.toString()}`,
+        `http://localhost:8080/api/product/allProducts?${params.toString()}`,
         'GET',
         null,
         authToken
@@ -72,11 +72,11 @@ export const getAllProducts = (
 // Cambiar disponibilidad del producto (habilitar/deshabilitar)
 export const toggleProductAvailability = (authToken, id, shouldEnable) => {
     const endpoint = shouldEnable ? 'enable' : 'disable';
-    return makeRequest(`/api/admin/${id}/${endpoint}`, 'POST', { id }, authToken);
+    return makeRequest(`http://localhost:8080/api/admin/${id}/${endpoint}`, 'POST', { id }, authToken);
 };
 
 // Degradar el producto
-export const demoteProduct = (authToken, id, language) => makeRequest(`/api/product/demote/${id}?lang=${language}`, 'PUT', null, authToken);
+export const demoteProduct = (authToken, id, language) => makeRequest(`http://localhost:8080/api/product/demote/${id}?lang=${language}`, 'PUT', null, authToken);
 
 // Crear una nueva categoría
 export const createCategory = (authToken, name) => {
@@ -104,39 +104,39 @@ export const editCollection = (authToken, id, name, isPromoted) => {
 
 // Obtener estadísticas del año (como ingresos, etc.)
 export const getStatisticsPerYear = (authToken, year) =>
-    makeRequest(`/api/admin/staticsPerYear?year=${year}`, 'GET', null, authToken);
+    makeRequest(`http://localhost:8080/api/admin/staticsPerYear?year=${year}`, 'GET', null, authToken);
 
 // Obtener usuarios con paginación y búsqueda
 export const getUsers = (authToken, page, pageSize, searchTerm = '') => {
     const query = searchTerm ? `&search=${encodeURIComponent(searchTerm)}` : '';
-    return makeRequest(`/api/admin/users?page=${page}&size=${pageSize}${query}`, 'GET', null, authToken);
+    return makeRequest(`http://localhost:8080/api/admin/users?page=${page}&size=${pageSize}${query}`, 'GET', null, authToken);
 };
 
 // Obtener las verificaciones pendientes de artistas
 export const getPendingVerifications = (authToken) =>
-    makeRequest('/api/admin/verification/pending', 'GET', null, authToken);
+    makeRequest('http://localhost:8080/api/admin/verification/pending', 'GET', null, authToken);
 
 export const getPendingUserProducts = (authToken) =>
-    makeRequest('/api/admin/userProduct/pending', 'GET', null, authToken);
+    makeRequest('http://localhost:8080/api/admin/userProduct/pending', 'GET', null, authToken);
 
 export const approveUserProduct = (authToken, productId) =>
-    makeRequest(`/api/admin/userProduct/${productId}/approve`, 'POST', null, authToken);
+    makeRequest(`http://localhost:8080/api/admin/userProduct/${productId}/approve`, 'POST', null, authToken);
 
 export const rejectUserProduct = (authToken, productId) =>
-    makeRequest(`/api/admin/userProduct/${productId}/reject`, 'POST', null, authToken);
+    makeRequest(`http://localhost:8080/api/admin/userProduct/${productId}/reject`, 'POST', null, authToken);
 
 // Verificar un artista
 export const getVerifyArtist = (authToken, id, verificationId) => {
-    return makeRequest('/api/admin/validate_artist', 'POST', { id, verificationId }, authToken);
+    return makeRequest('http://localhost:8080/api/admin/validate_artist', 'POST', { id, verificationId }, authToken);
 };
 
 // Rechazar un artista
 export const doRefuseArtist = (authToken, verificationId) =>
-    makeRequest(`/api/admin/${verificationId}/refuse`, 'POST', null, authToken);
+    makeRequest(`http://localhost:8080/api/admin/${verificationId}/refuse`, 'POST', null, authToken);
 
 // Función para obtener lor pedidos
 export const getOrders = (authToken, page, pageSize, status, search) => {
-    let url = `/api/admin/orders?page=${page}&size=${pageSize}`;
+    let url = `http://localhost:8080/api/admin/orders?page=${page}&size=${pageSize}`;
 
     if (status) {
         url += `&status=${encodeURIComponent(status)}`;
@@ -150,7 +150,7 @@ export const getOrders = (authToken, page, pageSize, status, search) => {
 
 //Función para actualizar el estado de un pedido
 export const updateOrderStatus = (authToken, orderId, newStatus) => {
-    return makeRequest('/api/admin/updateStatus', 'POST', { orderId, status: newStatus }, authToken);
+    return makeRequest('http://localhost:8080/api/admin/updateStatus', 'POST', { orderId, status: newStatus }, authToken);
 };
 
 

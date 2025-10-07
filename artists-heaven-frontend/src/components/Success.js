@@ -19,7 +19,7 @@ export default function Success() {
             return;
         }
 
-        fetch(`/api/payment_process/confirm?session_id=${sessionId}`)
+        fetch(`http://localhost:8080/api/payment_process/confirm?session_id=${sessionId}`)
             .then(res => res.json())
             .then(data => {
                 if (data.status === "success") {
