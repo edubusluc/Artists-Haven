@@ -31,8 +31,6 @@ public class UserController {
 
     private final ImageServingUtil imageServingUtil;
 
-    private static final String UPLOAD_DIR = "artists-heaven-backend/src/main/resources/mainArtist_media/";
-
     public UserController(UserService userService, ImageServingUtil imageServingUtil) {
         this.userService = userService;
         this.imageServingUtil = imageServingUtil;
@@ -83,15 +81,23 @@ public class UserController {
             Principal principal,
             @RequestParam String lang) {
 
-        String mainImage = "";
+        String mainImageUrl = null;
 
         MultipartFile image = userProfileDTO.getImage();
 
         if (image != null && !image.isEmpty()) {
-            mainImage = imageServingUtil.saveImages(image, UPLOAD_DIR, "/mainArtist_media/", false);
+            // Guardar la imagen usando la función genérica
+            mainImageUrl = imageServingUtil.saveMediaFile(
+                    image, // Archivo a guardar
+                    "mainArtist_media", // Carpeta física donde se guardará
+                    "/mainArtist_media/", // URL pública para frontend
+                    false // No se permiten videos
+            );
         }
 
-        userService.updateUserProfile(userProfileDTO, principal, mainImage, lang);
+        // Llamar al servicio para actualizar el perfil con la URL de la imagen si
+        // existe
+        userService.updateUserProfile(userProfileDTO, principal, mainImageUrl, lang);
 
         return ResponseEntity.ok(new StandardResponse<>("Profile updated successfully", 200));
     }

@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
+import org.springframework.core.io.UrlResource;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -32,7 +33,10 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.http.MediaType;
+import org.springframework.http.MediaTypeFactory;
 import org.springframework.data.domain.Page;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 @RestController
 @RequestMapping("/api/event")
@@ -40,13 +44,12 @@ public class EventController {
 
     private final EventService eventService;
 
-    private static final String UPLOAD_DIR = "artists-heaven-backend/src/main/resources/event_media/";
-
     private final ResourceLoader resourceLoader;
 
     private final ImageServingUtil imageServingUtil;
 
-    public EventController(EventService eventService, ResourceLoader resourceLoader, ImageServingUtil imageServingUtil) {
+    public EventController(EventService eventService, ResourceLoader resourceLoader,
+            ImageServingUtil imageServingUtil) {
         this.eventService = eventService;
         this.resourceLoader = resourceLoader;
         this.imageServingUtil = imageServingUtil;
@@ -136,7 +139,7 @@ public class EventController {
     public ResponseEntity<StandardResponse<Event>> newEvent(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Event data and event image", required = true, content = @Content(mediaType = "multipart/form-data")) @RequestPart("event") EventDTO eventDTO,
             @RequestPart("images") MultipartFile image,
-            String lang) {
+            @RequestParam String lang) {
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
@@ -151,10 +154,19 @@ public class EventController {
         }
 
         eventDTO.setArtistId(artist.getId());
-        String imageUrls = imageServingUtil.saveImages(image, UPLOAD_DIR, "/event_media/", false);
-        eventDTO.setImage(imageUrls);
 
-        Event createdEvent = eventService.newEvent(eventDTO,lang);
+        // Guardar la imagen usando la función genérica
+        if (image != null && !image.isEmpty()) {
+            String imageUrl = imageServingUtil.saveMediaFile(
+                    image, // Archivo a guardar
+                    "event_media", // Carpeta física donde se guardará
+                    "/event_media/", // URL pública para frontend
+                    false // No se permiten videos
+            );
+            eventDTO.setImage(imageUrl);
+        }
+
+        Event createdEvent = eventService.newEvent(eventDTO, lang);
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(new StandardResponse<>("Event created successfully", createdEvent, HttpStatus.CREATED.value()));
@@ -282,66 +294,80 @@ public class EventController {
             @Parameter(description = "ID of the event to update", required = true) @PathVariable Long id,
             @Parameter(description = "Event data to update", required = true, content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE)) @RequestPart("event") EventDTO eventDTO,
             @Parameter(description = "Optional new image file to replace the current event image") @RequestPart(value = "image", required = false) MultipartFile newImage,
-            String lang) {
+            @RequestParam String lang) {
 
-        // Getting the authenticated user (current logged-in user)
+        // Obtener usuario autenticado
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         Object principalUser = authentication.getPrincipal();
 
-        // Checking if the authenticated user is an Artist
-        if (!eventService.isArtist()) {
+        if (!(principalUser instanceof Artist artist)) {
             throw new AppExceptions.UnauthorizedActionException("Only artists can update events");
         }
 
-        Artist artist = (Artist) principalUser;
-
-        // Fetching the event by its ID
+        // Obtener evento por ID
         Event event = eventService.getEventById(id);
         if (event == null) {
             throw new AppExceptions.ResourceNotFoundException("Event not found with ID: " + id);
         }
 
-        // Verifying that the event belongs to the authenticated artist
+        // Verificar que el evento pertenece al artista autenticado
         if (!event.getArtist().getId().equals(artist.getId())) {
             throw new AppExceptions.ResourceNotFoundException("This event does not belong to you");
         }
 
-        // If a new image is provided, delete the old image and save the new one
-        if (newImage != null) {
-            eventService.deleteImages(event.getImage()); // Deleting old image
-            String imageUrl = imageServingUtil.saveImages(newImage, UPLOAD_DIR, "/event_media/", false); // Saving new
-                                                                                                         // image
-            eventDTO.setImage(imageUrl); // Setting the new image URL in eventDTO
+        // Si se proporciona una nueva imagen, eliminar la antigua y guardar la nueva
+        if (newImage != null && !newImage.isEmpty()) {
+            eventService.deleteImages(event.getImage()); // Eliminar imagen antigua
+            String imageUrl = imageServingUtil.saveMediaFile(
+                    newImage, // Archivo a guardar
+                    "event_media", // Carpeta física
+                    "/event_media/", // URL pública para frontend
+                    false // No se permiten videos
+            );
+            eventDTO.setImage(imageUrl); // Actualizar URL de la imagen en eventDTO
         }
 
-        // Updating the event with the provided data
-        eventService.updateEvent(event, eventDTO,lang);
+        // Actualizar evento con los datos proporcionados
+        eventService.updateEvent(event, eventDTO, lang);
 
-        // Returning a success message after the event is updated
+        // Respuesta de éxito
         StandardResponse<String> response = new StandardResponse<>("Event updated successfully", HttpStatus.OK.value());
         return ResponseEntity.ok(response);
     }
 
     @Operation(summary = "Retrieve event media by file name", description = "Returns the image file associated with an event by its file name. "
-            +
-            "The image is served with a PNG content type.")
-    @ApiResponse(responseCode = "200", description = "Image retrieved successfully", content = @Content(mediaType = "image/png"))
+            + "Supports serving images from the event_media directory.")
+    @ApiResponse(responseCode = "200", description = "Image retrieved successfully")
     @ApiResponse(responseCode = "404", description = "Image file not found")
     @GetMapping("/event_media/{fileName:.+}")
-    public ResponseEntity<Resource> getProductImage(
-            @Parameter(description = "Name of the image file to retrieve", required = true, example = "event_image.png") @PathVariable String fileName) {
-        
+    public ResponseEntity<Resource> getEventMedia(@PathVariable String fileName) {
         try {
-                        Resource resource = resourceLoader.getResource("classpath:event_media/" + fileName);
-                        if (resource.exists()) {
-                                return ResponseEntity.ok()
-                                                .contentType(MediaType.IMAGE_PNG)
-                                                .body(resource);
-                        } else {
-                                return ResponseEntity.notFound().build();
-                        }
-                } catch (Exception e) {
-                        return ResponseEntity.internalServerError().build();
-                }
+            // 1️⃣ Intentar cargar desde classpath (resources embebidos)
+            Resource resource = resourceLoader.getResource("classpath:event_media/" + fileName);
+            if (resource.exists() && resource.isReadable()) {
+                return ResponseEntity.ok()
+                        .contentType(MediaTypeFactory.getMediaType(fileName)
+                                .orElse(MediaType.APPLICATION_OCTET_STREAM))
+                        .body(resource);
+            }
+
+            // 2️⃣ Intentar desde filesystem
+            Path filePath = Paths.get(System.getProperty("user.dir"), "event_media", fileName).normalize();
+            Resource fileResource = new UrlResource(filePath.toUri());
+            if (fileResource.exists() && fileResource.isReadable()) {
+                return ResponseEntity.ok()
+                        .contentType(MediaTypeFactory.getMediaType(fileName)
+                                .orElse(MediaType.APPLICATION_OCTET_STREAM))
+                        .body(fileResource);
+            }
+
+            // 3️⃣ No encontrado
+            return ResponseEntity.notFound().build();
+
+        } catch (Exception e) {
+            e.printStackTrace(); // Para debug en consola
+            return ResponseEntity.internalServerError().build();
+        }
     }
+
 }

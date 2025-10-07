@@ -66,7 +66,7 @@ class VerificationControllerTest {
         artist.setEmail(email);
 
         when(verificationService.validateArtistForVerification(email)).thenReturn(artist);
-        when(imageServingUtil.saveImages(any(), anyString(), anyString(), anyBoolean()))
+        when(imageServingUtil.saveMediaFile(any(), anyString(), anyString(), anyBoolean()))
                 .thenReturn("http://example.com/video.mp4");
         when(messageSource.getMessage(eq("verification.message.successful"), isNull(), any(Locale.class)))
                 .thenReturn("Verification successful");
@@ -108,7 +108,7 @@ class VerificationControllerTest {
         artist.setEmail(email);
 
         when(verificationService.validateArtistForVerification(email)).thenReturn(artist);
-        when(imageServingUtil.saveImages(any(), anyString(), anyString(), anyBoolean()))
+        when(imageServingUtil.saveMediaFile(any(), anyString(), anyString(), anyBoolean()))
                 .thenReturn("http://example.com/video.mp4");
         doThrow(new AppExceptions.DuplicateActionException("Duplicate verification request"))
                 .when(verificationService).createVerification(eq(artist), anyString());
@@ -131,7 +131,7 @@ class VerificationControllerTest {
         artist.setEmail(email);
 
         when(verificationService.validateArtistForVerification(email)).thenReturn(artist);
-        when(imageServingUtil.saveImages(any(), anyString(), anyString(), anyBoolean()))
+        when(imageServingUtil.saveMediaFile(any(), anyString(), anyString(), anyBoolean()))
                 .thenReturn("http://example.com/video.mp4");
         doThrow(new AppExceptions.EmailSendException("Failed to send email"))
                 .when(emailSenderService).sendVerificationEmail(artist);

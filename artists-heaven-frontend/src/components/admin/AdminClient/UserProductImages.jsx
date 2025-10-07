@@ -23,7 +23,7 @@ export const UserProductImages = ({ images, productName }) => {
                 {images.map((img, index) => (
                     <img
                         key={index}
-                        src={`/api/user-products${img}`}
+                        src={`http://localhost:8080/api/user-products${img}`}
                         alt={`${productName} ${index + 1}`}
                         className="w-16 h-16 object-cover rounded cursor-pointer hover:scale-105 transition"
                         onClick={() => openModal(index)}
@@ -35,7 +35,7 @@ export const UserProductImages = ({ images, productName }) => {
                 <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
                     <div className="relative">
                         <img
-                            src={`/api/user-products${images[currentIndex]}`}
+                            src={`http://localhost:8080/api/user-products${images[currentIndex]}`}
                             alt={`${productName} ${currentIndex + 1}`}
                             className="max-w-[90vw] max-h-[80vh] object-contain rounded shadow-lg"
                         />

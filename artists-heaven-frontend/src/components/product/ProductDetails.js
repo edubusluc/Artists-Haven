@@ -23,7 +23,7 @@ const ProductImages = ({ images, name }) => (
             {images?.map((image, index) => (
                 <div key={index} className="flex justify-center w-1/2" style={{ flexShrink: 0 }}>
                     <img
-                        src={`/api/product${image}`}
+                        src={`http://localhost:8080/api/product${image}`}
                         alt={name}
                         className="max-w-full max-h-[300px] object-contain"
                         loading="lazy"
@@ -36,7 +36,7 @@ const ProductImages = ({ images, name }) => (
             {images?.map((image, index) => (
                 <ZoomableImage
                     key={index}
-                    src={`/api/product${image}`}
+                    src={`http://localhost:8080/api/product${image}`}
                     alt={name}
                 />
             ))}
@@ -212,8 +212,8 @@ const ProductDetails = () => {
             try {
                 setLoading(true);
                 const [productRes, reviewsRes] = await Promise.all([
-                    fetch(`/api/product/details/${id}`),
-                    fetch(`/api/rating/productReview/${id}`)
+                    fetch(`http://localhost:8080/api/product/details/${id}`),
+                    fetch(`http://localhost:8080/api/rating/productReview/${id}`)
                 ]);
 
                 if (!productRes.ok) throw new Error("Error al obtener el producto");
@@ -222,7 +222,7 @@ const ProductDetails = () => {
                 setProduct(productData.data);
 
                 const relatedRes = await fetch(
-                    `/api/product/related?section=${encodeURIComponent(
+                    `http://localhost:8080/api/product/related?section=${encodeURIComponent(
                         productData.data.section
                     )}&id=${encodeURIComponent(productData.data.id)}`
                 );
@@ -296,8 +296,8 @@ const ProductDetails = () => {
         setTimeout(() => setAdded(false), 500);
 
         const endpoint = authToken
-            ? `/api/myShoppingCart/addProducts`
-            : `/api/myShoppingCart/addProductsNonAuthenticate`;
+            ? `http://localhost:8080/api/myShoppingCart/addProducts`
+            : `http://localhost:8080/api/myShoppingCart/addProductsNonAuthenticate`;
 
         const payload = authToken
             ? {

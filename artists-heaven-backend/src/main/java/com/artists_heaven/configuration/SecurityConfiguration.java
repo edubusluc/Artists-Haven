@@ -127,8 +127,8 @@ public class SecurityConfiguration {
                         "/api/productVote/{id}",
                         "/api/reward-cards/**",
                         "/api/user-products/myUserProducts"
-                        
-                 };
+
+        };
 
         @Bean
         public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -163,7 +163,8 @@ public class SecurityConfiguration {
                                                                 .policyDirectives("default-src 'self'; " +
                                                                                 "script-src 'self'; " +
                                                                                 "style-src 'self'; " +
-                                                                                "img-src 'self' data:; " +
+                                                                                "img-src 'self' data: http://localhost:8080; "
+                                                                                +
                                                                                 "font-src 'self'; " +
                                                                                 "connect-src 'self' http://localhost:8080; "
                                                                                 +
@@ -176,7 +177,7 @@ public class SecurityConfiguration {
         @Bean
         public CorsConfigurationSource corsConfigurationSource() {
                 CorsConfiguration configuration = new CorsConfiguration();
-                configuration.setAllowedOrigins(List.of("http://localhost:3000", "http://localhost:8080"));
+                configuration.setAllowedOrigins(List.of("http://localhost:3000", "http://localhost:8080", "http://192.168.1.52:3000"));
                 configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
                 configuration.setAllowedHeaders(List.of("*"));
                 configuration.setAllowCredentials(true);

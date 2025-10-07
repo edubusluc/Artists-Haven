@@ -23,7 +23,7 @@ const SalesChart = ({ year }) => {
     const rolePath = role === "artist" ? "artists" : role;
 
     useEffect(() => {
-        fetch(`/api/${rolePath}/sales/monthly?year=${year}`, {
+        fetch(`http://localhost:8080/api/${rolePath}/sales/monthly?year=${year}`, {
             method: "GET",
             headers: {
                 'Authorization': `Bearer ${authToken}`,

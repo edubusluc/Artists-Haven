@@ -16,14 +16,14 @@ const RewardCards = () => {
     const fetchData = async () => {
         try {
             // ✅ Obtener puntos del usuario
-            const userRes = await fetch("/api/reward-cards/me", {
+            const userRes = await fetch("http://localhost:8080/api/reward-cards/me", {
                 headers: { 'Authorization': `Bearer ${token}` },
             });
             const userJson = await userRes.json();
             const userData = userJson.data;
 
             //✅ Obtener reward cards
-            const cardsRes = await fetch("/api/reward-cards/my", {
+            const cardsRes = await fetch("http://localhost:8080/api/reward-cards/my", {
                 headers: { 'Authorization': `Bearer ${token}` },
             });
             const cardsJson = await cardsRes.json();
@@ -41,7 +41,7 @@ const RewardCards = () => {
 
     const redeemCard = async (requiredPoints) => {
         try {
-            const response = await fetch(`/api/reward-cards/redeem?lang=${lang}`, {
+            const response = await fetch(`http://localhost:8080/api/reward-cards/redeem?lang=${lang}`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

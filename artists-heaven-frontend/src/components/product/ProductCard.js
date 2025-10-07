@@ -36,7 +36,7 @@ const ProductCard = ({ product }) => {
         data-content={product.onPromotion ? t("promotion") : ""}
       >
         <img
-          src={`/api/product${product.colors[0].images[0]}`}
+          src={`http://localhost:8080/api/product${product.colors[0].images[0]}`}
           alt={product.name}
           loading="lazy"
           className="h-auto absolute object-contain transition-all duration-500 ease-in-out 
@@ -44,7 +44,7 @@ const ProductCard = ({ product }) => {
         />
         {product.colors[0].images[1] && (
           <img
-            src={`/api/product${product.colors[0].images[1]}`}
+            src={`http://localhost:8080/api/product${product.colors[0].images[1]}`}
             alt={`${product.name} hover`}
             loading="lazy"
             className="h-auto absolute object-cover opacity-0 transition-all duration-500 

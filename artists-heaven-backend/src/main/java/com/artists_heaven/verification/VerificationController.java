@@ -33,8 +33,6 @@ public class VerificationController {
 
     private final MessageSource messageSource;
 
-    private final String UPLOAD_DIR = "artists-heaven-backend/src/main/resources/verification_media";
-
     public VerificationController(EmailSenderService emailSenderService, VerificationService verificationService,
             ImageServingUtil imageServingUtil, MessageSource messageSource) {
         this.emailSenderService = emailSenderService;
@@ -54,18 +52,32 @@ public class VerificationController {
             @Parameter(description = "Validation video file uploaded by the artist", required = true, content = @Content(mediaType = "video/*")) @RequestParam("video") MultipartFile video,
             @RequestParam String lang) {
 
+        // Validar que el artista puede enviar verificación
         Artist artist = verificationService.validateArtistForVerification(email);
 
-        String videoUrl = imageServingUtil.saveImages(video, UPLOAD_DIR, "/verification_media/", true);
+        // Validar y guardar el video de verificación usando la función genérica
+        if (video == null || video.isEmpty()) {
+            throw new IllegalArgumentException("The validation video file is empty or invalid.");
+        }
+
+        String videoUrl = imageServingUtil.saveMediaFile(
+                video, // Archivo a guardar
+                "verification_media", // Carpeta física
+                "/verification_media/", // URL pública para frontend
+                true // Permitimos videos
+        );
+
+        // Crear la verificación en base de datos
         verificationService.createVerification(artist, videoUrl);
 
+        // Enviar correo de confirmación
         emailSenderService.sendVerificationEmail(artist);
 
+        // Mensaje localizado
         Locale locale = new Locale(lang);
         String message = messageSource.getMessage("verification.message.successful", null, locale);
 
-        return ResponseEntity.ok(
-                new StandardResponse<>(message, HttpStatus.OK.value()));
+        return ResponseEntity.ok(new StandardResponse<>(message, HttpStatus.OK.value()));
     }
 
 }

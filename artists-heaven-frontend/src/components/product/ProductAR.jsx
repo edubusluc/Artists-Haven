@@ -6,7 +6,7 @@ import { X } from 'lucide-react';
 // ---------- Modelo 3D ----------
 
 const TshirtModel = ({ modelReference, section }) => {
-  const { scene } = useGLTF(`/api/product${modelReference}`);
+  const { scene } = useGLTF(`http://localhost:8080/api/product${modelReference}`);
   const modelRef = useRef();
   const [scale, setScale] = useState(() =>
     typeof window !== "undefined" && window.innerWidth < 768 ? 5 : 7

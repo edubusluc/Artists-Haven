@@ -29,7 +29,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.util.StringUtils;
 import com.artists_heaven.entities.artist.Artist;
 import com.artists_heaven.entities.artist.ArtistRepository;
 import com.artists_heaven.exception.AppExceptions.BadRequestException;
@@ -308,36 +307,40 @@ class EventServiceTest {
 
     @Test
     void testDeleteImagesSuccess() {
-        String removedImage = "event_media/test.jpg";
-        String cleanedPath = StringUtils.cleanPath(removedImage);
-        Path targetPath = Paths.get("artists-heaven-backend/src/main/resources", cleanedPath).normalize();
+        String removedImage = "/event_media/test.jpg";
 
-        // Mock the static method Files.delete
+        String fileName = Paths.get(removedImage).getFileName().toString(); // test.jpg
+        String folderName = "event_media";
+
+        Path targetPath = Paths.get(System.getProperty("user.dir"), folderName, fileName).normalize();
+
         try (MockedStatic<Files> mockedFiles = mockStatic(Files.class)) {
-            mockedFiles.when(() -> Files.delete(targetPath)).thenAnswer(invocation -> null);
+            mockedFiles.when(() -> Files.deleteIfExists(targetPath)).thenReturn(true);
 
             eventService.deleteImages(removedImage);
 
-            mockedFiles.verify(() -> Files.delete(targetPath), times(1));
+            mockedFiles.verify(() -> Files.deleteIfExists(targetPath), times(1));
         }
     }
 
     @Test
     void testDeleteImagesThrowsException() {
-        String removedImage = "event_media/test.jpg";
-        String cleanedPath = StringUtils.cleanPath(removedImage);
-        Path targetPath = Paths.get("artists-heaven-backend/src/main/resources", cleanedPath).normalize();
+        String removedImage = "/event_media/test.jpg";
 
-        // Mock the static method Files.delete to throw an IOException
+        String fileName = Paths.get(removedImage).getFileName().toString(); // test.jpg
+        String folderName = "event_media";
+
+        Path targetPath = Paths.get(System.getProperty("user.dir"), folderName, fileName).normalize();
+
         try (MockedStatic<Files> mockedFiles = mockStatic(Files.class)) {
-            mockedFiles.when(() -> Files.delete(targetPath)).thenThrow(new IOException("Test IOException"));
+            mockedFiles.when(() -> Files.deleteIfExists(targetPath)).thenThrow(new IOException("Test IOException"));
 
             IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
                 eventService.deleteImages(removedImage);
             });
 
             assertEquals("Error while deleting the image.", exception.getMessage());
-            mockedFiles.verify(() -> Files.delete(targetPath), times(1));
+            mockedFiles.verify(() -> Files.deleteIfExists(targetPath), times(1));
         }
     }
 

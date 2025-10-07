@@ -37,7 +37,7 @@ const UserLogin = () => {
         }
 
         try {
-            const response = await fetch("/api/auth/login", {
+            const response = await fetch("http://localhost:8080/api/auth/login", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email, password }),
@@ -73,7 +73,7 @@ const UserLogin = () => {
         const googleToken = response.credential;
 
         try {
-            const backendResponse = await fetch("/api/auth/google-login", {
+            const backendResponse = await fetch("http://localhost:8080/api/auth/google-login", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ idTokenString: googleToken }),

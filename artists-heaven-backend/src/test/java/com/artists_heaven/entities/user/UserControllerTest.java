@@ -134,7 +134,7 @@ class UserControllerTest {
                 Principal principal = () -> "testUser";
 
                 // Simular guardado de imágenes
-                when(imageServingUtil.saveImages(any(MultipartFile.class), anyString(), anyString(), eq(false)))
+                when(imageServingUtil.saveMediaFile(any(MultipartFile.class), anyString(), anyString(), eq(false)))
                                 .thenReturn("saved/path.jpg");
 
                 // Simular lógica de actualización sin excepción

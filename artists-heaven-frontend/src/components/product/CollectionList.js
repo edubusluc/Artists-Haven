@@ -6,7 +6,7 @@ const CollectionList = () => {
 
   return (
     <ProductSchema
-      endpoint={`/api/product/collection/${collectionName}`}
+      endpoint={`http://localhost:8080/api/product/collection/${collectionName}`}
       title={collectionName}
       hideCollectionFilter={true}
     />

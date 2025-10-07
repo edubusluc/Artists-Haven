@@ -43,7 +43,7 @@ const AddReviewModal = ({ isOpen, onClose, productId, authToken }) => {
         }
 
         try {
-            const response = await fetch(`/api/rating/new?lang=${language}`, {
+            const response = await fetch(`http://localhost:8080/api/rating/new?lang=${language}`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

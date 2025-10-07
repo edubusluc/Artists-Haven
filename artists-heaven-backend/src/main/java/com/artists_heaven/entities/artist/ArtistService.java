@@ -45,8 +45,6 @@ public class ArtistService {
 
     private final ImageServingUtil imageServingUtil;
 
-    private static final String UPLOAD_DIR = "artists-heaven-backend/src/main/resources/mainArtist_media/";
-
     public ArtistService(ArtistRepository artistRepository, UserRepository userRepository,
             CategoryRepository categoryRepository, VerificationRepository verificationRepository,
             ProductService productService, EventService eventService, MessageSource messageSource,
@@ -71,16 +69,15 @@ public class ArtistService {
      * @throws IllegalArgumentException if the email or artist name already exists
      */
     public Artist registerArtist(ArtistRegisterDTO request, String lang) {
-
         Locale locale = new Locale(lang);
 
-        // Validate email address
+        // Validar correo electrónico
         userRepository.findByEmail(request.getEmail()).ifPresent(u -> {
             String msg = messageSource.getMessage("email.duplicate", null, locale);
             throw new DuplicateActionException(msg);
         });
 
-        // Validate artist name
+        // Validar nombre de artista
         if (artistRepository.existsByArtistName(request.getArtistName())) {
             String msg = messageSource.getMessage("artistName.alreadyExists", null, locale);
             throw new DuplicateActionException(msg);
@@ -88,12 +85,17 @@ public class ArtistService {
 
         Artist artist = new Artist();
 
-        String imageUrl = imageServingUtil.saveImages(request.getImage(), UPLOAD_DIR, "/mainArtist_media/",
-                false);
+        // Guardar imagen principal del artista en la carpeta mainArtist_media
+        String imageUrl = imageServingUtil.saveMediaFile(
+                request.getImage(), // Archivo
+                "mainArtist_media", // Carpeta física dentro del proyecto
+                "/mainArtist_media/", // URL pública para frontend
+                false // No se permiten videos
+        );
 
         artist.setMainViewPhoto(imageUrl);
 
-        // Configure artist data
+        // Configurar datos del artista
         String username = request.getArtistName();
         artist.setUsername(username);
         artist.setArtistName(username);

@@ -15,7 +15,7 @@ const MyUserProducts = () => {
     useEffect(() => {
         const fetchProducts = async () => {
             try {
-                const res = await fetch("/api/user-products/myUserProducts", {
+                const res = await fetch("http://localhost:8080/api/user-products/myUserProducts", {
                     headers: {
                         Authorization: `Bearer ${authToken}`,
                     },
@@ -82,13 +82,13 @@ const MyUserProducts = () => {
                             {/* Imagen */}
                             <div className="relative w-full aspect-[6/7] rounded-xl overflow-hidden group mb-4">
                                 <img
-                                    src={`/api/user-products${prod.images[0]}`}
+                                    src={`http://localhost:8080/api/user-products${prod.images[0]}`}
                                     loading="lazy"
                                     className="absolute inset-0 h-full w-full object-cover transition-all duration-500 group-hover:opacity-0 group-hover:scale-105"
                                 />
                                 {prod.images[1] && (
                                     <img
-                                        src={`/api/user-products${prod.images[1]}`}
+                                        src={`http://localhost:8080/api/user-products${prod.images[1]}`}
                                         alt={`${prod.name} hover`}
                                         loading="lazy"
                                         className="absolute inset-0 h-full w-full object-cover opacity-0 transition-all duration-500 group-hover:opacity-100 group-hover:scale-105"

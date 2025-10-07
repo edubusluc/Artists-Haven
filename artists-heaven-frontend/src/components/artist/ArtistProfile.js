@@ -27,7 +27,7 @@ const ArtistProfile = () => {
 
     useEffect(() => {
         const token = localStorage.getItem("authToken");
-        fetch('/api/users/profile', {
+        fetch('http://localhost:8080/api/users/profile', {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
@@ -130,7 +130,7 @@ const ArtistProfile = () => {
         try {
             setFormErrors({});
 
-            const response = await fetch(`/api/users/profile/edit?lang=${currentLang}`, {
+            const response = await fetch(`http://localhost:8080/api/users/profile/edit?lang=${currentLang}`, {
                 method: 'PUT',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -248,7 +248,7 @@ const ArtistProfile = () => {
                             <div>
                                 <p className="text-gray-600 font-medium mb-2">{t('userProfile.profileImage')}</p>
                                 {formData.image ? (
-                                    <img src={`/api/artists/${formData.image}`} alt="Perfil"
+                                    <img src={`http://localhost:8080/api/artists/${formData.image}`} alt="Perfil"
                                         className="w-48 h-48 object-cover rounded-xl border shadow" />
                                 ) : (
                                     <p className="italic text-gray-400">{t('userProfile.noProfileImage')}</p>

@@ -33,7 +33,7 @@ const OrderDetails = () => {
             setErrorMessage("");
 
             try {
-                const res = await fetch(`/api/orders/${id}`, {
+                const res = await fetch(`http://localhost:8080/api/orders/${id}`, {
                     headers: {
                         Authorization: `Bearer ${authToken}`,
                     },
@@ -80,7 +80,7 @@ const OrderDetails = () => {
             setLoading(true);
             setErrorMessage("");
             try {
-                const res = await fetch(`/api/returns/${order.returnId}/return`, {
+                const res = await fetch(`http://localhost:8080/api/returns/${order.returnId}/return`, {
                     headers: {
                         Authorization: `Bearer ${authToken}`,
                     },

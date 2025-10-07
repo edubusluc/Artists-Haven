@@ -17,7 +17,7 @@ const PromoteProductForm = () => {
     const rol = localStorage.getItem("role");
 
     useEffect(() => {
-        fetch(`/api/product/details/${id}`)
+        fetch(`http://localhost:8080/api/product/details/${id}`)
             .then(res => res.json())
             .then(response => setProduct(response.data));
     }, [id]);
@@ -46,7 +46,7 @@ const PromoteProductForm = () => {
         };
 
         try {
-            const response = await fetch(`/api/product/promote/${id}`, {
+            const response = await fetch(`http://localhost:8080/api/product/promote/${id}`, {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",

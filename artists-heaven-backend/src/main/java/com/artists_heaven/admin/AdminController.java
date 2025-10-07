@@ -33,11 +33,13 @@ import java.util.Map;
 import java.util.function.Consumer;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
+import org.springframework.core.io.UrlResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.MediaTypeFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -45,6 +47,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -148,19 +152,33 @@ public class AdminController {
         @ApiResponse(responseCode = "400", description = "Invalid file name")
         @ApiResponse(responseCode = "404", description = "Video file not found")
         @GetMapping("/verification_media/{fileName:.+}")
-        public ResponseEntity<Resource> getVerificationVideo(
-                        @PathVariable String fileName) {
-
+        public ResponseEntity<Resource> getVerificationVideo(@PathVariable String fileName) {
                 try {
+                        // 1️⃣ Intentar cargar desde classpath (resources embebidos)
                         Resource resource = resourceLoader.getResource("classpath:verification_media/" + fileName);
-                        if (resource.exists()) {
+                        if (resource.exists() && resource.isReadable()) {
                                 return ResponseEntity.ok()
-                                                .contentType(MediaType.valueOf("video/mp4"))
+                                                .contentType(MediaTypeFactory.getMediaType(fileName)
+                                                                .orElse(MediaType.APPLICATION_OCTET_STREAM))
                                                 .body(resource);
-                        } else {
-                                return ResponseEntity.notFound().build();
                         }
+
+                        // 2️⃣ Intentar desde filesystem
+                        Path filePath = Paths.get(System.getProperty("user.dir"), "verification_media", fileName)
+                                        .normalize();
+                        Resource fileResource = new UrlResource(filePath.toUri());
+                        if (fileResource.exists() && fileResource.isReadable()) {
+                                return ResponseEntity.ok()
+                                                .contentType(MediaTypeFactory.getMediaType(fileName)
+                                                                .orElse(MediaType.APPLICATION_OCTET_STREAM))
+                                                .body(fileResource);
+                        }
+
+                        // 3️⃣ No encontrado
+                        return ResponseEntity.notFound().build();
+
                 } catch (Exception e) {
+                        e.printStackTrace(); // Para debug en consola
                         return ResponseEntity.internalServerError().build();
                 }
         }

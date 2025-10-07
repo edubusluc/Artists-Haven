@@ -11,6 +11,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 
 @Component
@@ -69,36 +72,54 @@ public class ImageServingUtil {
      * @return the accessible media URL of the saved file
      * @throws IllegalArgumentException if the file is invalid or cannot be saved
      */
-    public String saveImages(MultipartFile file, String uploadDir, String mediaUrlCode, boolean allowVideo) {
-        String mediaUrl = "";
-
-        // Get the original filename
-        String originalFilename = file.getOriginalFilename();
-
-        // Validate the filename
-        if (originalFilename == null || originalFilename.isEmpty()) {
-            throw new IllegalArgumentException("The file name is invalid.");
+    public String saveMediaFile(MultipartFile file, String folderName, String publicUrlPrefix, boolean allowVideo) {
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("The file is empty or invalid.");
         }
 
-        // Sanitize the filename to remove any invalid characters
-        originalFilename = sanitizeFilename(originalFilename);
+        // Obtener y sanear el nombre original del archivo
+        String originalFilename = sanitizeFilename(file.getOriginalFilename());
 
-        // Generate a unique filename to prevent conflicts
-        String fileName = UUID.randomUUID().toString() + "_" + originalFilename;
-        Path targetPath = Paths.get(uploadDir, fileName);
+        // Obtener extensión
+        String extension = "";
+        int dotIndex = originalFilename.lastIndexOf('.');
+        if (dotIndex > 0) {
+            extension = originalFilename.substring(dotIndex).toLowerCase();
+        }
+
+        // Validar extensión
+        List<String> allowedImageExtensions = Arrays.asList(".png", ".jpg", ".jpeg", ".webp");
+        List<String> allowedVideoExtensions = Arrays.asList(".mp4", ".mov", ".avi", ".mkv");
+
+        if (allowVideo) {
+            if (!allowedImageExtensions.contains(extension) && !allowedVideoExtensions.contains(extension)) {
+                throw new IllegalArgumentException("Invalid file type. Allowed image or video types.");
+            }
+        } else {
+            if (!allowedImageExtensions.contains(extension)) {
+                throw new IllegalArgumentException("Invalid file type. Only image types are allowed.");
+            }
+        }
+
+        // Generar nombre único
+        String uniqueFileName = UUID.randomUUID().toString() + extension;
+
+        // Carpeta absoluta dentro del proyecto
+        Path targetPath = Paths.get(System.getProperty("user.dir"), folderName, uniqueFileName).normalize();
 
         try {
-            if (file.isEmpty() || !isValidMedia(file, allowVideo)) {
-                throw new IllegalArgumentException("The file is not a valid image or video.");
-            }
+            // Crear carpeta si no existe
+            Files.createDirectories(targetPath.getParent());
 
-            Files.copy(file.getInputStream(), targetPath);
-            mediaUrl = mediaUrlCode + fileName;
+            // Guardar el archivo
+            Files.copy(file.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
+
+            // Devolver la URL pública para frontend
+            return publicUrlPrefix + uniqueFileName;
+
         } catch (IOException e) {
-            throw new IllegalArgumentException("Error while saving the file.", e);
+            throw new IllegalArgumentException("Error while saving the file: " + e.getMessage(), e);
         }
-
-        return mediaUrl;
     }
 
     /**
@@ -115,26 +136,5 @@ public class ImageServingUtil {
         return filename.replaceAll("[^a-zA-Z0-9\\._-]", "_");
     }
 
-    /**
-     * Checks if the provided file is a valid image.
-     *
-     * @param image the MultipartFile to validate.
-     * @return true if the file is a JPEG or PNG image, false otherwise.
-     */
-    private static boolean isValidMedia(MultipartFile file, boolean allowVideo) {
-        String contentType = file.getContentType();
-        if (contentType == null)
-            return false;
-
-        if (contentType.equals("image/jpeg") || contentType.equals("image/png")) {
-            return true;
-        }
-
-        if (allowVideo) {
-            return contentType.equals("video/mp4") || contentType.equals("video/quicktime");
-        }
-
-        return false;
-    }
 
 }

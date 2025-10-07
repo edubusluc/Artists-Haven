@@ -84,7 +84,7 @@ const AdminClient = () => {
         if (videoBlobsCache[videoUrl]) return videoBlobsCache[videoUrl];
         if (pendingFetches.current[videoUrl]) return pendingFetches.current[videoUrl];
 
-        const fetchPromise = fetch(`/api/admin${videoUrl}`, { method: "GET", headers: { 'Authorization': `Bearer ${authToken}` } })
+        const fetchPromise = fetch(`http://localhost:8080/api/admin${videoUrl}`, { method: "GET", headers: { 'Authorization': `Bearer ${authToken}` } })
             .then(response => {
                 if (!response.ok) throw new Error(`Failed to fetch video: ${response.status}`);
                 return response.blob();

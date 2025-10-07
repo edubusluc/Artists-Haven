@@ -66,7 +66,7 @@ const EditProduct = () => {
             setLoading(false);
             return;
         }
-        fetch(`/api/product/details/${id}`, { method: "GET" })
+        fetch(`http://localhost:8080/api/product/details/${id}`, { method: "GET" })
             .then((response) => {
                 if (!response.ok) throw new Error("Error al obtener el producto");
                 return response.json();
@@ -100,12 +100,12 @@ const EditProduct = () => {
             return;
         }
         const fetchCategories = async () => {
-            const response = await fetch("/api/product/categories");
+            const response = await fetch("http://localhost:8080/api/product/categories");
             const data = await response.json();
             setCategoriesList(data.data);
         };
         const fetchCollections = async () => {
-            const response = await fetch("/api/product/allCollections", {
+            const response = await fetch("http://localhost:8080/api/product/allCollections", {
                 headers: { 'Authorization': `Bearer ${authToken}` },
             });
             const data = await response.json();
@@ -193,7 +193,7 @@ const EditProduct = () => {
         });
 
         try {
-            const response = await fetch(`/api/product/edit/${id}?lang=${language}`, {
+            const response = await fetch(`http://localhost:8080/api/product/edit/${id}?lang=${language}`, {
                 method: "PUT",
                 body: formData,
                 headers: { 'Authorization': `Bearer ${authToken}` },
@@ -464,7 +464,7 @@ const EditProduct = () => {
                                         {color.images.map((img, imgIndex) => (
                                             <div key={imgIndex} className="text-center relative">
                                                 <img
-                                                    src={typeof img === "string" ? `/api/product${img}` : URL.createObjectURL(img)}
+                                                    src={typeof img === "string" ? `http://localhost:8080/api/product${img}` : URL.createObjectURL(img)}
                                                     alt={`preview-${index}-${imgIndex}`}
                                                     className="w-full h-24 object-cover rounded shadow mb-2"
                                                 />

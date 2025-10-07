@@ -39,7 +39,7 @@ const CreateEventForm = () => {
     useEffect(() => {
         const fetchVerificationStatus = async () => {
             try {
-                const response = await fetch('/api/event/isVerified', {
+                const response = await fetch('http://localhost:8080/api/event/isVerified', {
                     headers: { 'Authorization': `Bearer ${token}` },
                 });
                 if (response.ok) {
@@ -125,7 +125,7 @@ const CreateEventForm = () => {
         images.forEach((file) => formData.append("images", file));
 
         try {
-            const response = await fetch(`/api/event/new?lang=${language}`, {
+            const response = await fetch(`http://localhost:8080/api/event/new?lang=${language}`, {
                 method: "POST",
                 body: formData,
                 headers: {
